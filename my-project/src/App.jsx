@@ -10,9 +10,15 @@ import {
   BarChart3, Zap, RefreshCcw, Lock, Eye, EyeOff,
   CreditCard, MapPin, Calendar, Smartphone, Globe,
   Bot, ThumbsUp, Activity, PieChart, TrendingUp, AlertCircle,
-  Inbox, Store, Wallet, ChevronLeft
+  Inbox, Store, Wallet, ChevronLeft, Type, Palette, Camera,
+  Home, Grid, Layers
 } from 'lucide-react';
+
+// --- IMPORTS FOR DASHBOARDS & VIEWS ---
 import LandingPage from './LandingPage'; 
+import FounderAccess from './FounderAccess';
+import StoreAdmin from './StoreAdmin';
+import ShopView from './ShopView'; // Imported the new separate file
 
 // ==========================================
 // 1. ENTERPRISE MOCK DATA & UTILITIES
@@ -35,8 +41,8 @@ const SHOPS = [
     { id: 's2', name: 'ArtisanLoft', ownerId: 'seller2', revenue: 88000, totalOrders: 32, rating: 4.9, description: "Handcrafted apparel and sustainable goods." }
 ];
 
-// Mock Products (Enhanced with Specifications)
-const PRODUCTS = [
+// Initial Mock Products
+const INITIAL_PRODUCTS = [
   {
     id: 'p1',
     shopId: 's1',
@@ -51,7 +57,8 @@ const PRODUCTS = [
     description: "Premium weighted metal pen with matte black finish. Perfect for corporate gifting with custom laser engraving options available upon request.",
     specs: { material: "Brass Alloy", ink: "Gel Black (Refillable)", weight: "45g", mechanism: "Twist Action" },
     colors: ["#000000", "#1a1a1a", "#C0C0C0"],
-    customizationAvailable: true
+    customizationAvailable: true,
+    customizationType: "engraving" // engraving, print, neon
   },
   {
     id: 'p2',
@@ -68,7 +75,8 @@ const PRODUCTS = [
     specs: { material: "100% Cotton", gsm: "240", fit: "Oversized", wash: "Machine Cold" },
     colors: ["#FFFFFF", "#000000", "#808000", "#000080"],
     sizes: ["S", "M", "L", "XL"],
-    customizationAvailable: true
+    customizationAvailable: true,
+    customizationType: "print"
   },
   {
     id: 'p3',
@@ -84,7 +92,8 @@ const PRODUCTS = [
     description: "Custom LED neon sign. Send us your text or logo in the chat to get a preview. Low energy consumption, high impact.",
     specs: { voltage: "12V Adapter", lifespan: "50,000 hrs", mount: "Wall Kit Included", material: "Acrylic Backboard" },
     colors: ["#FF00FF", "#00FFFF", "#FFFF00"],
-    customizationAvailable: true
+    customizationAvailable: true,
+    customizationType: "neon"
   },
   {
     id: 'p4',
@@ -104,7 +113,7 @@ const PRODUCTS = [
   }
 ];
 
-// Mock Chats for Customization
+// Mock Chats
 const MOCK_CHATS = [
   {
     id: 'c1',
@@ -112,10 +121,15 @@ const MOCK_CHATS = [
     customerId: 'u2',
     sellerId: 'seller1',
     messages: [
-      { id: 1, sender: 'u2', text: "Hi, can I get 'Roshni' engraved on this pen?", time: "10:30 AM" },
-      { id: 2, sender: 'seller1', text: "Absolutely! We support laser engraving. Do you want it in cursive or block font?", time: "10:35 AM" }
+      { id: 1, sender: 'u2', text: "Hi, can I get 'Roshni' engraved on this pen?", time: "10:30 AM", type: 'text' },
+      { id: 2, sender: 'seller1', text: "Absolutely! We support laser engraving. Use the 'Customize' button to see a preview.", time: "10:35 AM", type: 'text' }
     ]
   }
+];
+
+const NOTIFICATIONS = [
+  { id: 1, title: "Order Shipped", text: "Your custom tee has been dispatched.", time: "2h ago", read: false },
+  { id: 2, title: "Seller Reply", text: "TechHaven replied to your query.", time: "5h ago", read: false }
 ];
 
 // --- Custom Hooks ---
@@ -202,14 +216,58 @@ const ToastContainer = ({ toasts, removeToast }) => (
 // 3. COMPLEX FEATURE COMPONENTS
 // ==========================================
 
+// --- Visual Live Customizer (The "Studio" Feature) ---
+const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCustomFont }) => {
+    // Positioning logic based on product type
+    const getOverlayStyle = () => {
+        switch(product.customizationType) {
+            case 'engraving': 
+                return { top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-5deg)', color: 'rgba(200, 200, 200, 0.8)', textShadow: '1px 1px 0px rgba(255,255,255,0.2)' };
+            case 'neon':
+                return { top: '40%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff', textShadow: '0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff' };
+            default: // print
+                return { top: '35%', left: '50%', transform: 'translate(-50%, -50%)', color: '#333' };
+        }
+    };
+
+    const fontStyles = {
+        'Modern': 'font-sans tracking-widest uppercase',
+        'Classic': 'font-serif italic',
+        'Handwritten': 'font-mono' // Approximating handwriting with mono for demo
+    };
+
+    return (
+        <div className="relative w-full aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-inner group">
+            <img src={product.image} className="w-full h-full object-cover" alt="Preview" />
+            
+            {/* The Live Text Overlay */}
+            {customText && (
+                <div 
+                    className={`absolute z-10 text-xl md:text-3xl font-bold whitespace-nowrap pointer-events-none transition-all duration-300 ${fontStyles[customFont] || 'font-sans'}`}
+                    style={getOverlayStyle()}
+                >
+                    {customText}
+                </div>
+            )}
+            
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-indigo-600 shadow-sm">
+                <Button size="sm" variant="ghost" className="!p-0 !bg-transparent">
+                  <Eye className="w-3 h-3 inline mr-1" /> Live Preview
+                </Button>
+            </div>
+        </div>
+    );
+};
+
 // --- Advanced Customization Chat Engine ---
 const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setChats }) => {
   const [message, setMessage] = useState("");
   const chatEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Find existing chat or create temporary placeholder
-  const activeChat = chats.find(c => c.productId === product.id && c.customerId === currentUser.id) || {
-    id: 'temp', productId: product.id, customerId: currentUser.id, messages: []
+  const activeChat = chats.find(c => c.productId === product.id && c.customerId === currentUser?.id) || {
+    id: 'temp', productId: product.id, customerId: currentUser?.id, messages: []
   };
 
   const scrollToBottom = () => {
@@ -220,19 +278,19 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
     if (isOpen) scrollToBottom();
   }, [isOpen, activeChat.messages]);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
+  const handleSend = (text = message, type = 'text') => {
+    if (!text.trim() && type === 'text') return;
     
     const newMessage = {
       id: Date.now(),
-      sender: currentUser.id,
-      text: message,
+      sender: currentUser?.id || 'guest',
+      text: text,
+      type: type,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     let updatedChats;
     if (activeChat.id === 'temp') {
-      // Create new chat session
       const newChat = {
         ...activeChat,
         id: generateId(),
@@ -241,7 +299,6 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
       };
       updatedChats = [...chats, newChat];
     } else {
-      // Update existing
       updatedChats = chats.map(c => c.id === activeChat.id ? { ...c, messages: [...c.messages, newMessage] } : c);
     }
     
@@ -253,18 +310,27 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
       const botReply = {
         id: Date.now() + 1,
         sender: 'system',
-        text: "Thanks for your request! The seller will review your customization details and get back to you shortly.",
+        text: type === 'image' ? "Received your design! We'll review compatibility." : "Thanks! We've noted your request.",
+        type: 'text',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setChats(prev => prev.map(c => c.productId === product.id && c.customerId === currentUser.id ? { ...c, messages: [...c.messages, botReply] } : c));
+      setChats(prev => prev.map(c => c.productId === product.id && c.customerId === currentUser?.id ? { ...c, messages: [...c.messages, botReply] } : c));
     }, 1500);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        // In a real app, upload to server. Here we simulate an image message.
+        handleSend("Image Attachment", 'image');
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg h-[600px] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
+      <div className="bg-white w-full max-w-lg h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
         {/* Header */}
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div className="flex items-center gap-3">
@@ -272,8 +338,8 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
               <img src={product.image} className="w-full h-full object-cover rounded" alt="" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Customize: {product.name}</h3>
-              <p className="text-xs text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Seller Online</p>
+              <h3 className="font-bold text-slate-900 text-sm">Chat: {product.name}</h3>
+              <p className="text-xs text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Seller Online</p>
             </div>
           </div>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
@@ -286,17 +352,23 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
               <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8" />
               </div>
-              <p className="font-bold text-slate-900">Start Customizing</p>
+              <p className="font-bold text-slate-900">Start Discussion</p>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Ask about engraving, color changes, or bulk orders. The seller is here to help!
+                Share your logo, ask about fonts, or discuss bulk discounts.
               </p>
             </div>
           ) : (
             activeChat.messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.sender === currentUser.id ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === currentUser.id ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-sm'}`}>
-                  <p>{msg.text}</p>
-                  <p className={`text-[10px] mt-1 opacity-70 ${msg.sender === currentUser.id ? 'text-indigo-100' : 'text-slate-400'}`}>{msg.time}</p>
+              <div key={msg.id} className={`flex ${msg.sender === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === currentUser?.id ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-sm'}`}>
+                  {msg.type === 'image' ? (
+                      <div className="flex items-center gap-2 bg-white/10 p-2 rounded-lg">
+                          <ImageIcon className="w-4 h-4" /> <span>Image Attached</span>
+                      </div>
+                  ) : (
+                      <p>{msg.text}</p>
+                  )}
+                  <p className={`text-[10px] mt-1 opacity-70 ${msg.sender === currentUser?.id ? 'text-indigo-100' : 'text-slate-400'}`}>{msg.time}</p>
                 </div>
               </div>
             ))
@@ -307,16 +379,17 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
         {/* Input Area */}
         <div className="p-4 bg-white border-t border-slate-100">
           <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-            <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Paperclip className="w-5 h-5" /></button>
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+            <button onClick={() => fileInputRef.current.click()} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Paperclip className="w-5 h-5" /></button>
             <input 
               type="text" 
               className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400"
-              placeholder="Type your requirements..."
+              placeholder="Type message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
+            <button onClick={() => handleSend()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
               <Send className="w-4 h-4" />
             </button>
           </div>
@@ -357,9 +430,14 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.cartId} className="flex gap-4 p-3 border border-slate-100 rounded-xl hover:border-indigo-100 transition-colors">
-                <div className="w-20 h-20 bg-slate-50 rounded-lg overflow-hidden shrink-0">
+              <div key={item.cartId} className="flex gap-4 p-3 border border-slate-100 rounded-xl hover:border-indigo-100 transition-colors bg-white shadow-sm">
+                <div className="w-20 h-20 bg-slate-50 rounded-lg overflow-hidden shrink-0 relative">
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover"/>
+                  {item.customization?.text && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <span className="text-[8px] text-white font-bold bg-black/50 px-1 rounded">{item.customization.text}</span>
+                      </div>
+                  )}
                 </div>
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
@@ -367,14 +445,23 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
                       <h4 className="font-bold text-sm text-slate-900 line-clamp-1">{item.name}</h4>
                       <button onClick={() => removeItem(item.cartId)} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
                     </div>
-                    {item.selectedColor && (
-                      <div className="flex items-center gap-2 mt-1">
-                          <div className="w-3 h-3 rounded-full border border-slate-200" style={{backgroundColor: item.selectedColor}}></div>
-                          {item.selectedSize && <span className="text-xs text-slate-500 border border-slate-200 px-1 rounded">{item.selectedSize}</span>}
-                      </div>
-                    )}
+                    {/* Customization Details Display */}
+                    <div className="mt-1 space-y-1">
+                        {item.selectedColor && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500">Color:</span>
+                                <div className="w-3 h-3 rounded-full border border-slate-200" style={{backgroundColor: item.selectedColor}}></div>
+                            </div>
+                        )}
+                        {item.customization?.text && (
+                            <div className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
+                                <Sparkles className="w-3 h-3" />
+                                <span>"{item.customization.text}" ({item.customization.font})</span>
+                            </div>
+                        )}
+                    </div>
                   </div>
-                  <div className="flex justify-between items-end">
+                  <div className="flex justify-between items-end mt-2">
                     <span className="font-bold text-indigo-600">₹{item.price}</span>
                   </div>
                 </div>
@@ -399,6 +486,37 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
       </div>
     </>
   );
+};
+
+// --- Mobile Bottom Navigation (Native App Feel) ---
+const MobileNav = ({ activeTab, navigate, cartCount }) => {
+    return (
+        <div className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 flex justify-around items-center h-16 pb-safe">
+            <button onClick={() => navigate('/')} className={`flex flex-col items-center gap-1 p-2 ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                <Home className="w-5 h-5" />
+                <span className="text-[10px] font-bold">Home</span>
+            </button>
+            <button onClick={() => navigate('/shop')} className={`flex flex-col items-center gap-1 p-2 ${activeTab === 'shop' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                <Grid className="w-5 h-5" />
+                <span className="text-[10px] font-bold">Shop</span>
+            </button>
+            {/* Center Main Action - Cart */}
+            <div className="relative -top-5">
+                <button onClick={() => document.dispatchEvent(new CustomEvent('openCart'))} className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
+                    <ShoppingBag className="w-6 h-6" />
+                    {cartCount > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full text-[10px] border-2 border-white">{cartCount}</span>}
+                </button>
+            </div>
+            <button onClick={() => navigate('/profile')} className={`flex flex-col items-center gap-1 p-2 ${activeTab === 'profile' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                <User className="w-5 h-5" />
+                <span className="text-[10px] font-bold">Profile</span>
+            </button>
+            <button onClick={() => navigate('/founder')} className={`flex flex-col items-center gap-1 p-2 ${activeTab === 'more' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                <Menu className="w-5 h-5" />
+                <span className="text-[10px] font-bold">More</span>
+            </button>
+        </div>
+    );
 };
 
 // --- Authentication Modal ---
@@ -494,262 +612,100 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
 };
 
 // ==========================================
-// 4. VIEWS & DASHBOARDS
+// 4. VIEWS (Common)
 // ==========================================
 
-// --- Seller Dashboard ---
-const SellerDashboard = ({ currentUser, products, orders, chats }) => {
-    const myShop = SHOPS.find(s => s.ownerId === currentUser.id) || { name: 'My Shop', revenue: 0, totalOrders: 0 };
-    const myProducts = products.filter(p => p.shopId === myShop.id);
-    const myOrders = orders.filter(o => o.items.some(i => i.shopId === myShop.id));
-    const myChats = chats.filter(c => c.sellerId === myShop.id);
-    
-    const calculatedRevenue = myOrders.reduce((acc, order) => {
-        const orderTotal = order.items.filter(i => i.shopId === myShop.id).reduce((sum, item) => sum + item.price, 0);
-        return acc + orderTotal;
-    }, myShop.revenue);
-
-    return (
-        <div className="p-8 max-w-7xl mx-auto pt-28">
-            <div className="flex justify-between items-end mb-8">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900">Seller Dashboard</h1>
-                    <p className="text-slate-500">Welcome back, {currentUser.name}. Manage your store.</p>
-                </div>
-                <Button>
-                   <Plus className="w-4 h-4" /> Add New Product
-                </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <Card className="p-6 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600"><DollarSign className="w-6 h-6"/></div>
-                    <div>
-                        <p className="text-slate-500 text-xs font-bold uppercase">Total Revenue</p>
-                        <h3 className="text-2xl font-black text-slate-900">₹{calculatedRevenue}</h3>
-                    </div>
-                </Card>
-                <Card className="p-6 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><Package className="w-6 h-6"/></div>
-                    <div>
-                        <p className="text-slate-500 text-xs font-bold uppercase">Total Orders</p>
-                        <h3 className="text-2xl font-black text-slate-900">{myOrders.length + myShop.totalOrders}</h3>
-                    </div>
-                </Card>
-                <Card className="p-6 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600"><Star className="w-6 h-6"/></div>
-                    <div>
-                        <p className="text-slate-500 text-xs font-bold uppercase">Shop Rating</p>
-                        <h3 className="text-2xl font-black text-slate-900">{myShop.rating}</h3>
-                    </div>
-                </Card>
-                <Card className="p-6 flex items-center gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600"><MessageSquare className="w-6 h-6"/></div>
-                    <div>
-                        <p className="text-slate-500 text-xs font-bold uppercase">Active Chats</p>
-                        <h3 className="text-2xl font-black text-slate-900">{myChats.length}</h3>
-                    </div>
-                </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Customization Requests */}
-                <Card className="p-6">
-                   <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> Customization Requests</h3>
-                   <div className="space-y-4">
-                      {myChats.length === 0 ? <p className="text-slate-400 text-sm">No active discussions.</p> :
-                         myChats.map(c => {
-                             const product = PRODUCTS.find(p => p.id === c.productId);
-                             return (
-                               <div key={c.id} className="p-3 border border-slate-100 rounded-xl flex gap-3 hover:bg-slate-50 cursor-pointer">
-                                  <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden"><img src={product?.image} className="w-full h-full object-cover"/></div>
-                                  <div>
-                                     <h4 className="font-bold text-sm text-slate-900">{product?.name}</h4>
-                                     <p className="text-xs text-slate-500 line-clamp-1">{c.messages[c.messages.length -1].text}</p>
-                                  </div>
-                               </div>
-                             )
-                         })
-                      }
-                   </div>
-                </Card>
-
-                 {/* Recent Orders */}
-                 <Card className="p-6">
-                    <h3 className="font-bold text-slate-900 mb-4">Recent Orders</h3>
-                    <div className="space-y-4">
-                        {myOrders.length === 0 ? <p className="text-slate-400 text-sm">No recent orders found.</p> : 
-                            myOrders.map(o => (
-                                <div key={o.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                                    <div>
-                                        <p className="font-bold text-sm text-slate-900">Order #{o.id.slice(0,5)}</p>
-                                        <p className="text-xs text-slate-500">{new Date(o.date).toLocaleDateString()}</p>
-                                    </div>
-                                    <Badge color="indigo">Processing</Badge>
-                                </div>
-                            ))
-                        }
-                    </div>
-                </Card>
-            </div>
-        </div>
-    );
-};
-
-// --- Founder Dashboard ---
-const FounderDashboard = ({ users, shops, orders, products }) => {
-    const totalPlatformRevenue = shops.reduce((acc, s) => acc + s.revenue, 0) + orders.reduce((acc, o) => acc + o.total, 0);
-    const totalPlatformOrders = shops.reduce((acc, s) => acc + s.totalOrders, 0) + orders.length;
-
-    return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-             <aside className="w-64 bg-[#0F172A] text-white flex flex-col shrink-0 transition-all duration-300">
-                <div className="h-20 flex items-center px-6 gap-3 border-b border-slate-800">
-                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold">C</div>
-                    <span className="font-bold text-lg tracking-tight">Founder Mode</span>
-                </div>
-                <nav className="flex-1 p-4 space-y-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 bg-indigo-600 rounded-xl text-white font-medium shadow-lg shadow-indigo-500/20">
-                        <Activity className="w-5 h-5"/> Overview
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl font-medium transition-colors">
-                        <Store className="w-5 h-5"/> Manage Shops
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl font-medium transition-colors">
-                        <Users className="w-5 h-5"/> Users
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl font-medium transition-colors">
-                        <Wallet className="w-5 h-5"/> Finances
-                    </button>
-                </nav>
-                <div className="p-4 border-t border-slate-800">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold">SC</div>
-                        <div className="text-sm">
-                            <p className="font-bold text-white">Sanjay C.</p>
-                            <p className="text-xs text-slate-500">Super Admin</p>
-                        </div>
-                    </div>
-                </div>
-             </aside>
-
-             <main className="flex-1 overflow-auto p-8">
-                 <header className="flex justify-between items-center mb-8">
-                     <div>
-                         <h1 className="text-3xl font-black text-slate-900">Platform Overview</h1>
-                         <p className="text-slate-500">Live data across all shops and users.</p>
-                     </div>
-                     <div className="flex items-center gap-4">
-                         <div className="px-4 py-2 bg-green-100 text-green-700 font-bold rounded-lg text-sm flex items-center gap-2">
-                             <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                             </span>
-                             System Operational
-                         </div>
-                     </div>
-                 </header>
-
-                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                     {[
-                         { label: 'Total Revenue', val: `₹${totalPlatformRevenue}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
-                         { label: 'Active Shops', val: shops.length, icon: Store, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                         { label: 'Total Users', val: users.length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-                         { label: 'Total Orders', val: totalPlatformOrders, icon: Package, color: 'text-amber-500', bg: 'bg-amber-50' },
-                     ].map((stat, i) => (
-                         <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                             <div>
-                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{stat.label}</p>
-                                 <h3 className="text-3xl font-black text-slate-900">{stat.val}</h3>
-                             </div>
-                             <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center ${stat.color}`}>
-                                 <stat.icon className="w-6 h-6" />
-                             </div>
-                         </div>
-                     ))}
-                 </div>
-
-                 <Card className="p-6 mb-8">
-                     <h3 className="font-bold text-slate-900 mb-6">Active Shops Performance</h3>
-                     <div className="overflow-x-auto">
-                         <table className="w-full text-left border-collapse">
-                             <thead>
-                                 <tr className="border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                     <th className="py-3 pl-2">Shop Name</th>
-                                     <th className="py-3">Owner</th>
-                                     <th className="py-3">Revenue</th>
-                                     <th className="py-3">Rating</th>
-                                     <th className="py-3">Status</th>
-                                 </tr>
-                             </thead>
-                             <tbody>
-                                 {shops.map(shop => {
-                                     const owner = users.find(u => u.id === shop.ownerId);
-                                     return (
-                                         <tr key={shop.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                             <td className="py-4 pl-2 font-bold text-slate-900">{shop.name}</td>
-                                             <td className="py-4 text-sm text-slate-600">{owner?.name || 'Unknown'}</td>
-                                             <td className="py-4 font-bold text-green-600">₹{shop.revenue}</td>
-                                             <td className="py-4 text-sm flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400"/> {shop.rating}</td>
-                                             <td className="py-4"><Badge color="green">Active</Badge></td>
-                                         </tr>
-                                     )
-                                 })}
-                             </tbody>
-                         </table>
-                     </div>
-                 </Card>
-
-                 <Card className="p-6">
-                     <h3 className="font-bold text-slate-900 mb-4">New Users</h3>
-                     <div className="flex gap-4 overflow-x-auto pb-2">
-                         {users.map(u => (
-                             <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 min-w-[200px]">
-                                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700">{u.avatar}</div>
-                                 <div>
-                                     <p className="text-sm font-bold text-slate-900">{u.name}</p>
-                                     <p className="text-xs text-slate-500 capitalize">{u.role}</p>
-                                 </div>
-                             </div>
-                         ))}
-                     </div>
-                 </Card>
-             </main>
-        </div>
-    );
-};
-
 // --- Product Detail View (High Ticket Item Feature) ---
-const ProductDetail = ({ addToCart, openChat, currentUser }) => {
+const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = PRODUCTS.find(p => p.id === id);
+  const product = products.find(p => p.id === id);
   const shop = SHOPS.find(s => s.id === product?.shopId);
+  
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]);
   const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0]);
+  
+  // Customization State
+  const [customText, setCustomText] = useState("");
+  const [customFont, setCustomFont] = useState("Modern");
 
-  if (!product) return <div className="p-20 text-center">Product not found. <Link to="/shop" className="text-indigo-600">Go back</Link></div>;
+  if (!product) return <div className="p-20 text-center">Product not found.</div>;
+
+  const handleAddToCart = () => {
+      const customization = product.customizationAvailable && customText ? {
+          text: customText,
+          font: customFont
+      } : null;
+
+      addToCart({ ...product, selectedColor, selectedSize, customization });
+  };
 
   return (
-    <div className="pt-28 pb-20 max-w-7xl mx-auto px-6">
+    <div className="pt-28 pb-32 max-w-7xl mx-auto px-6">
        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 font-medium">
          <ChevronLeft className="w-4 h-4" /> Back
        </button>
 
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
-          <div className="space-y-4">
-             <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
-             </div>
-          </div>
+         {/* LEFT COLUMN: Visuals */}
+         <div className="space-y-6">
+             {product.customizationAvailable ? (
+                 <LiveCustomizer 
+                    product={product} 
+                    customText={customText} 
+                    setCustomText={setCustomText} 
+                    customFont={customFont}
+                    setCustomFont={setCustomFont}
+                 />
+             ) : (
+                <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-sm">
+                   <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
+                </div>
+             )}
 
-          {/* Product Info */}
-          <div className="flex flex-col h-full">
+             {/* Customization Inputs (Only if available) */}
+             {product.customizationAvailable && (
+                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                     <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Palette className="w-5 h-5 text-indigo-600" /> Customize Your Design
+                     </h3>
+                     <div className="space-y-4">
+                         <div>
+                             <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Your Text (Name/Quote)</label>
+                             <input 
+                                type="text" 
+                                maxLength={20}
+                                value={customText}
+                                onChange={(e) => setCustomText(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                placeholder={`Enter text for ${product.customizationType}...`}
+                             />
+                         </div>
+                         <div>
+                             <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Select Font Style</label>
+                             <div className="flex gap-2">
+                                 {['Modern', 'Classic', 'Handwritten'].map(font => (
+                                     <button 
+                                        key={font}
+                                        onClick={() => setCustomFont(font)}
+                                        className={`px-4 py-2 rounded-lg text-sm border transition-all ${customFont === font ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                                     >
+                                          {font}
+                                     </button>
+                                 ))}
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             )}
+         </div>
+
+         {/* RIGHT COLUMN: Info & Actions */}
+         <div className="flex flex-col h-full">
              <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
                    <Badge color="indigo">{product.category}</Badge>
-                   {product.customizationAvailable && <Badge color="purple">Customizable</Badge>}
+                   {product.customizationAvailable && <Badge color="purple">Personalizable</Badge>}
                 </div>
                 <h1 className="text-4xl font-black text-slate-900 mb-2">{product.name}</h1>
                 <div className="flex items-center gap-2 text-sm">
@@ -757,8 +713,18 @@ const ProductDetail = ({ addToCart, openChat, currentUser }) => {
                    <span className="font-bold">{product.rating}</span> 
                    <span className="text-slate-400">({product.reviews} reviews)</span>
                    <span className="text-slate-300">•</span>
-                   <span className="text-slate-500">Sold by {shop?.name}</span>
+                   <span className="text-slate-500">By {shop?.name}</span>
                 </div>
+
+                {/* --- MODIFIED: Added Chat Button here as requested --- */}
+                <button 
+                  onClick={() => openChat(product)}
+                  className="mt-4 flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors w-fit border border-indigo-100"
+                >
+                   <MessageSquare className="w-4 h-4" />
+                   Chat regarding this product
+                </button>
+                {/* ---------------------------------------------------- */}
              </div>
 
              <div className="text-3xl font-black text-slate-900 mb-8">₹{product.price}</div>
@@ -801,113 +767,36 @@ const ProductDetail = ({ addToCart, openChat, currentUser }) => {
 
              {/* Action Buttons */}
              <div className="flex flex-col gap-3 mt-auto">
-                <Button size="lg" onClick={() => addToCart({ ...product, selectedColor, selectedSize })} className="w-full">
+                <Button size="lg" onClick={handleAddToCart} className="w-full">
                    <ShoppingBag className="w-5 h-5" /> Add to Cart
                 </Button>
                 
+                {/* Optional: Kept secondary chat button at bottom for access, or can remove if preferred */}
                 {product.customizationAvailable && (
                    <Button size="lg" variant="secondary" onClick={() => openChat(product)} className="w-full">
-                      <MessageSquare className="w-5 h-5" /> Discuss Customization
+                      <MessageSquare className="w-5 h-5" /> Customize Details
                    </Button>
                 )}
              </div>
 
              {/* Specs */}
              <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-2 gap-4">
-                {Object.entries(product.specs).map(([key, val]) => (
+                {product.specs && Object.entries(product.specs).map(([key, val]) => (
                    <div key={key}>
                       <span className="block text-xs text-slate-400 uppercase font-bold">{key}</span>
                       <span className="text-sm font-medium text-slate-900">{val}</span>
                    </div>
                 ))}
              </div>
-          </div>
+         </div>
        </div>
     </div>
   );
 };
 
-// --- Shop/Marketplace View ---
-const ShopView = ({ activeCategory, setActiveCategory, searchQuery, setSearchQuery, addToCart }) => {
-  const filteredProducts = PRODUCTS.filter(p => {
-      const matchesCategory = activeCategory === "All" || p.category === activeCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-  });
-
-  return (
-      <div className="pt-24 pb-20 max-w-7xl mx-auto px-6 min-h-screen">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
-               <div>
-                  <h2 className="text-4xl font-black text-slate-900 mb-2">Marketplace</h2>
-                  <p className="text-slate-500">Discover unique goods from independent sellers.</p>
-               </div>
-               <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative">
-                     <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                     <input 
-                       type="text" 
-                       placeholder="Search products..." 
-                       value={searchQuery}
-                       onChange={(e) => setSearchQuery(e.target.value)}
-                       className="w-full sm:w-64 pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-shadow focus:shadow-md"
-                     />
-                  </div>
-                  <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto no-scrollbar">
-                     {["All", "Tech", "Office", "Apparel", "Gifting"].map(cat => (
-                         <button 
-                           key={cat}
-                           onClick={() => setActiveCategory(cat)}
-                           className={`px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-600 hover:bg-slate-50'}`}
-                         >
-                           {cat}
-                         </button>
-                      ))}
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredProducts.map(product => {
-                    const shop = SHOPS.find(s => s.id === product.shopId);
-                    return (
-                       <Link to={`/product/${product.id}`} key={product.id} className="group bg-white rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-500 relative flex flex-col">
-                           <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
-                              <img src={product.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={product.name} />
-                              {product.stock === 0 && (
-                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold uppercase tracking-widest z-10 backdrop-blur-sm">Sold Out</div>
-                              )}
-                              <button 
-                                onClick={(e) => { e.preventDefault(); addToCart(product); }} 
-                                className="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 text-indigo-600 hover:bg-indigo-600 hover:text-white"
-                              >
-                                <ShoppingBag className="w-5 h-5" />
-                              </button>
-                           </div>
-                           <div className="p-6 flex-1 flex flex-col">
-                              <div className="flex justify-between items-start mb-2">
-                                 <h3 className="font-bold text-lg text-slate-900 line-clamp-1">{product.name}</h3>
-                                 <div className="flex items-center gap-1 text-xs font-bold bg-amber-50 text-amber-600 px-2 py-1 rounded-md">
-                                    <Star className="w-3 h-3 fill-current" /> {product.rating}
-                                 </div>
-                              </div>
-                              <p className="text-xs text-slate-500 mb-2">Sold by <span className="text-indigo-600 font-bold">{shop?.name || 'Craftify'}</span></p>
-                              <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50">
-                                 <span className="text-2xl font-black text-slate-900">₹{product.price}</span>
-                                 {product.customizationAvailable && <Badge color="purple">Customizable</Badge>}
-                              </div>
-                           </div>
-                       </Link>
-                    );
-                })}
-            </div>
-      </div>
-  );
-};
-
 // --- Profile View ---
 const ProfileView = ({ currentUser, orders, onLogout }) => (
-    <div className="pt-24 pb-20 max-w-5xl mx-auto px-6">
+    <div className="pt-24 pb-32 max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-6 mb-12 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
               <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-xl border-4 border-white">
                  {currentUser?.avatar}
@@ -922,17 +811,30 @@ const ProfileView = ({ currentUser, orders, onLogout }) => (
           </div>
           
           <Card className="p-6">
-               <h3 className="font-bold text-xl text-slate-800 mb-6">Order History</h3>
-               <div className="space-y-4">
-                    {orders.filter(o => o.customerId === currentUser?.id).length === 0 ? <p className="text-slate-400">No orders yet.</p> : 
-                       orders.filter(o => o.customerId === currentUser?.id).map(o => (
-                           <div key={o.id} className="flex justify-between p-4 bg-slate-50 rounded-xl">
-                               <div><p className="font-bold">Order #{o.id.slice(0,5)}</p><p className="text-xs text-slate-500">{o.items.length} items • {formatDate(o.date)}</p></div>
-                               <span className="font-bold text-indigo-600">₹{o.total}</span>
-                           </div>
-                       ))
-                    }
-               </div>
+                <h3 className="font-bold text-xl text-slate-800 mb-6">Order History</h3>
+                <div className="space-y-4">
+                     {orders.filter(o => o.customerId === currentUser?.id).length === 0 ? <p className="text-slate-400">No orders yet.</p> : 
+                        orders.filter(o => o.customerId === currentUser?.id).map(o => (
+                            <div key={o.id} className="flex flex-col md:flex-row justify-between p-4 bg-slate-50 rounded-xl gap-4">
+                               <div>
+                                   <p className="font-bold">Order #{o.id.slice(0,5)}</p>
+                                   <p className="text-xs text-slate-500">{o.items.length} items • {formatDate(o.date)}</p>
+                                   <div className="flex gap-2 mt-2">
+                                        {o.items.map((item, idx) => (
+                                            <div key={idx} className="w-10 h-10 rounded overflow-hidden border border-slate-200">
+                                                <img src={item.image} className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
+                                   </div>
+                               </div>
+                               <div className="text-right">
+                                   <span className="font-bold text-indigo-600 text-lg block">₹{o.total}</span>
+                                   <Badge color="green">Processing</Badge>
+                               </div>
+                            </div>
+                        ))
+                     }
+                </div>
           </Card>
           <Button onClick={onLogout} variant="danger" className="w-full mt-6">Sign Out</Button>
     </div>
@@ -947,8 +849,9 @@ const CraftifyContent = () => {
   const [cart, setCart] = useStickyState([], 'craftify_cart');
   const [orders, setOrders] = useStickyState([], 'craftify_orders');
   const [chats, setChats] = useStickyState(MOCK_CHATS, 'craftify_chats');
-  const [toasts, setToasts] = useState([]);
+  const [products, setProducts] = useStickyState(INITIAL_PRODUCTS, 'craftify_products');
   
+  const [toasts, setToasts] = useState([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState('customer');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -956,10 +859,18 @@ const CraftifyContent = () => {
   const [activeChatProduct, setActiveChatProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Custom Event Listener for Mobile Nav
+  useEffect(() => {
+      const openCartHandler = () => setIsCartOpen(true);
+      document.addEventListener('openCart', openCartHandler);
+      return () => document.removeEventListener('openCart', openCartHandler);
+  }, []);
+
   const addToast = (title, message, type = 'success') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, title, message, type }]);
@@ -1020,10 +931,13 @@ const CraftifyContent = () => {
     navigate('/profile');
   };
 
-  const showNavbar = location.pathname !== '/founder';
+  const showNavbar = location.pathname !== '/founder' && location.pathname !== '/';
+  
+  // Determine active tab for mobile nav
+  const activeTab = location.pathname === '/' ? 'home' : location.pathname === '/shop' ? 'shop' : location.pathname === '/profile' ? 'profile' : 'more';
 
   return (
-    <div className="bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200">
+    <div className="bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 pb-20 md:pb-0">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {showNavbar && (
@@ -1043,11 +957,33 @@ const CraftifyContent = () => {
                  {currentUser?.role === 'founder' && <Button size="sm" onClick={() => navigate('/founder')}>Founder Mode</Button>}
                  {currentUser?.role === 'seller' && <Button size="sm" onClick={() => navigate('/seller')}>Seller Dashboard</Button>}
                  
+                 {/* Notification Bell */}
+                 <div className="relative">
+                    <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2 rounded-full hover:bg-black/10 relative ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
+                        <Bell className="w-5 h-5" />
+                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    {isNotificationsOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 animate-fade-in z-[60]">
+                            <h4 className="font-bold text-xs p-2 text-slate-500 uppercase">Notifications</h4>
+                            {NOTIFICATIONS.map(n => (
+                                <div key={n.id} className="p-3 hover:bg-slate-50 rounded-lg cursor-pointer flex gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5"></div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">{n.title}</p>
+                                        <p className="text-xs text-slate-500">{n.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                 </div>
+
                  <button onClick={() => currentUser ? navigate('/profile') : openLogin('customer')} className={`p-2 rounded-full hover:bg-black/10 transition-colors ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
                     {currentUser ? <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-xs text-white border border-white">{currentUser.avatar}</div> : <User className="w-5 h-5" />}
                  </button>
                  
-                 <button onClick={() => setIsCartOpen(true)} className={`p-2 rounded-full hover:bg-black/10 relative ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
+                 <button onClick={() => setIsCartOpen(true)} className={`hidden md:block p-2 rounded-full hover:bg-black/10 relative ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
                     <ShoppingBag className="w-5 h-5" />
                     {cart.length > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full border border-white animate-pulse">{cart.length}</span>}
                  </button>
@@ -1066,13 +1002,16 @@ const CraftifyContent = () => {
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   addToCart={addToCart}
+                  products={products}
+                  shops={SHOPS} /* Passed shops so the view knows seller names */
                 />
              } />
              <Route path="/product/:id" element={
                 <ProductDetail 
-                    addToCart={addToCart} 
-                    openChat={openCustomizationChat}
-                    currentUser={currentUser}
+                   addToCart={addToCart} 
+                   openChat={openCustomizationChat}
+                   currentUser={currentUser}
+                   products={products}
                 />
              } />
              <Route path="/profile" element={
@@ -1080,18 +1019,31 @@ const CraftifyContent = () => {
                 <ProfileView currentUser={currentUser} orders={orders} onLogout={handleLogout} /> 
                 : <Navigate to="/" replace />
              } />
+             
+             {/* --- INTEGRATED FOUNDER ACCESS --- */}
              <Route path="/founder" element={
                 currentUser?.role === 'founder' ? 
-                <FounderDashboard users={USERS} shops={SHOPS} orders={orders} products={PRODUCTS} />
+                <FounderAccess users={USERS} shops={SHOPS} orders={orders} products={products} />
                 : <Navigate to="/" replace />
              } />
+
+             {/* --- INTEGRATED SELLER ADMIN (StoreAdmin) --- */}
              <Route path="/seller" element={
                 currentUser?.role === 'seller' ? 
-                <SellerDashboard currentUser={currentUser} products={PRODUCTS} orders={orders} chats={chats} />
+                <StoreAdmin 
+                   currentUser={currentUser} 
+                   products={products} 
+                   setProducts={setProducts}
+                   orders={orders} 
+                   chats={chats} 
+                />
                 : <Navigate to="/" replace />
              } />
          </Routes>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      {showNavbar && <MobileNav activeTab={activeTab} navigate={navigate} cartCount={cart.length} />}
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onLogin={handleLogin} initialMode={authMode} />
       
