@@ -42,18 +42,23 @@ const addOrderItems = async (req, res) => {
         const involvedShops = [...new Set(orderItems.map(item => item.shop))];
 
         for (const item of orderItems) {
-            const product = await Product.findById(item.product);
-            if (product) {
-                // Stock reduce karo
-                product.stock = product.stock - item.qty;
-                await product.save();
+            // --- OPTIMIZED: ATOMIC UPDATE ---
+            // Instead of finding, subtracting in JS, and saving (which is slow and risky),
+            // we let MongoDB handle the math atomically using $inc.
+            
+            const updatedProduct = await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { stock: -item.qty } }, // Decrement stock by qty
+                { new: true } // Return the updated document so we can send the new stock via Socket
+            );
 
+            if (updatedProduct) {
                 // --- SOCKET IO: Update Product Stock Instantly ---
                 // Agar koi aur user us product ko dekh raha hai, use turant dikhega "Only X left"
                 if (req.io) {
                     req.io.emit('product_updated', {
-                        _id: product._id,
-                        stock: product.stock
+                        _id: updatedProduct._id,
+                        stock: updatedProduct.stock
                     });
                 }
             }

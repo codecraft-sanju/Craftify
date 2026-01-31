@@ -1,3 +1,4 @@
+// LandingPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -356,11 +357,11 @@ const LandingPage = ({ onLoginClick }) => {
                       <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
                     </div>
                   </div>
-                  {/* Image Placeholder */}
+                  {/* Image Placeholder - UPDATED TO REMOTE URL */}
                   <div className="aspect-[16/9] bg-slate-900 relative flex items-center justify-center overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/20 to-purple-900/20"></div>
                       <img 
-                        src="/dashboard.png" 
+                        src="./dashboard.png" 
                         alt="Analytics Dashboard" 
                         className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" 
                         onError={(e) => {
@@ -400,7 +401,7 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* --- VALENTINE'S DAY SPECIAL SECTION (Replaces Pricing) --- */}
+      {/* --- VALENTINE'S DAY SPECIAL SECTION --- */}
       <section className="py-24 relative overflow-hidden" id="offers">
          {/* Background Decoration */}
          <div className="absolute inset-0 bg-gradient-to-b from-rose-950/20 to-slate-950"></div>
@@ -421,9 +422,9 @@ const LandingPage = ({ onLoginClick }) => {
          <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="glass-card rounded-[3rem] border-rose-500/30 overflow-hidden relative shadow-[0_0_100px_-20px_rgba(225,29,72,0.3)]">
                <div className="grid grid-cols-1 lg:grid-cols-2">
-                  
-                  {/* Left: Content */}
-                  <div className="p-10 md:p-16 flex flex-col justify-center">
+                 
+                 {/* Left: Content */}
+                 <div className="p-10 md:p-16 flex flex-col justify-center">
                      <div className="inline-flex items-center gap-2 text-rose-400 font-bold tracking-widest uppercase text-xs mb-4">
                         <Gift className="w-4 h-4" /> Valentine's Exclusive
                      </div>
@@ -457,10 +458,10 @@ const LandingPage = ({ onLoginClick }) => {
                            View Collection
                         </Button>
                      </div>
-                  </div>
+                 </div>
 
-                  {/* Right: Visuals */}
-                  <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10">
+                 {/* Right: Visuals */}
+                 <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10">
                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
                      
                      {/* Floating Cards Effect */}
@@ -485,7 +486,7 @@ const LandingPage = ({ onLoginClick }) => {
                            <Heart className="w-8 h-8 text-rose-500 fill-current" />
                         </div>
                      </div>
-                  </div>
+                 </div>
                </div>
             </div>
          </div>
@@ -500,8 +501,8 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-6 h-auto md:h-[650px]">
-             {/* Large Left Block */}
-             <div className="col-span-1 md:col-span-2 row-span-2 glass-card rounded-3xl p-10 relative overflow-hidden group reveal">
+              {/* Large Left Block */}
+              <div className="col-span-1 md:col-span-2 row-span-2 glass-card rounded-3xl p-10 relative overflow-hidden group reveal">
                 <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-30 transition-opacity duration-500">
                    <Globe className="w-64 h-64 text-indigo-500" />
                 </div>
@@ -530,21 +531,21 @@ const LandingPage = ({ onLoginClick }) => {
                       </div>
                    </div>
                 </div>
-             </div>
+              </div>
 
-             {/* Top Right Block */}
-             <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-100">
+              {/* Top Right Block */}
+              <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-100">
                 <ShieldCheck className="w-12 h-12 text-emerald-400 mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold text-white mb-2">Escrow Payments</h3>
                 <p className="text-sm text-slate-400 leading-relaxed">Funds are released only after customer satisfaction. 100% fraud protection.</p>
-             </div>
+              </div>
 
-             {/* Bottom Right Block */}
-             <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-200">
+              {/* Bottom Right Block */}
+              <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-200">
                 <Zap className="w-12 h-12 text-amber-400 mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold text-white mb-2">Instant Setup</h3>
                 <p className="text-sm text-slate-400 leading-relaxed">Go from sign-up to first sale in less than 5 minutes. No coding required.</p>
-             </div>
+              </div>
           </div>
         </div>
       </section>
@@ -559,17 +560,17 @@ const LandingPage = ({ onLoginClick }) => {
               <div key={i} className="flex gap-6 shrink-0">
                 {[1,2,3,4].map((n) => (
                   <div key={n} className="w-[350px] glass-card p-6 rounded-2xl shrink-0">
-                     <div className="flex gap-1 text-amber-400 mb-4">
-                        {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-current" />)}
-                     </div>
-                     <p className="text-slate-300 text-sm mb-6 leading-relaxed">"Craftify completely changed how I run my business. The automated shipping is a lifesaver!"</p>
-                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"></div>
-                        <div>
-                           <p className="text-white text-sm font-bold">Alex Johnson</p>
-                           <p className="text-slate-500 text-xs">Founder, PrintStyle</p>
-                        </div>
-                     </div>
+                      <div className="flex gap-1 text-amber-400 mb-4">
+                         {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-current" />)}
+                      </div>
+                      <p className="text-slate-300 text-sm mb-6 leading-relaxed">"Craftify completely changed how I run my business. The automated shipping is a lifesaver!"</p>
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"></div>
+                         <div>
+                            <p className="text-white text-sm font-bold">Alex Johnson</p>
+                            <p className="text-slate-500 text-xs">Founder, PrintStyle</p>
+                         </div>
+                      </div>
                   </div>
                 ))}
               </div>
@@ -637,8 +638,9 @@ const LandingPage = ({ onLoginClick }) => {
                   <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
                 ))}
                 <li>
-                  <button onClick={() => onLoginClick('founder')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
-                     <Lock className="w-3 h-3" /> Founder Access
+                  {/* UPDATED: DIRECT ROUTE TO ADMIN LOGIN */}
+                  <button onClick={() => navigate('/admin-login')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
+                      <Lock className="w-3 h-3" /> Founder Access
                   </button>
                 </li>
               </ul>

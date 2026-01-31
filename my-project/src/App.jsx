@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import { 
@@ -18,135 +19,78 @@ import {
 import LandingPage from './LandingPage'; 
 import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
-import ShopView from './ShopView'; // Imported the new separate file
+import ShopView from './ShopView'; 
+import SellerRegister from './SellerRegister'; 
 
 // ==========================================
-// 1. ENTERPRISE MOCK DATA & UTILITIES
+// 1. MOCK DATA (REPLACING BACKEND)
 // ==========================================
+
+const MOCK_USER = {
+  _id: "user_123",
+  name: "Sanjay Choudhary",
+  email: "sanjay@craftify.com",
+  role: "founder", 
+  avatar: "S",
+  token: "mock_token_xyz"
+};
+
+const MOCK_PRODUCTS = [
+  {
+    _id: "p1",
+    name: "Neon Vibes Custom Sign",
+    description: "Handcrafted LED neon sign. Perfect for bedroom decor or gaming setups. Energy efficient and long-lasting.",
+    price: 2499,
+    category: "Decor",
+    image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&q=80&w=800",
+    coverImage: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&q=80&w=800",
+    rating: 4.8,
+    numReviews: 120,
+    shop: { name: "Neon World" },
+    customizationAvailable: true,
+    customizationType: "neon",
+    colors: ["#FF00FF", "#00FFFF", "#FFFF00"],
+    sizes: ["S", "M", "L"],
+    specs: { Material: "Acrylic", Power: "12V Adapter" }
+  },
+  {
+    _id: "p2",
+    name: "Minimalist Cotton Tee",
+    description: "100% Organic Cotton. Breathable fabric with a modern fit. Customizable with your own text or logo.",
+    price: 799,
+    category: "Clothing",
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
+    coverImage: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
+    rating: 4.5,
+    numReviews: 85,
+    shop: { name: "Urban Threads" },
+    customizationAvailable: true,
+    customizationType: "print",
+    colors: ["#ffffff", "#000000", "#334455"],
+    sizes: ["M", "L", "XL", "XXL"],
+    specs: { Fabric: "Cotton", GSM: "180" }
+  },
+  {
+    _id: "p3",
+    name: "Engraved Wooden Wallet",
+    description: "Premium walnut wood wallet with RFID protection. Laser engrave your name for a personal touch.",
+    price: 1299,
+    category: "Accessories",
+    image: "https://images.unsplash.com/photo-1605646397368-8e658661621a?auto=format&fit=crop&q=80&w=800",
+    coverImage: "https://images.unsplash.com/photo-1605646397368-8e658661621a?auto=format&fit=crop&q=80&w=800",
+    rating: 4.9,
+    numReviews: 42,
+    shop: { name: "WoodWorks" },
+    customizationAvailable: true,
+    customizationType: "engraving",
+    colors: ["#5D4037"],
+    sizes: ["Standard"],
+    specs: { Wood: "Walnut", Cards: "Holds 6" }
+  }
+];
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date));
-
-// Mock Users
-const USERS = [
-  { id: 'founder1', name: 'Sanjay Choudhary', email: 'sanjay@craftify.com', role: 'founder', avatar: 'SC' },
-  { id: 'seller1', name: 'Rahul Dev', email: 'rahul@shop.com', role: 'seller', shopId: 's1', avatar: 'RD' },
-  { id: 'seller2', name: 'Priya Art', email: 'priya@art.com', role: 'seller', shopId: 's2', avatar: 'PA' },
-  { id: 'u2', name: 'Roshni', email: 'roshni@gmail.com', role: 'customer', avatar: 'R' }
-];
-
-// Mock Shops
-const SHOPS = [
-    { id: 's1', name: 'TechHaven', ownerId: 'seller1', revenue: 145000, totalOrders: 45, rating: 4.8, description: "Premium tech accessories and custom modifications." },
-    { id: 's2', name: 'ArtisanLoft', ownerId: 'seller2', revenue: 88000, totalOrders: 32, rating: 4.9, description: "Handcrafted apparel and sustainable goods." }
-];
-
-// Initial Mock Products
-const INITIAL_PRODUCTS = [
-  {
-    id: 'p1',
-    shopId: 's1',
-    name: "Obsidian Matte Pen",
-    category: "Office",
-    price: 499,
-    image: "https://images.unsplash.com/photo-1585336261022-680e295ce3fe?auto=format&fit=crop&q=80&w=800",
-    rating: 4.9,
-    reviews: 128,
-    stock: 150,
-    tags: ["Bestseller", "Laser Engravable"],
-    description: "Premium weighted metal pen with matte black finish. Perfect for corporate gifting with custom laser engraving options available upon request.",
-    specs: { material: "Brass Alloy", ink: "Gel Black (Refillable)", weight: "45g", mechanism: "Twist Action" },
-    colors: ["#000000", "#1a1a1a", "#C0C0C0"],
-    customizationAvailable: true,
-    customizationType: "engraving" // engraving, print, neon
-  },
-  {
-    id: 'p2',
-    shopId: 's2',
-    name: "Urban Oversized Tee",
-    category: "Apparel",
-    price: 899,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
-    rating: 4.7,
-    reviews: 84,
-    stock: 80,
-    tags: ["Trending", "100% Cotton"],
-    description: "240 GSM heavy cotton. Boxy fit. Ideal canvas for DTG printing or embroidery. Contact us for bulk team orders.",
-    specs: { material: "100% Cotton", gsm: "240", fit: "Oversized", wash: "Machine Cold" },
-    colors: ["#FFFFFF", "#000000", "#808000", "#000080"],
-    sizes: ["S", "M", "L", "XL"],
-    customizationAvailable: true,
-    customizationType: "print"
-  },
-  {
-    id: 'p3',
-    shopId: 's1',
-    name: "Cyberpunk Neon Sign",
-    category: "Tech",
-    price: 2499,
-    image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&q=80&w=800",
-    rating: 5.0,
-    reviews: 42,
-    stock: 15,
-    tags: ["Custom Text", "LED"],
-    description: "Custom LED neon sign. Send us your text or logo in the chat to get a preview. Low energy consumption, high impact.",
-    specs: { voltage: "12V Adapter", lifespan: "50,000 hrs", mount: "Wall Kit Included", material: "Acrylic Backboard" },
-    colors: ["#FF00FF", "#00FFFF", "#FFFF00"],
-    customizationAvailable: true,
-    customizationType: "neon"
-  },
-  {
-    id: 'p4',
-    shopId: 's2',
-    name: "Smart Temp Flask",
-    category: "Gifting",
-    price: 799,
-    image: "https://images.unsplash.com/photo-1602143407151-011141950038?auto=format&fit=crop&q=80&w=800",
-    rating: 4.6,
-    reviews: 210,
-    stock: 200,
-    tags: ["Corporate", "Smart"],
-    description: "LED temperature display. Keeps liquids hot/cold for 12 hours. Engrave your company logo for bulk orders.",
-    specs: { capacity: "500ml", material: "SS 304 Food Grade", battery: "500 days (Non-chargeable)" },
-    colors: ["#000000", "#FFFFFF", "#FF0000"],
-    customizationAvailable: false
-  }
-];
-
-// Mock Chats
-const MOCK_CHATS = [
-  {
-    id: 'c1',
-    productId: 'p1',
-    customerId: 'u2',
-    sellerId: 'seller1',
-    messages: [
-      { id: 1, sender: 'u2', text: "Hi, can I get 'Roshni' engraved on this pen?", time: "10:30 AM", type: 'text' },
-      { id: 2, sender: 'seller1', text: "Absolutely! We support laser engraving. Use the 'Customize' button to see a preview.", time: "10:35 AM", type: 'text' }
-    ]
-  }
-];
-
-const NOTIFICATIONS = [
-  { id: 1, title: "Order Shipped", text: "Your custom tee has been dispatched.", time: "2h ago", read: false },
-  { id: 2, title: "Seller Reply", text: "TechHaven replied to your query.", time: "5h ago", read: false }
-];
-
-// --- Custom Hooks ---
-
-const useStickyState = (defaultValue, key) => {
-  const [value, setValue] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stickyValue = window.localStorage.getItem(key);
-      return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
-    }
-    return defaultValue;
-  });
-  useEffect(() => {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-  return [value, setValue];
-};
 
 // ==========================================
 // 2. CORE UI COMPONENT LIBRARY
@@ -196,7 +140,6 @@ const Card = ({ children, className = "" }) => (
   </div>
 );
 
-// Toast Notification Component
 const ToastContainer = ({ toasts, removeToast }) => (
   <div className="fixed top-24 right-6 z-[120] flex flex-col gap-3 pointer-events-none">
     {toasts.map(toast => (
@@ -216,9 +159,8 @@ const ToastContainer = ({ toasts, removeToast }) => (
 // 3. COMPLEX FEATURE COMPONENTS
 // ==========================================
 
-// --- Visual Live Customizer (The "Studio" Feature) ---
+// --- Visual Live Customizer ---
 const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCustomFont }) => {
-    // Positioning logic based on product type
     const getOverlayStyle = () => {
         switch(product.customizationType) {
             case 'engraving': 
@@ -233,14 +175,13 @@ const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCus
     const fontStyles = {
         'Modern': 'font-sans tracking-widest uppercase',
         'Classic': 'font-serif italic',
-        'Handwritten': 'font-mono' // Approximating handwriting with mono for demo
+        'Handwritten': 'font-mono' 
     };
 
     return (
         <div className="relative w-full aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-inner group">
-            <img src={product.image} className="w-full h-full object-cover" alt="Preview" />
+            <img src={product.image || product.coverImage} className="w-full h-full object-cover" alt="Preview" />
             
-            {/* The Live Text Overlay */}
             {customText && (
                 <div 
                     className={`absolute z-10 text-xl md:text-3xl font-bold whitespace-nowrap pointer-events-none transition-all duration-300 ${fontStyles[customFont] || 'font-sans'}`}
@@ -260,15 +201,23 @@ const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCus
 };
 
 // --- Advanced Customization Chat Engine ---
-const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setChats }) => {
+const CustomizationChat = ({ isOpen, onClose, product, currentUser }) => {
   const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
-  const fileInputRef = useRef(null);
 
-  // Find existing chat or create temporary placeholder
-  const activeChat = chats.find(c => c.productId === product.id && c.customerId === currentUser?.id) || {
-    id: 'temp', productId: product.id, customerId: currentUser?.id, messages: []
-  };
+  useEffect(() => {
+    if (isOpen) {
+        setLoading(true);
+        setTimeout(() => {
+            setMessages([
+                { text: `Hi ${currentUser?.name || 'there'}! How can I help you customize this ${product.name}?`, sender: 'seller', createdAt: Date.now() }
+            ]);
+            setLoading(false);
+        }, 800);
+    }
+  }, [isOpen, product, currentUser]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -276,54 +225,21 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
 
   useEffect(() => {
     if (isOpen) scrollToBottom();
-  }, [isOpen, activeChat.messages]);
+  }, [isOpen, messages]);
 
-  const handleSend = (text = message, type = 'text') => {
-    if (!text.trim() && type === 'text') return;
-    
-    const newMessage = {
-      id: Date.now(),
-      sender: currentUser?.id || 'guest',
-      text: text,
-      type: type,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+  const handleSend = () => {
+    if (!message.trim()) return;
 
-    let updatedChats;
-    if (activeChat.id === 'temp') {
-      const newChat = {
-        ...activeChat,
-        id: generateId(),
-        sellerId: product.shopId,
-        messages: [newMessage]
-      };
-      updatedChats = [...chats, newChat];
-    } else {
-      updatedChats = chats.map(c => c.id === activeChat.id ? { ...c, messages: [...c.messages, newMessage] } : c);
-    }
-    
-    setChats(updatedChats);
+    // 1. Add User Message
+    const userMsg = { text: message, sender: currentUser?._id || 'user', createdAt: Date.now() };
+    setMessages(prev => [...prev, userMsg]);
     setMessage("");
 
-    // Simulate Bot/Seller Reply
+    // 2. Simulate Seller Reply
     setTimeout(() => {
-      const botReply = {
-        id: Date.now() + 1,
-        sender: 'system',
-        text: type === 'image' ? "Received your design! We'll review compatibility." : "Thanks! We've noted your request.",
-        type: 'text',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setChats(prev => prev.map(c => c.productId === product.id && c.customerId === currentUser?.id ? { ...c, messages: [...c.messages, botReply] } : c));
+        const sellerMsg = { text: "That sounds great! We can definitely do that for you.", sender: 'seller', createdAt: Date.now() };
+        setMessages(prev => [...prev, sellerMsg]);
     }, 1500);
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        // In a real app, upload to server. Here we simulate an image message.
-        handleSend("Image Attachment", 'image');
-    }
   };
 
   if (!isOpen) return null;
@@ -331,11 +247,10 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white w-full max-w-lg h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
-        {/* Header */}
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white p-1 border border-slate-200">
-              <img src={product.image} className="w-full h-full object-cover rounded" alt="" />
+              <img src={product.image || product.coverImage} className="w-full h-full object-cover rounded" alt="" />
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-sm">Chat: {product.name}</h3>
@@ -345,30 +260,17 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
         </div>
 
-        {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-          {activeChat.messages.length === 0 ? (
-            <div className="text-center py-10">
-              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8" />
-              </div>
-              <p className="font-bold text-slate-900">Start Discussion</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Share your logo, ask about fonts, or discuss bulk discounts.
-              </p>
-            </div>
+          {loading ? (
+             <div className="flex justify-center p-10"><RefreshCcw className="w-6 h-6 animate-spin text-indigo-500"/></div>
           ) : (
-            activeChat.messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.sender === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === currentUser?.id ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-sm'}`}>
-                  {msg.type === 'image' ? (
-                      <div className="flex items-center gap-2 bg-white/10 p-2 rounded-lg">
-                          <ImageIcon className="w-4 h-4" /> <span>Image Attached</span>
-                      </div>
-                  ) : (
-                      <p>{msg.text}</p>
-                  )}
-                  <p className={`text-[10px] mt-1 opacity-70 ${msg.sender === currentUser?.id ? 'text-indigo-100' : 'text-slate-400'}`}>{msg.time}</p>
+            messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.sender === (currentUser?._id || 'user') ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === (currentUser?._id || 'user') ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none shadow-sm'}`}>
+                  <p>{msg.text}</p>
+                  <p className={`text-[10px] mt-1 opacity-70 ${msg.sender === (currentUser?._id || 'user') ? 'text-indigo-100' : 'text-slate-400'}`}>
+                    {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </p>
                 </div>
               </div>
             ))
@@ -376,11 +278,9 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
           <div ref={chatEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="p-4 bg-white border-t border-slate-100">
           <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
-            <button onClick={() => fileInputRef.current.click()} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Paperclip className="w-5 h-5" /></button>
+            <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Paperclip className="w-5 h-5" /></button>
             <input 
               type="text" 
               className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400"
@@ -389,7 +289,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={() => handleSend()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
+            <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md">
               <Send className="w-4 h-4" />
             </button>
           </div>
@@ -400,7 +300,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, chats, setCh
 };
 
 // --- Cart Drawer ---
-const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
+const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + item.price, 0);
 
   const removeItem = (cartId) => {
@@ -432,7 +332,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
             cart.map(item => (
               <div key={item.cartId} className="flex gap-4 p-3 border border-slate-100 rounded-xl hover:border-indigo-100 transition-colors bg-white shadow-sm">
                 <div className="w-20 h-20 bg-slate-50 rounded-lg overflow-hidden shrink-0 relative">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover"/>
+                  <img src={item.image || item.coverImage} alt={item.name} className="w-full h-full object-cover"/>
                   {item.customization?.text && (
                       <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                           <span className="text-[8px] text-white font-bold bg-black/50 px-1 rounded">{item.customization.text}</span>
@@ -445,7 +345,6 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
                       <h4 className="font-bold text-sm text-slate-900 line-clamp-1">{item.name}</h4>
                       <button onClick={() => removeItem(item.cartId)} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
                     </div>
-                    {/* Customization Details Display */}
                     <div className="mt-1 space-y-1">
                         {item.selectedColor && (
                             <div className="flex items-center gap-2">
@@ -456,7 +355,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
                         {item.customization?.text && (
                             <div className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded w-fit">
                                 <Sparkles className="w-3 h-3" />
-                                <span>"{item.customization.text}" ({item.customization.font})</span>
+                                <span>"{item.customization.text}"</span>
                             </div>
                         )}
                     </div>
@@ -480,7 +379,9 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
               <span className="text-slate-900">Total</span>
               <span className="text-indigo-600">₹{total}</span>
             </div>
-            <Button onClick={onCheckout} className="w-full" size="lg" variant="primary">Checkout Now <ArrowRight className="w-4 h-4"/></Button>
+            <Button onClick={onCheckout} className="w-full" size="lg" variant="primary">
+                  {currentUser ? 'Checkout Now' : 'Login to Checkout'} <ArrowRight className="w-4 h-4"/>
+            </Button>
           </div>
         )}
       </div>
@@ -488,7 +389,7 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout }) => {
   );
 };
 
-// --- Mobile Bottom Navigation (Native App Feel) ---
+// --- Mobile Bottom Navigation ---
 const MobileNav = ({ activeTab, navigate, cartCount }) => {
     return (
         <div className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 flex justify-around items-center h-16 pb-safe">
@@ -500,7 +401,6 @@ const MobileNav = ({ activeTab, navigate, cartCount }) => {
                 <Grid className="w-5 h-5" />
                 <span className="text-[10px] font-bold">Shop</span>
             </button>
-            {/* Center Main Action - Cart */}
             <div className="relative -top-5">
                 <button onClick={() => document.dispatchEvent(new CustomEvent('openCart'))} className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
                     <ShoppingBag className="w-6 h-6" />
@@ -519,17 +419,25 @@ const MobileNav = ({ activeTab, navigate, cartCount }) => {
     );
 };
 
-// --- Authentication Modal ---
+// --- Authentication Modal (MOCKED) ---
 const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  const isFounderLogin = initialMode === 'founder';
+  
   useEffect(() => {
-    if(initialMode === 'founder') setEmail('sanjay@craftify.com');
-    else if(initialMode === 'seller') setEmail('rahul@shop.com');
-    else setEmail('');
+    if(isFounderLogin) {
+        setEmail('admin18@gmail.com');
+        setIsLogin(true); 
+    } else {
+        setEmail('');
+    }
+    setError("");
   }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
@@ -537,14 +445,23 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+
+    // SIMULATED LOGIN
     setTimeout(() => {
-      const user = USERS.find(u => u.email === email) || { 
-        id: generateId(), name: 'New User', email, role: 'customer', avatar: 'N' 
-      };
-      onLogin(user);
-      setLoading(false);
-      onClose();
-    }, 1500);
+        setLoading(false);
+        const role = isFounderLogin ? 'founder' : 'user';
+        
+        // Return Mock User
+        const user = {
+            ...MOCK_USER,
+            name: name || "Demo User",
+            email: email,
+            role: role
+        };
+        onLogin(user);
+        onClose();
+    }, 1000);
   };
 
   return (
@@ -554,15 +471,30 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
         <div className="p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-4 text-white shadow-lg shadow-indigo-200">
-               <Sparkles className="w-8 h-8" />
+               {isFounderLogin ? <Lock className="w-8 h-8" /> : <Sparkles className="w-8 h-8" />}
             </div>
             <h2 className="text-2xl font-black text-slate-900">
-               {initialMode === 'founder' ? 'Founder Login' : initialMode === 'seller' ? 'Seller Portal' : 'Welcome!'}
+               {isFounderLogin ? 'God Mode Access' : (isLogin ? 'Welcome Back' : 'Create Account')}
             </h2>
-            <p className="text-slate-500 text-sm mt-2">Enter your details to access.</p>
+            <p className="text-slate-500 text-sm mt-2">
+                {isFounderLogin ? 'Enter Admin Credentials' : 'Enter your details to access.'}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && !isFounderLogin && (
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 ml-1">Full Name</label>
+                    <input 
+                        type="text" 
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="w-full pl-4 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" 
+                        placeholder="John Doe"
+                        required={!isLogin}
+                    />
+                </div>
+            )}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 ml-1">Email Address</label>
               <div className="relative">
@@ -593,18 +525,17 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
             </div>
 
             <Button type="submit" loading={loading} className="w-full py-4 mt-4" variant="primary">
-              {isLogin ? 'Sign In' : 'Create Account'}
+              {isFounderLogin ? 'Unlock Dashboard' : (isLogin ? 'Sign In' : 'Sign Up')}
             </Button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-400">
-               Demo Logins:<br/>
-               Founder: sanjay@craftify.com<br/>
-               Seller: rahul@shop.com<br/>
-               Customer: roshni@gmail.com
-            </p>
-          </div>
+          {!isFounderLogin && (
+              <div className="mt-4 text-center">
+                  <button onClick={() => setIsLogin(!isLogin)} className="text-sm text-indigo-600 hover:underline font-bold">
+                      {isLogin ? "New here? Create Account" : "Already have an account? Sign In"}
+                  </button>
+              </div>
+          )}
         </div>
       </div>
     </div>
@@ -615,21 +546,19 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
 // 4. VIEWS (Common)
 // ==========================================
 
-// --- Product Detail View (High Ticket Item Feature) ---
+// --- Product Detail View ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = products.find(p => p.id === id);
-  const shop = SHOPS.find(s => s.id === product?.shopId);
+  // Ensure products are loaded or fetch specific product from state
+  const product = products.find(p => p._id === id || p.id === id);
   
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]);
   const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0]);
-  
-  // Customization State
   const [customText, setCustomText] = useState("");
   const [customFont, setCustomFont] = useState("Modern");
 
-  if (!product) return <div className="p-20 text-center">Product not found.</div>;
+  if (!product) return <div className="p-20 text-center">Loading Product...</div>;
 
   const handleAddToCart = () => {
       const customization = product.customizationAvailable && customText ? {
@@ -647,7 +576,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
        </button>
 
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-         {/* LEFT COLUMN: Visuals */}
          <div className="space-y-6">
              {product.customizationAvailable ? (
                  <LiveCustomizer 
@@ -659,11 +587,10 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
                  />
              ) : (
                 <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                   <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
+                   <img src={product.image || product.coverImage} className="w-full h-full object-cover" alt={product.name} />
                 </div>
              )}
 
-             {/* Customization Inputs (Only if available) */}
              {product.customizationAvailable && (
                  <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                      <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -700,7 +627,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
              )}
          </div>
 
-         {/* RIGHT COLUMN: Info & Actions */}
          <div className="flex flex-col h-full">
              <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
@@ -710,13 +636,12 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
                 <h1 className="text-4xl font-black text-slate-900 mb-2">{product.name}</h1>
                 <div className="flex items-center gap-2 text-sm">
                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> 
-                   <span className="font-bold">{product.rating}</span> 
-                   <span className="text-slate-400">({product.reviews} reviews)</span>
+                   <span className="font-bold">{product.rating || 0}</span> 
+                   <span className="text-slate-400">({product.reviews?.length || product.numReviews} reviews)</span>
                    <span className="text-slate-300">•</span>
-                   <span className="text-slate-500">By {shop?.name}</span>
+                   <span className="text-slate-500">By {product.shop?.name || 'Verified Seller'}</span>
                 </div>
 
-                {/* --- MODIFIED: Added Chat Button here as requested --- */}
                 <button 
                   onClick={() => openChat(product)}
                   className="mt-4 flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors w-fit border border-indigo-100"
@@ -724,65 +649,54 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
                    <MessageSquare className="w-4 h-4" />
                    Chat regarding this product
                 </button>
-                {/* ---------------------------------------------------- */}
              </div>
 
              <div className="text-3xl font-black text-slate-900 mb-8">₹{product.price}</div>
 
              <p className="text-slate-600 leading-relaxed mb-8">{product.description}</p>
 
-             {/* Selectors */}
-             {product.colors && (
+             {product.colors && product.colors.length > 0 && (
                <div className="mb-6">
                   <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Select Color</label>
                   <div className="flex gap-3">
-                     {product.colors.map(color => (
-                        <button 
+                      {product.colors.map(color => (
+                         <button 
                            key={color} 
                            onClick={() => setSelectedColor(color)}
                            className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === color ? 'border-indigo-600 scale-110' : 'border-slate-200 hover:scale-105'}`}
                            style={{ backgroundColor: color }}
                         />
-                     ))}
+                      ))}
                   </div>
                </div>
              )}
 
-             {product.sizes && (
+             {product.sizes && product.sizes.length > 0 && (
                <div className="mb-8">
                   <label className="text-xs font-bold uppercase text-slate-500 mb-2 block">Select Size</label>
                   <div className="flex gap-3">
-                     {product.sizes.map(size => (
-                        <button 
+                      {product.sizes.map(size => (
+                         <button 
                            key={size} 
                            onClick={() => setSelectedSize(size)}
                            className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center font-bold transition-all ${selectedSize === size ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
                         >
                            {size}
                         </button>
-                     ))}
+                      ))}
                   </div>
                </div>
              )}
 
-             {/* Action Buttons */}
              <div className="flex flex-col gap-3 mt-auto">
                 <Button size="lg" onClick={handleAddToCart} className="w-full">
                    <ShoppingBag className="w-5 h-5" /> Add to Cart
                 </Button>
-                
-                {/* Optional: Kept secondary chat button at bottom for access, or can remove if preferred */}
-                {product.customizationAvailable && (
-                   <Button size="lg" variant="secondary" onClick={() => openChat(product)} className="w-full">
-                      <MessageSquare className="w-5 h-5" /> Customize Details
-                   </Button>
-                )}
              </div>
 
-             {/* Specs */}
              <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-2 gap-4">
                 {product.specs && Object.entries(product.specs).map(([key, val]) => (
-                   <div key={key}>
+                   <div key={key} className={key === '_id' ? 'hidden' : ''}>
                       <span className="block text-xs text-slate-400 uppercase font-bold">{key}</span>
                       <span className="text-sm font-medium text-slate-900">{val}</span>
                    </div>
@@ -799,7 +713,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => (
     <div className="pt-24 pb-32 max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-6 mb-12 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
               <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-xl border-4 border-white">
-                 {currentUser?.avatar}
+                 {currentUser?.avatar || currentUser?.name?.charAt(0)}
               </div>
               <div className="text-center md:text-left">
                  <h1 className="text-3xl font-black text-slate-900">{currentUser?.name}</h1>
@@ -813,43 +727,124 @@ const ProfileView = ({ currentUser, orders, onLogout }) => (
           <Card className="p-6">
                 <h3 className="font-bold text-xl text-slate-800 mb-6">Order History</h3>
                 <div className="space-y-4">
-                     {orders.filter(o => o.customerId === currentUser?.id).length === 0 ? <p className="text-slate-400">No orders yet.</p> : 
-                        orders.filter(o => o.customerId === currentUser?.id).map(o => (
-                            <div key={o.id} className="flex flex-col md:flex-row justify-between p-4 bg-slate-50 rounded-xl gap-4">
-                               <div>
-                                   <p className="font-bold">Order #{o.id.slice(0,5)}</p>
-                                   <p className="text-xs text-slate-500">{o.items.length} items • {formatDate(o.date)}</p>
-                                   <div className="flex gap-2 mt-2">
-                                        {o.items.map((item, idx) => (
-                                            <div key={idx} className="w-10 h-10 rounded overflow-hidden border border-slate-200">
-                                                <img src={item.image} className="w-full h-full object-cover" />
-                                            </div>
-                                        ))}
-                                   </div>
-                               </div>
-                               <div className="text-right">
-                                   <span className="font-bold text-indigo-600 text-lg block">₹{o.total}</span>
-                                   <Badge color="green">Processing</Badge>
-                               </div>
-                            </div>
-                        ))
-                     }
+                      {orders.length === 0 ? <p className="text-slate-400">No orders yet.</p> : 
+                         orders.map(o => (
+                             <div key={o._id} className="flex flex-col md:flex-row justify-between p-4 bg-slate-50 rounded-xl gap-4">
+                                <div>
+                                    <p className="font-bold">Order #{o._id.toString().slice(0,5)}</p>
+                                    <p className="text-xs text-slate-500">{o.items.length} items • {formatDate(o.createdAt)}</p>
+                                    <div className="flex gap-2 mt-2">
+                                             {o.items.map((item, idx) => (
+                                                 <div key={idx} className="w-10 h-10 rounded overflow-hidden border border-slate-200">
+                                                      <img src={item.image || "https://via.placeholder.com/50"} className="w-full h-full object-cover" alt="" />
+                                                 </div>
+                                             ))}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="font-bold text-indigo-600 text-lg block">₹{o.totalPrice}</span>
+                                    <Badge color={o.orderStatus === 'Delivered' ? 'green' : 'indigo'}>{o.orderStatus || 'Processing'}</Badge>
+                                </div>
+                             </div>
+                         ))
+                      }
                 </div>
           </Card>
           <Button onClick={onLogout} variant="danger" className="w-full mt-6">Sign Out</Button>
     </div>
 );
 
+// --- Admin Login Page (NEW) ---
+const AdminLoginPage = ({ onLogin }) => {
+    const [email, setEmail] = useState("admin18@gmail.com");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+  
+    const handleLogin = (e) => {
+      e.preventDefault();
+      setLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+          setLoading(false);
+          const user = {
+              _id: "user_admin",
+              name: "Sanjay Choudhary",
+              email: email,
+              role: "founder",
+              avatar: "SC",
+              token: "god_token"
+          };
+          onLogin(user);
+      }, 1500);
+    };
+  
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+          {/* Background effects */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-slate-950"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+          
+          <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative z-10 animate-fade-in">
+               <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-slate-800 rounded-2xl mx-auto flex items-center justify-center mb-4 text-indigo-500 border border-slate-700 shadow-lg shadow-indigo-900/20">
+                      <Lock className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-3xl font-black text-white tracking-tight">God Mode Access</h2>
+                  <p className="text-slate-400 text-sm mt-2">Restricted Area. Authorized Personnel Only.</p>
+              </div>
+  
+              <form onSubmit={handleLogin} className="space-y-4">
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 ml-1 uppercase">Admin ID</label>
+                      <div className="relative">
+                          <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
+                          <input 
+                              type="email" 
+                              value={email}
+                              onChange={e => setEmail(e.target.value)}
+                              className="w-full pl-12 pr-4 py-3 bg-slate-950/50 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all font-medium placeholder:text-slate-600" 
+                              placeholder="admin@craftify.com"
+                              required
+                          />
+                      </div>
+                  </div>
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 ml-1 uppercase">Security Key</label>
+                      <div className="relative">
+                          <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
+                          <input 
+                              type="password" 
+                              value={password}
+                              onChange={e => setPassword(e.target.value)}
+                              className="w-full pl-12 pr-4 py-3 bg-slate-950/50 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all font-medium placeholder:text-slate-600" 
+                              placeholder="••••••••"
+                              required
+                          />
+                      </div>
+                  </div>
+  
+                  <Button type="submit" loading={loading} className="w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-500 text-white border-0 shadow-lg shadow-indigo-500/25">
+                      {loading ? 'Authenticating...' : 'Unlock System'}
+                  </Button>
+              </form>
+               <div className="mt-8 text-center">
+                   <button onClick={() => navigate('/')} className="text-slate-500 hover:text-white text-sm transition-colors">Return to Safety</button>
+               </div>
+          </div>
+      </div>
+    );
+  };
+
 // ==========================================
 // 5. MAIN APP COMPONENT & ROUTER
 // ==========================================
 
 const CraftifyContent = () => {
-  const [currentUser, setCurrentUser] = useStickyState(null, 'craftify_user');
-  const [cart, setCart] = useStickyState([], 'craftify_cart');
-  const [orders, setOrders] = useStickyState([], 'craftify_orders');
-  const [chats, setChats] = useStickyState(MOCK_CHATS, 'craftify_chats');
-  const [products, setProducts] = useStickyState(INITIAL_PRODUCTS, 'craftify_products');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [cart, setCart] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState(MOCK_PRODUCTS);
   
   const [toasts, setToasts] = useState([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -864,13 +859,17 @@ const CraftifyContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Custom Event Listener for Mobile Nav
+  // 1. Initial Load: Check Auth
   useEffect(() => {
-      const openCartHandler = () => setIsCartOpen(true);
-      document.addEventListener('openCart', openCartHandler);
-      return () => document.removeEventListener('openCart', openCartHandler);
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if(userInfo) {
+        setCurrentUser(userInfo);
+    }
+    // Also load mock orders if user exists
+    if(userInfo) setOrders([{ _id: "order_old_1", items: [MOCK_PRODUCTS[0]], totalPrice: 2499, createdAt: Date.now(), orderStatus: 'Delivered' }]);
   }, []);
 
+  // --- Helpers ---
   const addToast = (title, message, type = 'success') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, title, message, type }]);
@@ -896,45 +895,64 @@ const CraftifyContent = () => {
 
   const handleLogin = (user) => {
     setCurrentUser(user);
+    localStorage.setItem("userInfo", JSON.stringify(user));
     setIsAuthOpen(false);
     addToast("Welcome Back", `Signed in as ${user.name}`);
-    if(user.role === 'founder') navigate('/founder');
-    else if(user.role === 'seller') navigate('/seller');
+    
+    // REDIRECT LOGIC
+    if(user.role === 'founder') {
+        navigate('/founder');
+    } 
+    else if(user.role === 'seller') {
+        navigate('/my-shop');
+    }
   };
 
   const openLogin = (mode = 'customer') => {
+      // If user wants to be a seller, send them to the Seller page (which now handles login too)
+      if(mode === 'seller') {
+          // Default to login mode if explicitly asked for seller login
+          navigate('/seller-login'); 
+          return;
+      }
       setAuthMode(mode);
       setIsAuthOpen(true);
   };
 
   const handleLogout = () => {
+      localStorage.removeItem("userInfo");
       setCurrentUser(null);
+      setOrders([]);
       navigate('/');
   };
 
   const handleCheckout = () => {
-    setIsCartOpen(false);
     if (!currentUser) return openLogin();
     
     const newOrder = {
-      id: generateId(),
-      items: cart,
-      total: cart.reduce((acc, i) => acc + i.price, 0),
-      date: new Date(),
-      status: 'Processing',
-      customerName: currentUser.name,
-      customerId: currentUser.id
+        _id: generateId(),
+        items: cart,
+        totalPrice: cart.reduce((acc, i) => acc + i.price, 0),
+        createdAt: Date.now(),
+        orderStatus: 'Processing'
     };
+
     setOrders([newOrder, ...orders]);
     setCart([]);
+    setIsCartOpen(false);
     addToast("Order Placed!", "Thank you for your purchase.");
     navigate('/profile');
   };
 
-  const showNavbar = location.pathname !== '/founder' && location.pathname !== '/';
-  
-  // Determine active tab for mobile nav
+  // Hide Navbar for landing page, seller register, seller login, and admin login
+  const showNavbar = location.pathname !== '/founder' && location.pathname !== '/' && location.pathname !== '/seller-register' && location.pathname !== '/seller-login' && location.pathname !== '/admin-login';
   const activeTab = location.pathname === '/' ? 'home' : location.pathname === '/shop' ? 'shop' : location.pathname === '/profile' ? 'profile' : 'more';
+
+  useEffect(() => {
+    const openCartHandler = () => setIsCartOpen(true);
+    document.addEventListener('openCart', openCartHandler);
+    return () => document.removeEventListener('openCart', openCartHandler);
+  }, []);
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 pb-20 md:pb-0">
@@ -955,26 +973,17 @@ const CraftifyContent = () => {
 
               <div className="flex items-center gap-4">
                  {currentUser?.role === 'founder' && <Button size="sm" onClick={() => navigate('/founder')}>Founder Mode</Button>}
-                 {currentUser?.role === 'seller' && <Button size="sm" onClick={() => navigate('/seller')}>Seller Dashboard</Button>}
                  
-                 {/* Notification Bell */}
+                 {currentUser?.role === 'seller' && <Button size="sm" onClick={() => navigate('/my-shop')}>Seller Dashboard</Button>}
+                 
                  <div className="relative">
                     <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2 rounded-full hover:bg-black/10 relative ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
                         <Bell className="w-5 h-5" />
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
                     {isNotificationsOpen && (
                         <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-2 animate-fade-in z-[60]">
                             <h4 className="font-bold text-xs p-2 text-slate-500 uppercase">Notifications</h4>
-                            {NOTIFICATIONS.map(n => (
-                                <div key={n.id} className="p-3 hover:bg-slate-50 rounded-lg cursor-pointer flex gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5"></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-800">{n.title}</p>
-                                        <p className="text-xs text-slate-500">{n.text}</p>
-                                    </div>
-                                </div>
-                            ))}
+                            <p className="text-xs text-center p-2 text-slate-400">No new notifications</p>
                         </div>
                     )}
                  </div>
@@ -995,6 +1004,29 @@ const CraftifyContent = () => {
       <main className="min-h-screen">
          <Routes>
              <Route path="/" element={<LandingPage onLoginClick={openLogin} />} />
+             
+             {/* --- UPDATED: Split Seller Routes --- */}
+             <Route path="/seller-register" element={
+                 <SellerRegister 
+                    onLoginSuccess={handleLogin}
+                    initialMode="register" 
+                 />
+             } />
+
+             <Route path="/seller-login" element={
+                 <SellerRegister 
+                    onLoginSuccess={handleLogin}
+                    initialMode="login" 
+                 />
+             } />
+
+             {/* --- NEW: Admin Login Route --- */}
+             <Route path="/admin-login" element={
+                 <AdminLoginPage 
+                    onLogin={handleLogin}
+                 />
+             } />
+
              <Route path="/shop" element={
                 <ShopView 
                   activeCategory={activeCategory} 
@@ -1003,7 +1035,7 @@ const CraftifyContent = () => {
                   setSearchQuery={setSearchQuery}
                   addToCart={addToCart}
                   products={products}
-                  shops={SHOPS} /* Passed shops so the view knows seller names */
+                  shops={[]} 
                 />
              } />
              <Route path="/product/:id" element={
@@ -1020,29 +1052,22 @@ const CraftifyContent = () => {
                 : <Navigate to="/" replace />
              } />
              
-             {/* --- INTEGRATED FOUNDER ACCESS --- */}
              <Route path="/founder" element={
                 currentUser?.role === 'founder' ? 
-                <FounderAccess users={USERS} shops={SHOPS} orders={orders} products={products} />
+                <FounderAccess currentUser={currentUser} />
                 : <Navigate to="/" replace />
              } />
 
-             {/* --- INTEGRATED SELLER ADMIN (StoreAdmin) --- */}
-             <Route path="/seller" element={
+             <Route path="/my-shop" element={
                 currentUser?.role === 'seller' ? 
                 <StoreAdmin 
                    currentUser={currentUser} 
-                   products={products} 
-                   setProducts={setProducts}
-                   orders={orders} 
-                   chats={chats} 
                 />
                 : <Navigate to="/" replace />
              } />
          </Routes>
       </main>
 
-      {/* Mobile Bottom Navigation */}
       {showNavbar && <MobileNav activeTab={activeTab} navigate={navigate} cartCount={cart.length} />}
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onLogin={handleLogin} initialMode={authMode} />
@@ -1053,6 +1078,7 @@ const CraftifyContent = () => {
         cart={cart}
         setCart={setCart}
         onCheckout={handleCheckout}
+        currentUser={currentUser}
       />
 
       {activeChatProduct && (
@@ -1061,8 +1087,6 @@ const CraftifyContent = () => {
            onClose={() => setIsChatOpen(false)}
            product={activeChatProduct}
            currentUser={currentUser}
-           chats={chats}
-           setChats={setChats}
         />
       )}
     </div>

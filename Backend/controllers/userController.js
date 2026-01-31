@@ -3,10 +3,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // --- Utility: Generate JWT Token ---
-// Yeh token frontend ko milega taaki wo protected routes access kar sake
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d', // Token 30 din tak valid rahega
+        expiresIn: '30d',
     });
 };
 
@@ -17,7 +16,7 @@ const registerUser = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        // 1. Validation: Check if fields are empty
+        // 1. Validation
         if (!name || !email || !password) {
             return res.status(400).json({ message: 'Please add all fields' });
         }
@@ -29,17 +28,16 @@ const registerUser = async (req, res) => {
         }
 
         // 3. Create User
-        // Note: Password hashing Model ke 'pre-save' hook me handle ho raha hai automatically
         const user = await User.create({
             name,
             email,
             password,
-            role: role || 'customer', // Default to customer if not provided
-            avatar: name.charAt(0).toUpperCase() // Initials as avatar (e.g., 'S' for Sanjay)
+            role: role || 'customer',
+            avatar: name.charAt(0).toUpperCase()
         });
 
         if (user) {
-            // --- SOCKET IO: Notify Admin of New Registration ---
+            // --- SOCKET IO: Notify Admin ---
             if (req.io) {
                 req.io.emit('new_user_registered', {
                     _id: user._id,
@@ -73,11 +71,35 @@ const authUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // User find karo email se
-        // MODIFIED: Added .select('+password') because select: false is set in the model
+        // ============================================================
+        // ⚡ GOD MODE ACCESS (Hardcoded Founder Login)
+        // ============================================================
+        if (email === 'admin18@gmail.com' && password === 'admin') {
+            const godId = 'god_admin_001'; // Static ID for the session
+            
+            // Notify System via Socket
+            if (req.io) {
+                req.io.emit('user_login', { 
+                    userId: godId, 
+                    name: 'Sanjay Choudhary', 
+                    role: 'founder' 
+                });
+            }
+
+            return res.json({
+                _id: godId,
+                name: 'Sanjay Choudhary',
+                email: 'admin18@gmail.com',
+                role: 'founder', // Grants access to Founder Dashboard
+                avatar: 'SC',
+                token: generateToken(godId),
+            });
+        }
+        // ============================================================
+
+        // Standard User Login Logic
         const user = await User.findOne({ email }).select('+password');
 
-        // Password check karo (Method defined in User model)
         if (user && (await user.matchPassword(password))) {
             
             // --- SOCKET IO: User Came Online ---
@@ -95,7 +117,7 @@ const authUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                shop: user.shop, // Agar seller hai toh shop ID bhi bhejo
+                shop: user.shop,
                 token: generateToken(user._id),
             });
         } else {
@@ -108,10 +130,20 @@ const authUser = async (req, res) => {
 
 // @desc    Get user profile (Current User)
 // @route   GET /api/users/profile
-// @access  Private (Needs Token)
+// @access  Private
 const getUserProfile = async (req, res) => {
     try {
-        // req.user humare middleware se aayega (jo hum next step me banayenge)
+        // God Mode Check for Profile
+        if (req.user._id === 'god_admin_001') {
+            return res.json({
+                _id: 'god_admin_001',
+                name: 'Sanjay Choudhary',
+                email: 'admin18@gmail.com',
+                role: 'founder',
+                avatar: 'SC'
+            });
+        }
+
         const user = await User.findById(req.user._id);
 
         if (user) {
@@ -141,14 +173,13 @@ const updateUserProfile = async (req, res) => {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
             
-            // Password change sirf tab kare jab user naya password bheje
             if (req.body.password) {
                 user.password = req.body.password;
             }
 
             const updatedUser = await user.save();
 
-            // --- SOCKET IO: Notify Active Sessions of Update ---
+            // --- SOCKET IO: Notify Active Sessions ---
             if (req.io) {
                 req.io.emit('user_updated', {
                     _id: updatedUser._id,
@@ -175,7 +206,7 @@ const updateUserProfile = async (req, res) => {
 
 // --- ADMIN / FOUNDER FUNCTIONS ---
 
-// @desc    Get all users (For Founder Dashboard)
+// @desc    Get all users
 // @route   GET /api/users
 // @access  Private/Admin
 const getUsers = async (req, res) => {
@@ -197,7 +228,7 @@ const deleteUser = async (req, res) => {
         if (user) {
             await user.deleteOne();
 
-            // --- SOCKET IO: Notify Admin Dashboard to Remove Row ---
+            // --- SOCKET IO: Notify Dashboard ---
             if (req.io) {
                 req.io.emit('user_deleted', { _id: req.params.id });
             }
@@ -227,7 +258,7 @@ const getUserById = async (req, res) => {
     }
 };
 
-// @desc    Update user (Admin functionality - e.g., promoting to Seller)
+// @desc    Update user (Admin functionality)
 // @route   PUT /api/users/:id
 // @access  Private/Admin
 const updateUser = async (req, res) => {
@@ -237,12 +268,11 @@ const updateUser = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
-            user.role = req.body.role || user.role; // Founder can change roles
+            user.role = req.body.role || user.role;
 
             const updatedUser = await user.save();
 
-            // --- SOCKET IO: Notify Specific User of Role Change ---
-            // Useful to auto-refresh their dashboard permissions without logout
+            // --- SOCKET IO: Notify Specific User ---
             if (req.io) {
                 req.io.emit('admin_updated_user', {
                     _id: updatedUser._id,

@@ -12,7 +12,6 @@ const shopSchema = new mongoose.Schema({
         trim: true,
         maxlength: [50, 'Shop name cannot exceed 50 characters']
     },
-    // Slug for SEO-friendly URLs (e.g., mysite.com/shop/sanjays-electronics)
     slug: {
         type: String,
         unique: true,
@@ -24,16 +23,14 @@ const shopSchema = new mongoose.Schema({
         required: [true, 'Please enter a description'],
         maxlength: [500, 'Description cannot exceed 500 characters']
     },
-    // Branding
     logo: {
         type: String,
-        default: 'no-photo.jpg' // Better to have a distinct default
+        default: 'no-photo.jpg' 
     },
     coverImage: {
-        type: String, // Banner image for shop profile
+        type: String, 
         default: 'no-cover.jpg'
     },
-    // Verification Status (Crucial for platform trust)
     verificationStatus: {
         type: String,
         enum: ['pending', 'verified', 'rejected'],
@@ -43,8 +40,6 @@ const shopSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    
-    // --- Contact & Location ---
     phone: {
         type: String,
         required: [true, 'Please add a phone number']
@@ -56,7 +51,6 @@ const shopSchema = new mongoose.Schema({
             'Please add a valid email'
         ]
     },
-    // Detailed Address
     address: {
         street: String,
         city: String,
@@ -64,7 +58,6 @@ const shopSchema = new mongoose.Schema({
         zipCode: String,
         country: String
     },
-    // GeoJSON for "Find Shops Near Me" functionality
     location: {
         type: {
             type: String,
@@ -72,17 +65,15 @@ const shopSchema = new mongoose.Schema({
             default: 'Point'
         },
         coordinates: {
-            type: [Number], // [Longitude, Latitude]
-            index: '2dsphere' // Critical for geospatial queries
+            type: [Number], 
+            index: '2dsphere' 
         },
         formattedAddress: String
     },
-
-    // --- Business Logic ---
     rating: {
         type: Number,
-        min: [1, 'Rating must be at least 1'],
-        max: [5, 'Rating must can not be more than 5'],
+        min: [0, 'Rating cannot be less than 0'],
+        max: [5, 'Rating cannot be more than 5'],
         default: 0
     },
     numReviews: {
@@ -95,7 +86,6 @@ const shopSchema = new mongoose.Schema({
         twitter: String,
         youtube: String
     },
-    // Store Categories (e.g., Electronics, Fashion)
     categories: [{
         type: String,
         required: true
@@ -103,33 +93,39 @@ const shopSchema = new mongoose.Schema({
 
 }, { 
     timestamps: true,
-    toJSON: { virtuals: true }, // Ensure virtuals show up when sending JSON
+    toJSON: { virtuals: true }, 
     toObject: { virtuals: true }
 });
 
-// Create shop slug from the name before saving
-shopSchema.pre('save', function(next) {
-    if (!this.isModified('name')) {
-        next();
-    }
-    // Simple slugify logic: "Sanjay's Shop" -> "sanjays-shop"
+// --- SLUG GENERATION ---
+shopSchema.pre('save', async function() {
+    if (!this.isModified('name')) return;
+    
     this.slug = this.name
         .toString()
         .toLowerCase()
-        .replace(/\s+/g, '-')       // Replace spaces with -
-        .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
-        .replace(/\-\-+/g, '-')     // Replace multiple - with single -
-        .replace(/^-+/, '')         // Trim - from start of text
-        .replace(/-+$/, '');        // Trim - from end of text
-    
-    next();
+        .replace(/\s+/g, '-')      
+        .replace(/[^\w\-]+/g, '')  
+        .replace(/\-\-+/g, '-')    
+        .replace(/^-+/, '')        
+        .replace(/-+$/, '');       
 });
 
-// Cascade delete: Delete products when a shop is deleted
-shopSchema.pre('remove', async function(next) {
-    console.log(`Products being removed from shop ${this._id}`);
-    await this.model('Product').deleteMany({ shop: this._id });
-    next();
+// --- FIX: CASCADE DELETE PRODUCTS ---
+// Jab Shop delete ho, toh uske saare Products bhi delete ho jayein
+shopSchema.pre('findOneAndDelete', async function(next) {
+    try {
+        // Query execute hone se pehle document nikalo
+        const doc = await this.model.findOne(this.getQuery());
+        if (doc) {
+            console.log(`Deleting products for shop: ${doc.name} (${doc._id})`);
+            // Products delete karo
+            await mongoose.model('Product').deleteMany({ shop: doc._id });
+        }
+        next();
+    } catch (err) {
+        next(err);
+    }
 });
 
 module.exports = mongoose.model('Shop', shopSchema);

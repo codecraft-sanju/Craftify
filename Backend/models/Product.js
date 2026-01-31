@@ -18,7 +18,6 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Please enter product name'],
         trim: true
     },
-    // SEO Friendly URL (e.g., /product/custom-neon-sign-blue)
     slug: {
         type: String,
         lowercase: true,
@@ -32,31 +31,28 @@ const productSchema = new mongoose.Schema({
     category: {
         type: String,
         required: [true, 'Please enter product category'],
-        index: true // Helps filter faster
+        index: true 
     },
     brand: {
         type: String
     },
-
-    // --- Pricing & Sales ---
     price: {
         type: Number,
         required: [true, 'Please enter product price'],
         maxlength: [9, 'Price cannot exceed 9 figures']
     },
     compareAtPrice: {
-        type: Number, // The "Original" price before discount
-        default: 0    // If price is 100 and compareAt is 150, frontend shows 33% OFF
+        type: Number, 
+        default: 0    
     },
     sold: {
         type: Number,
-        default: 0 // Track sales to show "Popular" or "Best Selling"
+        default: 0 
     },
-
-    // --- Inventory & Logistics ---
     sku: {
-        type: String, // Stock Keeping Unit (unique ID for warehouse)
-        unique: true
+        type: String, 
+        unique: true,
+        sparse: true 
     },
     stock: {
         type: Number,
@@ -65,56 +61,41 @@ const productSchema = new mongoose.Schema({
     },
     lowStockThreshold: {
         type: Number,
-        default: 5 // Alert seller when stock drops below this
+        default: 5 
     },
     shipping: {
-        weight: { type: Number, default: 0 }, // in grams
+        weight: { type: Number, default: 0 }, 
         dimensions: {
             length: { type: Number, default: 0 },
             width: { type: Number, default: 0 },
             height: { type: Number, default: 0 }
         }
     },
-
-    // --- Media ---
-    // Main display image
     coverImage: {
         type: String,
         required: true
     },
-    // Gallery images
     images: [
         {
-            public_id: { type: String, required: true },
+            public_id: { type: String }, 
             url: { type: String, required: true }
         }
     ],
-
-    // --- Attributes & Variants ---
     colors: [String], 
     sizes: [String],
     specs: [{
-        key: String,   // e.g., "Material"
-        value: String  // e.g., "100% Cotton"
+        key: String,   
+        value: String  
     }],
-
-    // --- Customization Logic (Advanced) ---
-    isCustomizable: {
+    customizationAvailable: { 
         type: Boolean,
         default: false
     },
-    customizationOptions: {
-        type: {
-            type: String, // 'text', 'upload', 'selection'
-            enum: ['text', 'upload', 'selection', 'none'],
-            default: 'none'
-        },
-        instruction: String, // "Enter the name to be engraved"
-        extraFee: { type: Number, default: 0 }, // Cost for customization
-        required: { type: Boolean, default: false }
+    customizationType: { 
+        type: String, 
+        enum: ['text', 'upload', 'selection', 'none'],
+        default: 'none'
     },
-
-    // --- Social Proof ---
     reviews: [reviewSchema],
     rating: {
         type: Number,
@@ -124,8 +105,6 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    
-    // Soft Delete (Don't actually delete products, just hide them)
     isActive: {
         type: Boolean,
         default: true
@@ -137,17 +116,21 @@ const productSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Create slug from name
-productSchema.pre('save', function(next) {
-    if (!this.isModified('name')) {
-        next();
-    }
-    this.slug = this.name.toLowerCase().split(' ').join('-');
-    next();
+// --- FIXED: Removed 'next' completely ---
+// Changed to async function for consistency
+productSchema.pre('save', async function() {
+    if (!this.isModified('name')) return;
+    
+    this.slug = this.name
+        .toString()
+        .toLowerCase()
+        .replace(/\s+/g, '-')      
+        .replace(/[^\w\-]+/g, '')  
+        .replace(/\-\-+/g, '-')    
+        .replace(/^-+/, '')        
+        .replace(/-+$/, '');       
 });
 
-// Update Average Rating after saving a review
-// Note: This requires complex aggregation, simplified here for understanding
 productSchema.methods.calculateRating = function() {
     if (this.reviews.length === 0) {
         this.rating = 0;

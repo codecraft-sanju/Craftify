@@ -48,7 +48,7 @@ const chatSchema = new mongoose.Schema({
     product: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product'
-        // Not required: Users might chat about a general shop inquiry, not a specific product
+        // Not required: Users might chat about a general shop inquiry
     },
     
     // Status Metadata (Optimization for Inbox View)
@@ -76,13 +76,15 @@ const chatSchema = new mongoose.Schema({
     },
 
     // The actual conversation
+    // Note: If chats become extremely long (>1000 msgs), consider referencing instead of embedding.
+    // For a marketplace context, embedding is usually fine and faster.
     messages: [messageSchema]
 
 }, { timestamps: true });
 
 // Index for faster queries when loading a user's inbox
-// We often query by "find chats where I am the customer OR the seller"
-chatSchema.index({ customer: 1, seller: 1 });
-chatSchema.index({ lastMessageAt: -1 }); // Useful for sorting inbox by newest
+// Allows finding "All chats where I am the Customer" or "All chats where I am the Seller" efficiently
+chatSchema.index({ customer: 1, lastMessageAt: -1 });
+chatSchema.index({ seller: 1, lastMessageAt: -1 });
 
 module.exports = mongoose.model('Chat', chatSchema);

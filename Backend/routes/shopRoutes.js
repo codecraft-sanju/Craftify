@@ -20,7 +20,7 @@ router.route('/')
     .get(protect, founder, getAllShops); // Founder sees all shops
 
 router.route('/my-shop')
-    .get(protect, seller, getMyShop)
+    .get(protect, getMyShop)
     .put(protect, seller, updateShopProfile);
 
 // Founder Actions
