@@ -11,18 +11,18 @@ const {
 } = require('../controllers/orderController');
 const { protect, seller, founder } = require('../middleware/authMiddleware');
 
-// Base Routes
+// Base Route
 router.route('/')
-    .post(protect, addOrderItems) // Customer places order
-    .get(protect, founder, getOrders); // Founder sees all
+    .post(protect, addOrderItems) // Place Order
+    .get(protect, founder, getOrders); // Admin View
 
-// Specific Lists
+// Specific Lists (Static Paths)
 router.route('/myorders').get(protect, getMyOrders); // Customer History
 router.route('/shop-orders').get(protect, seller, getShopOrders); // Seller Dashboard
 
-// Specific Order Operations
+// Dynamic ID Routes (Last)
 router.route('/:id').get(protect, getOrderById);
-router.route('/:id/pay').put(protect, updateOrderToPaid); // Payment Gateway webhook
-router.route('/:id/deliver').put(protect, seller, updateOrderStatus); // Update Status
+router.route('/:id/pay').put(protect, updateOrderToPaid); 
+router.route('/:id/deliver').put(protect, seller, updateOrderStatus); 
 
 module.exports = router;

@@ -1,3 +1,4 @@
+// backend/controllers/chatController.js
 const Chat = require('../models/Chat');
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
@@ -14,34 +15,34 @@ const accessChat = async (req, res) => {
     }
 
     try {
-        // 1. Product dhundo taaki Seller (Shop Owner) ka pata chale
+        // 1. Find Product & Shop to identify Seller
         const product = await Product.findById(productId);
         if(!product) return res.status(404).json({ message: "Product not found" });
 
         const shop = await Shop.findById(product.shop);
         if(!shop) return res.status(404).json({ message: "Shop not found" });
 
-        const sellerId = shop.owner; // Shop ka owner hi Seller hai
+        const sellerId = shop.owner; // The owner of the shop is the Seller
 
-        // 2. Check karo ki kya Customer aur Seller ke beech IS Product ke liye pehle se chat hai?
+        // 2. Check if Chat already exists between Customer & Seller for THIS Product
         let isChat = await Chat.findOne({
             customer: req.user._id,
             product: productId
         })
         .populate("customer", "name email avatar")
         .populate("seller", "name email avatar")
-        .populate("product");
+        .populate("product", "name image coverImage");
 
-        // 3. Agar Chat hai, toh wahi return karo
+        // 3. If Chat exists, return it
         if (isChat) {
             res.send(isChat);
         } else {
-            // 4. Agar Chat nahi hai, toh Nayi Chat Create karo
+            // 4. If Chat doesn't exist, create a new one
             var chatData = {
                 customer: req.user._id,
                 seller: sellerId,
                 product: productId,
-                messages: [] // Empty start
+                messages: [] // Start empty
             };
 
             const createdChat = await Chat.create(chatData);
@@ -49,14 +50,13 @@ const accessChat = async (req, res) => {
             const FullChat = await Chat.findOne({ _id: createdChat._id })
                 .populate("customer", "name email avatar")
                 .populate("seller", "name email avatar")
-                .populate("product");
+                .populate("product", "name image coverImage");
 
-            // --- SOCKET IO: Notify Seller of New Inquiry ---
-            // Seller ke inbox me nayi chat turant dikhni chahiye
+            // --- SOCKET IO: Notify Seller ---
             if (req.io) {
                 req.io.emit('new_chat_started', {
                     chat: FullChat,
-                    receiverId: sellerId // Only the seller should react to this
+                    receiverId: sellerId // Only seller listens
                 });
             }
 
@@ -72,11 +72,11 @@ const accessChat = async (req, res) => {
 // @access  Private
 const fetchMyChats = async (req, res) => {
     try {
-        // Woh chats dhundo jaha user "customer" hai
+        // Find chats where user is "customer"
         const results = await Chat.find({ customer: req.user._id })
-            .populate("seller", "name avatar") // Seller ka naam dikhana hai list me
-            .populate("product", "name image") // Product ki photo dikhani hai
-            .sort({ updatedAt: -1 }); // Latest chat upar
+            .populate("seller", "name avatar") // Show seller name
+            .populate("product", "name coverImage") // Show product image
+            .sort({ updatedAt: -1 }); // Latest first
 
         res.status(200).send(results);
     } catch (error) {
@@ -89,10 +89,10 @@ const fetchMyChats = async (req, res) => {
 // @access  Private (Seller)
 const fetchShopChats = async (req, res) => {
     try {
-        // Woh chats dhundo jaha user "seller" hai
+        // Find chats where user is "seller"
         const results = await Chat.find({ seller: req.user._id })
-            .populate("customer", "name avatar") // Customer ka naam dikhana hai
-            .populate("product", "name image")
+            .populate("customer", "name avatar") // Show customer name
+            .populate("product", "name coverImage")
             .sort({ updatedAt: -1 });
 
         res.status(200).send(results);
@@ -105,52 +105,48 @@ const fetchShopChats = async (req, res) => {
 // @route   PUT /api/chats/message
 // @access  Private
 const sendMessage = async (req, res) => {
-    const { chatId, content, type } = req.body; // type can be 'text' or 'image'
+    const { chatId, content, type } = req.body; // type: 'text' or 'image'
 
     if (!chatId || !content) {
         return res.status(400).json({ message: "Invalid data passed into request" });
     }
 
     try {
-        // Naya message object banayein
         const newMessage = {
             sender: req.user._id,
-            text: content, // Agar image hai toh URL yahan aayega, frontend logic ke hisaab se
+            text: content, // content can be text string OR image URL
             type: type || 'text',
+            readAt: null,
+            isRead: false
         };
 
-        // Chat dhundo aur message array me push karo
         const updatedChat = await Chat.findByIdAndUpdate(
             chatId,
             { 
                 $push: { messages: newMessage },
-                lastMessage: content, // Optimization for inbox view
+                lastMessage: type === 'image' ? '📷 Photo' : content,
                 lastMessageAt: Date.now()
             },
-            { new: true } // Return updated document
+            { new: true }
         )
         .populate("customer", "name avatar")
         .populate("seller", "name avatar")
-        .populate("product");
+        .populate("product", "name coverImage");
 
         if (!updatedChat) {
-            res.status(404);
-            throw new Error("Chat Not Found");
+            return res.status(404).json({ message: "Chat Not Found" });
         }
 
         // --- SOCKET IO: REAL TIME MESSAGE ---
-        // Pura updated chat object ya sirf naya message bhej sakte hain
         if (req.io) {
-            // Hum ek specific event emit karenge jisme Chat ID aur Message hoga
+            // Broadcast new message to specific chat room
             req.io.emit('new_message_received', {
                 chatId: chatId,
-                message: updatedChat.messages[updatedChat.messages.length - 1], // The last message added
-                sender: req.user._id,
-                // Receiver ko pata lagane ke liye logic frontend pe bhi ho sakta hai ya yahan
-                // Usually client side check karta hai: "Agar main is chat room me hoon, to append karo"
+                message: updatedChat.messages[updatedChat.messages.length - 1], // The latest message
+                sender: req.user._id
             });
             
-            // Optional: Notification Event (Agar user chat khol ke nahi baitha hai)
+            // Notification Logic
             const receiverId = req.user._id.toString() === updatedChat.customer._id.toString() 
                 ? updatedChat.seller._id 
                 : updatedChat.customer._id;
@@ -158,7 +154,8 @@ const sendMessage = async (req, res) => {
             req.io.emit('notification_received', {
                 receiverId: receiverId,
                 senderName: req.user.name,
-                text: content
+                text: type === 'image' ? 'Sent a photo' : content,
+                chatId: chatId
             });
         }
 
@@ -176,12 +173,12 @@ const getChatMessages = async (req, res) => {
     try {
         const chat = await Chat.findById(req.params.chatId)
             .populate("customer", "name avatar")
-            .populate("seller", "name avatar");
+            .populate("seller", "name avatar")
+            .populate("product", "name coverImage");
 
         if(!chat) return res.status(404).json({ message: "Chat not found" });
 
-        // Security Check: Kya user is chat ka hissa hai?
-        // Convert ObjectIDs to string for comparison
+        // Security Check: Is user part of this chat?
         const isParticipant = 
             chat.customer._id.toString() === req.user._id.toString() || 
             chat.seller._id.toString() === req.user._id.toString();

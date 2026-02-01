@@ -1,39 +1,34 @@
+// backend/controllers/shopController.js
 const Shop = require('../models/Shop');
 const User = require('../models/User');
 
-// @desc    Register a new Shop
+// @desc    Register a new Shop (Multi-Shop Allowed)
 // @route   POST /api/shops
 // @access  Private (Registered User)
 const registerShop = async (req, res) => {
     try {
         const { name, tagline, description, phone, logo } = req.body;
 
-        // 1. Check agar user ke paas pehle se shop hai (One shop per user policy)
-        const shopExists = await Shop.findOne({ owner: req.user._id });
-
-        if (shopExists) {
-            return res.status(400).json({ message: 'You already own a shop' });
-        }
-
-        // 2. Create the Shop
+        // 1. Create the Shop directly (No "Already Exists" check)
         const shop = await Shop.create({
             owner: req.user._id,
             name,
             tagline,
             description,
             phone,
-            logo: logo || undefined, // Agar logo nahi bheja toh default use hoga model se
+            logo: logo || undefined, 
             isActive: true 
         });
 
-        // 3. IMPORTANT: Update the User Model
-        // User ka role 'seller' banate hain aur shop ID user me save karte hain
+        // 2. Update User Role
+        // Agar user pehle se seller nahi tha, toh ab seller ban jayega
         const user = await User.findById(req.user._id);
-        user.role = 'seller';
-        user.shop = shop._id;
-        await user.save();
+        if (user.role === 'customer') {
+            user.role = 'seller';
+            await user.save();
+        }
 
-        // --- SOCKET IO: Notify Admin of New Shop ---
+        // --- SOCKET IO: Notify Admin ---
         if (req.io) {
             req.io.emit('shop_created', {
                 _id: shop._id,
@@ -45,34 +40,47 @@ const registerShop = async (req, res) => {
 
         res.status(201).json(shop);
     } catch (error) {
+        console.error("Register Shop Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Get Current Seller's Shop Profile (For StoreAdmin.jsx)
+// @desc    Get All Shops owned by Current Seller
 // @route   GET /api/shops/my-shop
 // @access  Private (Seller)
-const getMyShop = async (req, res) => {
+const getMyShops = async (req, res) => {
     try {
-        // Logged in user ki ID se shop dhundo
-        const shop = await Shop.findOne({ owner: req.user._id });
+        // Find ALL shops where owner is the logged-in user
+        // Returns an array: [{shop1}, {shop2}]
+        const shops = await Shop.find({ owner: req.user._id });
 
-        if (shop) {
-            res.json(shop);
+        // Frontend expects either null (no shop) or data
+        // If array is empty, return null or empty array based on your frontend logic
+        // For your current frontend which expects a single object initially:
+        // We will return the FIRST shop found for now to keep frontend working,
+        // but ideally frontend should handle an array.
+        
+        // TEMPORARY FIX FOR FRONTEND COMPATIBILITY:
+        // Return the first shop if exists, else null.
+        // (Later we can update frontend to show a list of shops)
+        const primaryShop = shops.length > 0 ? shops[0] : null;
+
+        if (primaryShop) {
+            res.json(primaryShop);
         } else {
-            res.status(404).json({ message: 'Shop not found' });
+            // Send null so frontend shows "Create Shop" form
+            res.json(null); 
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Get Shop by ID (For Public ShopView.jsx)
+// @desc    Get Shop by ID (Public View)
 // @route   GET /api/shops/:id
 // @access  Public
 const getShopById = async (req, res) => {
     try {
-        // Owner ka naam aur email bhi populate karte hain taaki frontend pe dikha sake "Sold by Sanjay"
         const shop = await Shop.findById(req.params.id).populate('owner', 'name email avatar');
 
         if (shop) {
@@ -85,15 +93,16 @@ const getShopById = async (req, res) => {
     }
 };
 
-// @desc    Update Shop Settings (Name, Tagline, Phone, etc.)
+// @desc    Update Shop Settings
 // @route   PUT /api/shops/my-shop
 // @access  Private (Seller)
 const updateShopProfile = async (req, res) => {
     try {
+        // For now, updating the first shop found. 
+        // In future, pass shopId in params to update specific shop.
         const shop = await Shop.findOne({ owner: req.user._id });
 
         if (shop) {
-            // Frontend se data aa raha hai, usse update karo
             shop.name = req.body.name || shop.name;
             shop.tagline = req.body.tagline || shop.tagline;
             shop.description = req.body.description || shop.description;
@@ -102,8 +111,6 @@ const updateShopProfile = async (req, res) => {
 
             const updatedShop = await shop.save();
 
-            // --- SOCKET IO: Real-time Update for Customers Viewing Shop ---
-            // Jo log abhi iss shop ko dekh rahe hain, unhe turant naya naam/logo dikhega
             if (req.io) {
                 req.io.emit('shop_updated', {
                     shopId: updatedShop._id,
@@ -124,12 +131,11 @@ const updateShopProfile = async (req, res) => {
 
 // --- FOUNDER / ADMIN FEATURES ---
 
-// @desc    Get All Shops (For Founder Dashboard)
+// @desc    Get All Shops
 // @route   GET /api/shops
 // @access  Private (Admin/Founder)
 const getAllShops = async (req, res) => {
     try {
-        // Owner details populate kar rahe hain taaki Founder dashboard table me "Owner Name" dikhe
         const shops = await Shop.find({}).populate('owner', 'name email avatar');
         res.json(shops);
     } catch (error) {
@@ -147,15 +153,9 @@ const deleteShop = async (req, res) => {
         if (shop) {
             await shop.deleteOne();
             
-            // Optional: User ka role wapas 'customer' kar sakte hain
-            const user = await User.findById(shop.owner);
-            if (user) {
-                user.role = 'customer';
-                user.shop = undefined;
-                await user.save();
-            }
-
-            // --- SOCKET IO: Notify Dashboard & Owner ---
+            // Note: Not downgrading user role automatically, 
+            // as they might have other shops.
+            
             if (req.io) {
                 req.io.emit('shop_deleted', { shopId: req.params.id });
             }
@@ -169,7 +169,7 @@ const deleteShop = async (req, res) => {
     }
 };
 
-// @desc    Update Shop Status (Ban/Unban functionality)
+// @desc    Update Shop Status
 // @route   PUT /api/shops/:id/status
 // @access  Private (Admin/Founder)
 const updateShopStatus = async (req, res) => {
@@ -180,12 +180,10 @@ const updateShopStatus = async (req, res) => {
             shop.isActive = req.body.isActive;
             const updatedShop = await shop.save();
 
-            // --- SOCKET IO: Notify Seller Immediately ---
-            // Agar shop ban ho gayi, toh seller ke dashboard pe turant alert aayega
             if (req.io) {
                 req.io.emit('shop_status_changed', {
                     shopId: updatedShop._id,
-                    ownerId: updatedShop.owner, // Frontend will check if this matches logged-in user
+                    ownerId: updatedShop.owner,
                     isActive: updatedShop.isActive,
                     message: updatedShop.isActive ? 'Your shop is now Active!' : 'Your shop has been suspended.'
                 });
@@ -202,7 +200,7 @@ const updateShopStatus = async (req, res) => {
 
 module.exports = {
     registerShop,
-    getMyShop,
+    getMyShop: getMyShops,
     getShopById,
     updateShopProfile,
     getAllShops,

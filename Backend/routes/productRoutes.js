@@ -10,23 +10,24 @@ const {
     getTopProducts,
     getProductsByShop
 } = require('../controllers/productController');
-const { protect, seller, founder } = require('../middleware/authMiddleware');
+const { protect, seller } = require('../middleware/authMiddleware');
 
-// Public Routes
+// Base Routes
 router.route('/')
-    .get(getProducts) // Search + Filter logic here
-    .post(protect, seller, createProduct); // Only Seller can add
+    .get(getProducts) // Marketplace Search
+    .post(protect, seller, createProduct); // Add Product
 
+// Specific Lists (Static/Distinct Paths)
 router.get('/top', getTopProducts);
 router.get('/shop/:shopId', getProductsByShop);
 
-// Reviews (Customer)
+// Reviews
 router.route('/:id/reviews').post(protect, createProductReview);
 
-// Specific Product Operations
+// Dynamic ID Routes (Last)
 router.route('/:id')
-    .get(getProductById) // Public
-    .put(protect, seller, updateProduct) // Seller only
-    .delete(protect, deleteProduct); // Seller (own) or Founder
+    .get(getProductById)
+    .put(protect, seller, updateProduct)
+    .delete(protect, deleteProduct); // Seller or Founder (handled in controller)
 
 module.exports = router;

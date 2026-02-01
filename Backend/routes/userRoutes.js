@@ -12,10 +12,10 @@ const {
 } = require('../controllers/userController');
 const { protect, founder } = require('../middleware/authMiddleware');
 
-// Public Routes
+// Public
 router.post('/login', authUser);
 
-// Protected Routes (Profile)
+// Protected (Profile)
 router.route('/profile')
     .get(protect, getUserProfile)
     .put(protect, updateUserProfile);
@@ -23,7 +23,7 @@ router.route('/profile')
 // Founder/Admin Routes + Register
 router.route('/')
     .post(registerUser) // Register is public
-    .get(protect, founder, getUsers); // Get All Users is Founder only
+    .get(protect, founder, getUsers); // List users (Founder only)
 
 router.route('/:id')
     .get(protect, founder, getUserById)

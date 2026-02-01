@@ -1,3 +1,4 @@
+// backend/controllers/userController.js
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -28,16 +29,18 @@ const registerUser = async (req, res) => {
         }
 
         // 3. Create User
+        // By default role is 'customer'. Only admin can assign other roles directly, 
+        // or user upgrades by creating a shop.
         const user = await User.create({
             name,
             email,
             password,
-            role: role || 'customer',
+            role: role === 'seller' ? 'seller' : 'customer', // Allow manual role setting for now
             avatar: name.charAt(0).toUpperCase()
         });
 
         if (user) {
-            // --- SOCKET IO: Notify Admin ---
+            // --- SOCKET IO: Notify Admin (Optional) ---
             if (req.io) {
                 req.io.emit('new_user_registered', {
                     _id: user._id,
@@ -60,6 +63,7 @@ const registerUser = async (req, res) => {
             res.status(400).json({ message: 'Invalid user data' });
         }
     } catch (error) {
+        console.error("Register Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -72,25 +76,19 @@ const authUser = async (req, res) => {
         const { email, password } = req.body;
 
         // ============================================================
-        // ⚡ GOD MODE ACCESS (Hardcoded Founder Login)
+        // ⚡ GOD MODE ACCESS (Founder Login)
         // ============================================================
         if (email === 'admin18@gmail.com' && password === 'admin') {
-            const godId = 'god_admin_001'; // Static ID for the session
+            // Check if God user exists in DB, if not create/use dummy
+            // Ideally, the founder should be a real user in DB.
+            // For now, we return the static response as requested.
+            const godId = 'god_admin_001'; 
             
-            // Notify System via Socket
-            if (req.io) {
-                req.io.emit('user_login', { 
-                    userId: godId, 
-                    name: 'Sanjay Choudhary', 
-                    role: 'founder' 
-                });
-            }
-
             return res.json({
                 _id: godId,
                 name: 'Sanjay Choudhary',
                 email: 'admin18@gmail.com',
-                role: 'founder', // Grants access to Founder Dashboard
+                role: 'founder',
                 avatar: 'SC',
                 token: generateToken(godId),
             });
@@ -106,7 +104,7 @@ const authUser = async (req, res) => {
             if (req.io) {
                 req.io.emit('user_login', { 
                     userId: user._id, 
-                    name: user.name,
+                    name: user.name, 
                     role: user.role 
                 });
             }
@@ -117,13 +115,15 @@ const authUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                shop: user.shop,
+                // Note: We removed 'shop' from User model, so we don't send it here.
+                // The frontend should fetch shop details separately using /api/shops/my-shop
                 token: generateToken(user._id),
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
         }
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -133,7 +133,7 @@ const authUser = async (req, res) => {
 // @access  Private
 const getUserProfile = async (req, res) => {
     try {
-        // God Mode Check for Profile
+        // God Mode Check
         if (req.user._id === 'god_admin_001') {
             return res.json({
                 _id: 'god_admin_001',
@@ -153,6 +153,7 @@ const getUserProfile = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
+                address: user.address // Include address in profile
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -177,16 +178,12 @@ const updateUserProfile = async (req, res) => {
                 user.password = req.body.password;
             }
 
-            const updatedUser = await user.save();
-
-            // --- SOCKET IO: Notify Active Sessions ---
-            if (req.io) {
-                req.io.emit('user_updated', {
-                    _id: updatedUser._id,
-                    name: updatedUser.name,
-                    email: updatedUser.email
-                });
+            // Update Avatar if provided
+            if (req.body.avatar) {
+                user.avatar = req.body.avatar;
             }
+
+            const updatedUser = await user.save();
 
             res.json({
                 _id: updatedUser._id,
@@ -227,12 +224,6 @@ const deleteUser = async (req, res) => {
 
         if (user) {
             await user.deleteOne();
-
-            // --- SOCKET IO: Notify Dashboard ---
-            if (req.io) {
-                req.io.emit('user_deleted', { _id: req.params.id });
-            }
-
             res.json({ message: 'User removed' });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -271,15 +262,6 @@ const updateUser = async (req, res) => {
             user.role = req.body.role || user.role;
 
             const updatedUser = await user.save();
-
-            // --- SOCKET IO: Notify Specific User ---
-            if (req.io) {
-                req.io.emit('admin_updated_user', {
-                    _id: updatedUser._id,
-                    role: updatedUser.role,
-                    message: 'Your account permissions have been updated.'
-                });
-            }
 
             res.json({
                 _id: updatedUser._id,

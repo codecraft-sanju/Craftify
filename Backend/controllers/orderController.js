@@ -1,3 +1,4 @@
+// backend/controllers/orderController.js
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
@@ -24,7 +25,7 @@ const addOrderItems = async (req, res) => {
         // 1. Create the Order
         const order = new Order({
             customer: req.user._id,
-            items: orderItems, // Frontend should send shopId in each item
+            items: orderItems, // Frontend sends shopId inside each item (Crucial for Multi-Vendor)
             shippingAddress,
             paymentMethod,
             itemsPrice,
@@ -36,25 +37,21 @@ const addOrderItems = async (req, res) => {
         const createdOrder = await order.save();
 
         // 2. STOCK MANAGEMENT & REAL-TIME ALERTS
-        // Order place hote hi stock kam karna padega aur sellers ko notify karna padega
         
-        // Is order me jitne bhi unique shops involved hain, unki list banao
+        // List of all unique shops involved in this order
         const involvedShops = [...new Set(orderItems.map(item => item.shop))];
 
+        // Loop through items to update stock
         for (const item of orderItems) {
-            // --- OPTIMIZED: ATOMIC UPDATE ---
-            // Instead of finding, subtracting in JS, and saving (which is slow and risky),
-            // we let MongoDB handle the math atomically using $inc.
-            
+            // --- ATOMIC UPDATE: Safe & Fast ---
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-                { $inc: { stock: -item.qty } }, // Decrement stock by qty
-                { new: true } // Return the updated document so we can send the new stock via Socket
+                { $inc: { stock: -item.qty } }, // Reduce stock
+                { new: true } 
             );
 
             if (updatedProduct) {
-                // --- SOCKET IO: Update Product Stock Instantly ---
-                // Agar koi aur user us product ko dekh raha hai, use turant dikhega "Only X left"
+                // --- SOCKET IO: Live Stock Update for other customers ---
                 if (req.io) {
                     req.io.emit('product_updated', {
                         _id: updatedProduct._id,
@@ -65,11 +62,11 @@ const addOrderItems = async (req, res) => {
         }
 
         // --- SOCKET IO: Notify Sellers ---
-        // Sellers ke dashboard par pop-up aayega "New Order!"
+        // Sellers frontend will listen: "Is this order ID for one of my shops?"
         if (req.io) {
             req.io.emit('new_order_placed', {
                 orderId: createdOrder._id,
-                shopIds: involvedShops, // Client side check karega: "Kya ye order meri shop ke liye hai?"
+                shopIds: involvedShops, 
                 totalAmount: createdOrder.totalAmount,
                 customerName: req.user.name
             });
@@ -86,11 +83,9 @@ const addOrderItems = async (req, res) => {
 // @access  Private
 const getOrderById = async (req, res) => {
     try {
-        // Customer ka naam aur email populate karo
-        const order = await Order.findById(req.params.id).populate(
-            'customer',
-            'name email'
-        );
+        const order = await Order.findById(req.params.id)
+            .populate('customer', 'name email')
+            .populate('items.product', 'name coverImage'); // Populate product details
 
         if (order) {
             res.json(order);
@@ -102,7 +97,7 @@ const getOrderById = async (req, res) => {
     }
 };
 
-// @desc    Update order to paid (Usually hit by Payment Gateway Webhook or Frontend after success)
+// @desc    Update order to paid
 // @route   PUT /api/orders/:id/pay
 // @access  Private
 const updateOrderToPaid = async (req, res) => {
@@ -112,7 +107,6 @@ const updateOrderToPaid = async (req, res) => {
         if (order) {
             order.isPaid = true;
             order.paidAt = Date.now();
-            // Data from Razorpay/Stripe/PayPal
             order.paymentResult = {
                 id: req.body.id,
                 status: req.body.status,
@@ -122,8 +116,7 @@ const updateOrderToPaid = async (req, res) => {
 
             const updatedOrder = await order.save();
 
-            // --- SOCKET IO: Notify Seller to Ship Item ---
-            // Payment confirm hote hi seller ko notification: "Payment Received, Ready to Ship"
+            // Notify involved sellers
             const involvedShops = [...new Set(order.items.map(item => item.shop.toString()))];
             
             if (req.io) {
@@ -151,7 +144,10 @@ const updateOrderStatus = async (req, res) => {
         const order = await Order.findById(req.params.id);
 
         if (order) {
-            order.orderStatus = req.body.status; // 'Shipped' or 'Delivered'
+            // Note: In a strict multi-vendor system, we would update individual item statuses.
+            // For this MVP, updating the global status is acceptable.
+            
+            order.orderStatus = req.body.status; 
             
             if (req.body.status === 'Delivered') {
                 order.deliveredAt = Date.now();
@@ -161,12 +157,11 @@ const updateOrderStatus = async (req, res) => {
 
             const updatedOrder = await order.save();
 
-            // --- SOCKET IO: Notify Customer ---
-            // Customer ke phone/laptop par notification: "Your Order has been Shipped!"
+            // Notify Customer
             if (req.io) {
                 req.io.emit('order_status_updated', {
                     orderId: updatedOrder._id,
-                    customerId: updatedOrder.customer, // Frontend check karega "Kya ye mera order hai?"
+                    customerId: updatedOrder.customer, 
                     status: updatedOrder.orderStatus
                 });
             }
@@ -185,7 +180,6 @@ const updateOrderStatus = async (req, res) => {
 // @access  Private (Customer)
 const getMyOrders = async (req, res) => {
     try {
-        // Sirf wahi orders laao jo logged in user ne kiye hain
         const orders = await Order.find({ customer: req.user._id }).sort({ createdAt: -1 });
         res.json(orders);
     } catch (error) {
@@ -195,26 +189,30 @@ const getMyOrders = async (req, res) => {
 
 // --- SELLER & ADMIN FEATURES ---
 
-// @desc    Get Seller's Shop Orders
+// @desc    Get Seller's Shop Orders (MULTI-SHOP FIXED)
 // @route   GET /api/orders/shop-orders
 // @access  Private (Seller)
 const getShopOrders = async (req, res) => {
     try {
-        // 1. Seller ki shop dhundo
-        const shop = await Shop.findOne({ owner: req.user._id });
+        // 1. User ki SAARI shops dhundo (Array of shops)
+        const shops = await Shop.find({ owner: req.user._id });
         
-        if (!shop) {
-            return res.status(404).json({ message: 'Shop not found for this seller' });
+        if (!shops || shops.length === 0) {
+            return res.status(404).json({ message: 'No shops found for this seller' });
         }
 
-        // 2. Wo orders dhundo jisme is shop ka item ho ('items.shop' check karega)
-        // .sort({ createdAt: -1 }) se latest order sabse upar aayega
-        const orders = await Order.find({ 'items.shop': shop._id })
+        // 2. Un sabhi shops ki IDs ka array banao
+        const shopIds = shops.map(shop => shop._id);
+
+        // 3. Database mein wo orders dhundo jisme inme se KOI BHI shop involved ho
+        // $in operator checks if 'items.shop' matches ANY id in 'shopIds' array
+        const orders = await Order.find({ 'items.shop': { $in: shopIds } })
             .populate('customer', 'name email')
             .sort({ createdAt: -1 });
 
-        // Note: Frontend par hum filter kar lenge ki exactly kitna amount is seller ka hai
-        // Kyunki 'Order' object me pure cart ka total hota hai.
+        // Note: Frontend will receive full orders. 
+        // Logic to calculate specific revenue for *this* seller needs to happen on frontend
+        // by filtering items inside the order that match the seller's shop IDs.
         
         res.json(orders);
     } catch (error) {
@@ -242,6 +240,6 @@ module.exports = {
     updateOrderToPaid,
     updateOrderStatus,
     getMyOrders,
-    getShopOrders, // Seller ke liye
-    getOrders,     // Founder ke liye
+    getShopOrders, // Fixed for Multi-Shop
+    getOrders,     
 };

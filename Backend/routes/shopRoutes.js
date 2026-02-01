@@ -11,19 +11,19 @@ const {
 } = require('../controllers/shopController');
 const { protect, seller, founder } = require('../middleware/authMiddleware');
 
-// Public
-router.get('/:id', getShopById);
-
-// Protected (Seller Actions)
+// 1. Static Routes (Specific Paths) - MUST BE TOP
 router.route('/')
-    .post(protect, registerShop) // Create Shop (User becomes Seller)
-    .get(protect, founder, getAllShops); // Founder sees all shops
+    .post(protect, registerShop) // Create Shop
+    .get(protect, founder, getAllShops); // Founder View
 
 router.route('/my-shop')
-    .get(protect, getMyShop)
+    .get(protect, getMyShop) // Seller Dashboard Data
     .put(protect, seller, updateShopProfile);
 
-// Founder Actions
+// 2. Dynamic Routes (Parameters) - MUST BE BOTTOM
+router.get('/:id', getShopById); // Public Shop View
+
+// Founder Actions on Specific ID
 router.delete('/:id', protect, founder, deleteShop);
 router.put('/:id/status', protect, founder, updateShopStatus);
 

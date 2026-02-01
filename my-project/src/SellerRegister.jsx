@@ -1,10 +1,12 @@
-// SellerRegister.jsx
+// src/SellerRegister.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Store, ArrowRight, CheckCircle, Mail, Lock, User, 
-  ShoppingBag, Sparkles, Loader2, ChevronRight, LogIn 
+  ShoppingBag, Sparkles, Loader2, ChevronRight, LogIn, Phone, AlertCircle
 } from 'lucide-react';
+
+const API_URL = "http://localhost:5000";
 
 // ==========================================
 // 1. UI COMPONENTS (Local)
@@ -31,11 +33,11 @@ const Button = ({ children, variant = 'primary', className = '', loading, ...pro
 
 export default function SellerRegister({ onLoginSuccess, initialMode = 'register' }) {
   const navigate = useNavigate();
-  // We determine the view based on the prop passed from the Route
   const isLoginView = initialMode === 'login'; 
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   
   // Form State
   const [formData, setFormData] = useState({
@@ -43,54 +45,95 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     email: '',
     password: '',
     shopName: '',
-    category: 'Clothing'
+    category: 'Clothing',
+    phone: '', // Added: Required by Shop Model
+    description: 'Welcome to my new shop on Craftify!' // Default description
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(""); // Clear error on typing
   };
 
   // --- SUBMISSION HANDLER ---
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
-    // Simulate API Call
-    setTimeout(() => {
-        setLoading(false);
-        
-        let newUser;
-
+    try {
         if (isLoginView) {
-            // LOGIN LOGIC
-            newUser = {
-                _id: "seller_existing_123",
-                name: "Verified Seller", // In real app, fetch from DB
-                email: formData.email,
-                role: 'seller', 
-                token: "mock_token_seller_login",
-                avatar: "V"
-            };
+            // === LOGIN LOGIC ===
+            const res = await fetch(`${API_URL}/api/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: formData.email,
+                    password: formData.password
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Login failed");
+
+            // Check if user is actually a seller
+            if(data.role !== 'seller' && data.role !== 'founder' && data.role !== 'admin') {
+                 // Optional: Ask them to create a shop if they are just a customer
+                 throw new Error("This account is not registered as a Seller.");
+            }
+
+            onLoginSuccess(data);
+
         } else {
-            // REGISTER LOGIC
-            newUser = {
-                _id: "new_seller_" + Date.now(),
-                name: formData.name,
-                email: formData.email,
-                role: 'seller', 
-                token: "mock_token_seller_new",
-                avatar: formData.name.charAt(0).toUpperCase()
-            };
+            // === REGISTER LOGIC (2 Steps) ===
+            
+            // 1. Create User
+            const userRes = await fetch(`${API_URL}/api/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    // Note: Role defaults to 'customer' in backend, we promote them in Step 2
+                })
+            });
+
+            const userData = await userRes.json();
+            if (!userRes.ok) throw new Error(userData.message || "User registration failed");
+
+            // 2. Create Shop (This promotes user to 'seller')
+            const shopRes = await fetch(`${API_URL}/api/shops`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userData.token}`
+                },
+                body: JSON.stringify({
+                    name: formData.shopName,
+                    description: formData.description,
+                    phone: formData.phone,
+                    categories: [formData.category] // Backend expects array
+                })
+            });
+
+            const shopData = await shopRes.json();
+            if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
+
+            // 3. Update Local User Data with new Role
+            const finalUser = { ...userData, role: 'seller', shop: shopData._id };
+            onLoginSuccess(finalUser);
         }
 
-        // Pass to App.jsx to handle global state
-        onLoginSuccess(newUser);
-        
-    }, 1500);
+    } catch (err) {
+        setError(err.message);
+        setLoading(false);
+    }
   };
 
   // Helper to switch routes
   const handleSwitchMode = () => {
+      setError("");
       if(isLoginView) {
           navigate('/seller-register');
       } else {
@@ -101,9 +144,8 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   return (
     <div className="min-h-screen bg-slate-50 flex">
       
-      {/* --- LEFT SIDE: VALUE PROP (Changes text based on mode) --- */}
+      {/* --- LEFT SIDE: VALUE PROP --- */}
       <div className="hidden lg:flex w-1/2 bg-[#0F172A] relative overflow-hidden flex-col justify-between p-16 text-white">
-         {/* Background Effects */}
          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
 
@@ -135,7 +177,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             </p>
          </div>
 
-         {/* Testimonial Card */}
          <div className="relative z-10 bg-slate-800/50 backdrop-blur-xl p-6 rounded-2xl border border-slate-700 max-w-md mt-10">
             <div className="flex gap-1 text-amber-400 mb-3">
                {[1,2,3,4,5].map(i => <Sparkles key={i} className="w-4 h-4 fill-current"/>)}
@@ -164,13 +205,20 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                    {isLoginView ? 'Enter your credentials to access dashboard' : `Step ${step} of 2`}
                </p>
                
-               {/* Progress Bar (Only for Register) */}
                {!isLoginView && (
                    <div className="w-full h-1 bg-slate-100 mt-4 rounded-full overflow-hidden">
                       <div className={`h-full bg-indigo-600 transition-all duration-500 ${step === 1 ? 'w-1/2' : 'w-full'}`}></div>
                    </div>
                )}
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 animate-in slide-in-from-top-2">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium">{error}</span>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                
@@ -188,6 +236,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                    onChange={handleChange}
                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                    placeholder="you@business.com"
+                                   required
                                />
                            </div>
                        </div>
@@ -202,6 +251,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                    onChange={handleChange}
                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                    placeholder="••••••••"
+                                   required
                                />
                            </div>
                        </div>
@@ -227,6 +277,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                       placeholder="John Doe"
                                       autoFocus
+                                      required
                                    />
                                 </div>
                              </div>
@@ -241,6 +292,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                       onChange={handleChange}
                                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                       placeholder="you@business.com"
+                                      required
                                    />
                                 </div>
                              </div>
@@ -255,6 +307,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                       onChange={handleChange}
                                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                       placeholder="••••••••"
+                                      required
                                    />
                                 </div>
                              </div>
@@ -265,7 +318,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                    className="w-full" 
                                    onClick={() => {
                                       if(formData.name && formData.email && formData.password) setStep(2);
-                                      else alert("Please fill all fields");
+                                      else setError("Please fill all fields to continue.");
                                    }}
                                 >
                                    Continue <ArrowRight className="w-4 h-4" />
@@ -289,6 +342,24 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                                       placeholder="e.g. Urban Threads"
                                       autoFocus
+                                      required
+                                   />
+                                </div>
+                             </div>
+
+                             {/* Added Phone Field for Backend Compliance */}
+                             <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contact Phone</label>
+                                <div className="relative">
+                                   <Phone className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                                   <input 
+                                      type="tel" 
+                                      name="phone"
+                                      value={formData.phone}
+                                      onChange={handleChange}
+                                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                                      placeholder="9876543210"
+                                      required
                                    />
                                 </div>
                              </div>

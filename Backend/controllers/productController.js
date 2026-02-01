@@ -1,30 +1,27 @@
+// backend/controllers/productController.js
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 
-// @desc    Fetch all products (with Search & Category Filter)
+// @desc    Fetch all products (Marketplace View)
 // @route   GET /api/products
 // @access  Public
 const getProducts = async (req, res) => {
     try {
-        // --- Search Logic ---
-        // Agar query me 'keyword' hai (e.g. ?keyword=pen), toh name regex search karega
         const keyword = req.query.keyword
             ? {
                   name: {
                       $regex: req.query.keyword,
-                      $options: 'i', // Case insensitive
+                      $options: 'i',
                   },
               }
             : {};
 
-        // --- Category Logic ---
-        // Agar query me 'category' hai (e.g. ?category=Tech), toh filter add karo
         const category = req.query.category && req.query.category !== 'All' 
             ? { category: req.query.category } 
             : {};
 
-        // Combine logic (Search Keyword AND Category)
-        const products = await Product.find({ ...keyword, ...category }).populate('shop', 'name');
+        // Populate shop details so we can show "Sold by [Shop Name]"
+        const products = await Product.find({ ...keyword, ...category }).populate('shop', 'name logo rating');
 
         res.json(products);
     } catch (error) {
@@ -37,9 +34,8 @@ const getProducts = async (req, res) => {
 // @access  Public
 const getProductById = async (req, res) => {
     try {
-        // Reviews me user ka naam bhi chahiye, isliye reviews.user populate kiya
         const product = await Product.findById(req.params.id)
-            .populate('shop', 'name logo owner') 
+            .populate('shop', 'name logo owner rating') 
             .populate('reviews.user', 'name avatar');
 
         if (product) {
@@ -48,7 +44,6 @@ const getProductById = async (req, res) => {
             res.status(404).json({ message: 'Product not found' });
         }
     } catch (error) {
-        // Agar ID format galat hai (CastError)
         res.status(404).json({ message: 'Product not found' });
     }
 };
@@ -58,57 +53,74 @@ const getProductById = async (req, res) => {
 // @access  Private (Seller only)
 const createProduct = async (req, res) => {
     try {
-        // 1. Verify if user has a shop
-        const shop = await Shop.findOne({ owner: req.user._id });
-        if (!shop) {
-            return res.status(400).json({ message: 'No shop found. You must register as a seller first.' });
-        }
-
         const {
-            name, price, description, image, category, 
+            shop: shopId, // Frontend MUST send the Shop ID now
+            name, price, description, category, 
             stock, tags, specs, colors, sizes,
-            customizationAvailable, customizationType
+            customizationAvailable, customizationType,
+            image, coverImage, sku 
         } = req.body;
 
-        // 2. Create Product linked to Shop
+        // 1. Validation: Ensure Shop ID is provided
+        if (!shopId) {
+            return res.status(400).json({ message: 'Please specify which shop this product belongs to.' });
+        }
+
+        // 2. Security: Verify that the Logged-in User OWNS this specific shop
+        const shop = await Shop.findById(shopId);
+        if (!shop) {
+            return res.status(404).json({ message: 'Shop not found.' });
+        }
+
+        // Strict Check: Sirf Shop ka maalik hi product add kar sakta hai
+        if (shop.owner.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'You are not authorized to add products to this shop.' });
+        }
+
+        // 3. SKU Logic (Auto-generate if empty to avoid E11000 error)
+        // sparse: true in model handles nulls, but we generate one to be safe.
+        const finalSku = sku && sku.trim() !== '' 
+            ? sku 
+            : `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        // 4. Create Product
         const product = new Product({
-            shop: shop._id, // Link to seller's shop
+            shop: shopId,
             name,
             price,
             description,
-            image,
+            coverImage: coverImage || image || 'https://via.placeholder.com/300',
             category,
             stock,
             tags, 
             specs,
             colors, 
             sizes,
+            sku: finalSku, 
             customizationAvailable, 
             customizationType,
-            // Initial Ratings
             rating: 0,
             numReviews: 0
         });
 
         const createdProduct = await product.save();
         
-        // --- SOCKET IO: Notify Shop Page Visitors ---
-        // Agar koi user shop profile par hai, toh naya product list me turant add ho jayega
+        // --- SOCKET IO: Notify Live Users ---
         if (req.io) {
             req.io.emit('product_created', {
                 shopId: shop._id,
-                product: {
-                    _id: createdProduct._id,
-                    name: createdProduct.name,
-                    price: createdProduct.price,
-                    image: createdProduct.image,
-                    category: createdProduct.category
-                }
+                productName: createdProduct.name
             });
         }
 
         res.status(201).json(createdProduct);
+
     } catch (error) {
+        console.error("Create Product Error:", error);
+        // Handle Duplicate Key (SKU or Slug)
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Duplicate error: Product name or SKU already exists." });
+        }
         res.status(500).json({ message: error.message });
     }
 };
@@ -119,48 +131,42 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const {
-            name, price, description, image, category,
+            name, price, description, category,
             stock, tags, specs, colors, sizes,
-            customizationAvailable, customizationType
+            customizationAvailable, customizationType,
+            image, coverImage
         } = req.body;
 
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            // Check Ownership: Kya ye product usi shop ka hai jiska owner logged-in user hai?
-            const shop = await Shop.findOne({ owner: req.user._id });
+            // 1. Fetch the shop associated with this product
+            const shop = await Shop.findById(product.shop);
             
-            if (!shop || product.shop.toString() !== shop._id.toString()) {
-                return res.status(401).json({ message: 'Not authorized to update this product' });
+            // 2. Strict Security Check: Does the logged-in user own this shop?
+            if (!shop || shop.owner.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: 'Not authorized to update this product' });
             }
 
-            // Update fields
+            // 3. Update fields
             product.name = name || product.name;
             product.price = price || product.price;
             product.description = description || product.description;
-            product.image = image || product.image;
+            product.coverImage = coverImage || image || product.coverImage;
             product.category = category || product.category;
             product.stock = stock || product.stock;
             product.tags = tags || product.tags;
             product.specs = specs || product.specs;
             product.colors = colors || product.colors;
             product.sizes = sizes || product.sizes;
-            // Use nullish coalescing (??) for booleans to allow 'false'
             product.customizationAvailable = customizationAvailable ?? product.customizationAvailable;
             product.customizationType = customizationType || product.customizationType;
 
             const updatedProduct = await product.save();
 
-            // --- SOCKET IO: Live Update on Product Page ---
-            // Price change, Stock Low, or Name change reflects instantly
+            // Socket Notification
             if (req.io) {
-                req.io.emit('product_updated', {
-                    _id: updatedProduct._id,
-                    price: updatedProduct.price,
-                    stock: updatedProduct.stock,
-                    name: updatedProduct.name,
-                    description: updatedProduct.description // Useful if someone is reading it
-                });
+                req.io.emit('product_updated', { _id: updatedProduct._id });
             }
 
             res.json(updatedProduct);
@@ -180,24 +186,21 @@ const deleteProduct = async (req, res) => {
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            // Check Permission: Seller owns it OR User is Founder (Admin)
-            const shop = await Shop.findOne({ owner: req.user._id });
-            const isOwner = shop && product.shop.toString() === shop._id.toString();
+            // Fetch Shop to check ownership
+            const shop = await Shop.findById(product.shop);
+            
+            // Allow if Owner OR Founder (Admin)
+            const isOwner = shop && shop.owner.toString() === req.user._id.toString();
             const isAdmin = req.user.role === 'founder';
 
             if (!isOwner && !isAdmin) {
-                return res.status(401).json({ message: 'Not authorized to delete this product' });
+                return res.status(403).json({ message: 'Not authorized to delete this product' });
             }
 
             await product.deleteOne();
 
-            // --- SOCKET IO: Remove from Lists ---
-            // Cart, Wishlist, or Browsing page se product gayab ho jana chahiye
             if (req.io) {
-                req.io.emit('product_deleted', { 
-                    _id: req.params.id,
-                    shopId: product.shop 
-                });
+                req.io.emit('product_deleted', { _id: req.params.id, shopId: product.shop });
             }
 
             res.json({ message: 'Product removed' });
@@ -215,11 +218,9 @@ const deleteProduct = async (req, res) => {
 const createProductReview = async (req, res) => {
     try {
         const { rating, comment } = req.body;
-
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            // Check if user already reviewed
             const alreadyReviewed = product.reviews.find(
                 (r) => r.user.toString() === req.user._id.toString()
             );
@@ -237,29 +238,11 @@ const createProductReview = async (req, res) => {
 
             product.reviews.push(review);
             product.numReviews = product.reviews.length;
-
-            // Calculate Average Rating
             product.rating =
                 product.reviews.reduce((acc, item) => item.rating + acc, 0) /
                 product.reviews.length;
 
             await product.save();
-
-            // --- SOCKET IO: Live Review Feed ---
-            // Product page par average stars aur naya review turant dikhega
-            if (req.io) {
-                req.io.emit('review_added', {
-                    productId: product._id,
-                    newRating: product.rating,
-                    numReviews: product.numReviews,
-                    review: {
-                        name: req.user.name,
-                        rating: Number(rating),
-                        comment: comment,
-                        createdAt: new Date()
-                    }
-                });
-            }
 
             res.status(201).json({ message: 'Review added' });
         } else {
@@ -270,12 +253,11 @@ const createProductReview = async (req, res) => {
     }
 };
 
-// @desc    Get top rated products (For Carousel/Featured)
+// @desc    Get top rated products
 // @route   GET /api/products/top
 // @access  Public
 const getTopProducts = async (req, res) => {
     try {
-        // Sort by rating descending, limit 3
         const products = await Product.find({}).sort({ rating: -1 }).limit(3);
         res.json(products);
     } catch (error) {
@@ -283,12 +265,12 @@ const getTopProducts = async (req, res) => {
     }
 };
 
-// @desc    Get products by Shop ID (For Public Shop Profile)
+// @desc    Get products by Shop ID (For Public Storefront)
 // @route   GET /api/products/shop/:shopId
 // @access  Public
 const getProductsByShop = async (req, res) => {
     try {
-        const products = await Product.find({ shop: req.params.shopId });
+        const products = await Product.find({ shop: req.params.shopId }).sort({ createdAt: -1 });
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });

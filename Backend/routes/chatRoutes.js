@@ -9,15 +9,15 @@ const {
 } = require('../controllers/chatController');
 const { protect, seller } = require('../middleware/authMiddleware');
 
-// Start or Get Chat
-router.route('/').post(protect, accessChat);
+// Base Ops
+router.route('/').post(protect, accessChat); // Start/Get Chat
+router.route('/message').put(protect, sendMessage); // Send Msg
 
-// Chat Lists
-router.route('/my-chats').get(protect, fetchMyChats); // For Customer
-router.route('/shop-chats').get(protect, seller, fetchShopChats); // For Seller
+// Lists
+router.route('/my-chats').get(protect, fetchMyChats); // Customer Inbox
+router.route('/shop-chats').get(protect, seller, fetchShopChats); // Seller Inbox
 
-// Messaging
-router.route('/message').put(protect, sendMessage);
+// Dynamic ID (Last)
 router.route('/:chatId').get(protect, getChatMessages);
 
 module.exports = router;

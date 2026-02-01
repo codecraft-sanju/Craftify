@@ -1,25 +1,23 @@
 // LandingPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ShoppingBag, Store, ShieldCheck, Zap, Globe, 
   CreditCard, Play, Star, Menu, X, ChevronRight, Lock, 
   TrendingUp, Users, Package, Box, Check, Activity, Heart, Gift, Timer
 } from 'lucide-react';
+import io from 'socket.io-client';
+
+const ENDPOINT = "http://localhost:5000";
 
 /* -------------------------------------------------------------------------- */
 /* STYLES & ANIMATIONS                                                        */
 /* -------------------------------------------------------------------------- */
 const styleInjection = `
-  /* Global Fix for Mobile White Bar */
   html, body {
-    background-color: #020617; /* Matches slate-950 */
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-    width: 100%;
+    background-color: #020617;
+    margin: 0; padding: 0; overflow-x: hidden; width: 100%;
   }
-
   @keyframes blob {
     0% { transform: translate(0px, 0px) scale(1); }
     33% { transform: translate(30px, -50px) scale(1.1); }
@@ -59,9 +57,6 @@ const styleInjection = `
   .animation-delay-2000 { animation-delay: 2s; }
   .animation-delay-4000 { animation-delay: 4s; }
   
-  .perspective-1000 { perspective: 1000px; }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
-  
   .glass-card {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(16px);
@@ -97,7 +92,6 @@ const styleInjection = `
     mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
-  /* Reveal on Scroll Classes */
   .reveal {
     opacity: 0;
     transform: translateY(30px);
@@ -109,11 +103,7 @@ const styleInjection = `
   }
 `;
 
-/* -------------------------------------------------------------------------- */
-/* HOOKS & UTILITIES                                                          */
-/* -------------------------------------------------------------------------- */
-
-// Hook to handle scroll reveal animations
+// --- Hook for Scroll Animations ---
 const useScrollReveal = () => {
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -133,7 +123,6 @@ const useScrollReveal = () => {
 /* COMPONENTS                                                                 */
 /* -------------------------------------------------------------------------- */
 
-// --- 3D Tilt Card Component ---
 const TiltCard = ({ children, className }) => {
   const [rotate, setRotate] = useState({ x: 0, y: 0 });
 
@@ -146,7 +135,6 @@ const TiltCard = ({ children, className }) => {
     const centerY = box.height / 2;
     const rotateX = (y - centerY) / 25;
     const rotateY = (centerX - x) / 25;
-
     setRotate({ x: rotateX, y: rotateY });
   };
 
@@ -159,16 +147,13 @@ const TiltCard = ({ children, className }) => {
       className={`transition-transform duration-300 ease-out will-change-transform ${className}`}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
-      style={{
-        transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) scale3d(1, 1, 1)`,
-      }}
+      style={{ transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) scale3d(1, 1, 1)` }}
     >
       {children}
     </div>
   );
 };
 
-// --- Reusable Button ---
 const Button = ({ children, variant = 'primary', className = '', icon: Icon, onClick }) => {
   const baseStyle = "group relative inline-flex items-center justify-center gap-2 px-8 py-4 font-semibold text-sm transition-all duration-300 rounded-full active:scale-95 overflow-hidden";
   
@@ -191,26 +176,59 @@ const Button = ({ children, variant = 'primary', className = '', icon: Icon, onC
   );
 };
 
-// --- Live Activity Toast ---
+// --- DYNAMIC LIVE ACTIVITY (Hybrid: Real Socket + Mock Fallback) ---
 const LiveActivity = () => {
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState({ name: '', action: '', time: '' });
 
-  const activities = [
+  // 1. Mock Data for "Busy" Look
+  const mockActivities = [
     { name: 'Rahul from Delhi', action: 'started a new store', time: '2s ago' },
     { name: 'Sarah from Mumbai', action: 'sold a Custom Hoodie', time: '12s ago' },
     { name: 'Amit from Bangalore', action: 'earned ₹12,000', time: '1m ago' },
-    { name: 'Priya from Pune', action: 'bought Valentine Gift', time: '5s ago' },
   ];
 
   useEffect(() => {
+    // A. Connect to Real Socket
+    const socket = io(ENDPOINT);
+
+    // Listener: Real Order
+    socket.on("new_order_placed", (orderData) => {
+        setData({
+            name: orderData.customerName || 'A Customer',
+            action: `purchased for ₹${orderData.totalAmount}`,
+            time: 'Just now'
+        });
+        setVisible(true);
+        setTimeout(() => setVisible(false), 5000);
+    });
+
+    // Listener: New User
+    socket.on("new_user_registered", (userData) => {
+        setData({
+            name: userData.name,
+            action: 'joined Craftify',
+            time: 'Just now'
+        });
+        setVisible(true);
+        setTimeout(() => setVisible(false), 5000);
+    });
+
+    // B. Mock Loop (Fallback) - Only runs if no real event happens for a while
     const loop = setInterval(() => {
-      const randomActivity = activities[Math.floor(Math.random() * activities.length)];
-      setData(randomActivity);
-      setVisible(true);
-      setTimeout(() => setVisible(false), 4000);
-    }, 8000);
-    return () => clearInterval(loop);
+      // 30% chance to show mock data every 10 seconds (less aggressive)
+      if (Math.random() > 0.7) {
+          const randomActivity = mockActivities[Math.floor(Math.random() * mockActivities.length)];
+          setData(randomActivity);
+          setVisible(true);
+          setTimeout(() => setVisible(false), 4000);
+      }
+    }, 10000);
+
+    return () => {
+        clearInterval(loop);
+        socket.disconnect();
+    };
   }, []);
 
   return (
@@ -262,10 +280,10 @@ const Navbar = ({ onLoginClick }) => {
 
         {/* Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <button onClick={() => onLoginClick('seller')} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+          <button onClick={() => onLoginClick('customer')} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
             Sign In
           </button>
-          <Button variant="primary" size="sm" className="px-6 py-2.5 text-xs h-10" onClick={() => navigate('/shop')}>
+          <Button variant="primary" size="sm" className="px-6 py-2.5 text-xs h-10" onClick={() => onLoginClick('seller')}>
             Start Free
           </Button>
         </div>
@@ -303,7 +321,6 @@ const LandingPage = ({ onLoginClick }) => {
 
       {/* --- HERO SECTION --- */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        {/* Dynamic Background */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 cyber-grid animate-grid opacity-30"></div>
           <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] animate-blob mix-blend-screen"></div>
@@ -314,7 +331,6 @@ const LandingPage = ({ onLoginClick }) => {
         <div className="container max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center text-center">
             
-            {/* Announcement Badge */}
             <div className="animate-float inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-10 cursor-pointer hover:bg-indigo-500/20 transition-colors">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -324,7 +340,6 @@ const LandingPage = ({ onLoginClick }) => {
               <ChevronRight className="w-3 h-3" />
             </div>
 
-            {/* Headline */}
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.1] reveal active">
               <span className="text-gradient block">Design. Sell.</span>
               <span className="text-gradient-primary block">Dominate.</span>
@@ -335,7 +350,6 @@ const LandingPage = ({ onLoginClick }) => {
               Launch your custom brand in minutes, not months. Zero inventory, infinite scale.
             </p>
 
-            {/* CTA Group */}
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto reveal active delay-200">
               <Button variant="glow" icon={ShoppingBag} onClick={() => navigate('/shop')}>
                 Explore Marketplace
@@ -345,11 +359,10 @@ const LandingPage = ({ onLoginClick }) => {
               </Button>
             </div>
 
-            {/* Floating Dashboard Mockup */}
+            {/* Dashboard Mockup */}
             <div className="mt-24 relative w-full max-w-5xl mx-auto px-6 reveal">
                <TiltCard className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-indigo-500/10 bg-slate-900/80 backdrop-blur-xl relative group">
                   <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                  {/* Mock UI Header */}
                   <div className="h-10 border-b border-white/5 flex items-center px-4 gap-2">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
@@ -357,19 +370,42 @@ const LandingPage = ({ onLoginClick }) => {
                       <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
                     </div>
                   </div>
-                  {/* Image Placeholder - UPDATED TO REMOTE URL */}
-                  <div className="aspect-[16/9] bg-slate-900 relative flex items-center justify-center overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/20 to-purple-900/20"></div>
-                      <img 
-                        src="./dashboard.png" 
-                        alt="Analytics Dashboard" 
-                        className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" 
-                        onError={(e) => {
-                          e.target.style.display='none'; 
-                          e.target.parentNode.innerHTML += '<span class="text-slate-600 font-mono">Dashboard Preview Unavailable</span>'
-                        }}
-                      />
-                      {/* Overlay Stats */}
+                  
+                  {/* Dashboard Graphic Placeholder - Simulating UI */}
+                  <div className="aspect-[16/9] bg-slate-900 relative flex items-center justify-center overflow-hidden p-8">
+                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/10 to-purple-900/10"></div>
+                      
+                      {/* Abstract Chart Representation */}
+                      <div className="w-full h-full flex flex-col gap-6">
+                          <div className="flex gap-6">
+                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
+                                  <div className="h-2 w-20 bg-indigo-500/50 rounded mb-2"></div>
+                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
+                              </div>
+                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
+                                  <div className="h-2 w-20 bg-purple-500/50 rounded mb-2"></div>
+                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
+                              </div>
+                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
+                                  <div className="h-2 w-20 bg-emerald-500/50 rounded mb-2"></div>
+                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
+                              </div>
+                          </div>
+                          <div className="flex-1 rounded-xl bg-white/5 border border-white/5 p-4 relative overflow-hidden">
+                               <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-indigo-500/20 to-transparent"></div>
+                               {/* Mock Graph Line */}
+                               <svg className="w-full h-full" viewBox="0 0 100 20" preserveAspectRatio="none">
+                                   <path d="M0,20 L0,15 L10,12 L20,16 L30,10 L40,14 L50,5 L60,8 L70,3 L80,10 L90,6 L100,0 L100,20 Z" fill="url(#grad)" />
+                                   <defs>
+                                       <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                           <stop offset="0%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0.5}} />
+                                           <stop offset="100%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0}} />
+                                       </linearGradient>
+                                   </defs>
+                               </svg>
+                          </div>
+                      </div>
+
                       <div className="absolute bottom-8 left-8 p-4 glass-card rounded-xl animate-float">
                          <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
                          <p className="text-2xl font-bold text-white">₹14,20,590</p>
@@ -379,7 +415,6 @@ const LandingPage = ({ onLoginClick }) => {
                       </div>
                   </div>
                </TiltCard>
-               {/* Glow behind card */}
                <div className="absolute -inset-4 bg-indigo-500/20 blur-3xl -z-10 rounded-[3rem]"></div>
             </div>
           </div>
@@ -401,9 +436,8 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* --- VALENTINE'S DAY SPECIAL SECTION --- */}
+      {/* --- VALENTINE'S DAY SECTION --- */}
       <section className="py-24 relative overflow-hidden" id="offers">
-         {/* Background Decoration */}
          <div className="absolute inset-0 bg-gradient-to-b from-rose-950/20 to-slate-950"></div>
          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             {[...Array(12)].map((_, i) => (
@@ -423,7 +457,6 @@ const LandingPage = ({ onLoginClick }) => {
             <div className="glass-card rounded-[3rem] border-rose-500/30 overflow-hidden relative shadow-[0_0_100px_-20px_rgba(225,29,72,0.3)]">
                <div className="grid grid-cols-1 lg:grid-cols-2">
                  
-                 {/* Left: Content */}
                  <div className="p-10 md:p-16 flex flex-col justify-center">
                      <div className="inline-flex items-center gap-2 text-rose-400 font-bold tracking-widest uppercase text-xs mb-4">
                         <Gift className="w-4 h-4" /> Valentine's Exclusive
@@ -460,28 +493,23 @@ const LandingPage = ({ onLoginClick }) => {
                      </div>
                  </div>
 
-                 {/* Right: Visuals */}
                  <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10">
                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
                      
-                     {/* Floating Cards Effect */}
                      <div className="relative w-full max-w-md aspect-square">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-rose-500 rounded-full blur-[80px] opacity-40 animate-pulse"></div>
-                        
                         <div className="absolute top-10 left-0 w-48 glass-card p-3 rounded-2xl rotate-[-12deg] animate-float">
                            <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden">
                               <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">His Hoodie</div>
                            </div>
                            <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
                         </div>
-
                         <div className="absolute bottom-10 right-0 w-48 glass-card p-3 rounded-2xl rotate-[12deg] animate-float animation-delay-2000">
                            <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden">
                               <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">Her Hoodie</div>
                            </div>
                            <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
                         </div>
-
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl animate-bounce">
                            <Heart className="w-8 h-8 text-rose-500 fill-current" />
                         </div>
@@ -492,7 +520,7 @@ const LandingPage = ({ onLoginClick }) => {
          </div>
       </section>
 
-      {/* --- BENTO GRID FEATURES --- */}
+      {/* --- FEATURES SECTION --- */}
       <section className="py-32 bg-slate-950 relative" id="features">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-20 reveal">
@@ -501,7 +529,6 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-6 h-auto md:h-[650px]">
-              {/* Large Left Block */}
               <div className="col-span-1 md:col-span-2 row-span-2 glass-card rounded-3xl p-10 relative overflow-hidden group reveal">
                 <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-30 transition-opacity duration-500">
                    <Globe className="w-64 h-64 text-indigo-500" />
@@ -515,7 +542,6 @@ const LandingPage = ({ onLoginClick }) => {
                      <p className="text-slate-400 max-w-md leading-relaxed">Our automated shipping partners deliver to 25,000+ pincodes. Real-time tracking, automated labels, and COD support built-in.</p>
                    </div>
                    
-                   {/* Interactive Map Visual */}
                    <div className="mt-8 p-5 rounded-2xl bg-slate-900/80 border border-white/10 backdrop-blur-md max-w-sm hover:border-indigo-500/50 transition-colors cursor-crosshair">
                       <div className="flex items-center gap-3 mb-4">
                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
@@ -533,14 +559,12 @@ const LandingPage = ({ onLoginClick }) => {
                 </div>
               </div>
 
-              {/* Top Right Block */}
               <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-100">
                 <ShieldCheck className="w-12 h-12 text-emerald-400 mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold text-white mb-2">Escrow Payments</h3>
                 <p className="text-sm text-slate-400 leading-relaxed">Funds are released only after customer satisfaction. 100% fraud protection.</p>
               </div>
 
-              {/* Bottom Right Block */}
               <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-200">
                 <Zap className="w-12 h-12 text-amber-400 mb-6 group-hover:scale-110 transition-transform" />
                 <h3 className="text-xl font-bold text-white mb-2">Instant Setup</h3>
@@ -550,52 +574,23 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </section>
 
-      {/* --- TESTIMONIALS (Moving Rail) --- */}
-      <section className="py-20 overflow-hidden bg-slate-900/30 border-y border-white/5">
-         <div className="max-w-7xl mx-auto px-6 mb-10 text-center reveal">
-            <h2 className="text-2xl font-bold text-white">Trusted by modern entrepreneurs</h2>
-         </div>
-         <div className="flex animate-scroll-left w-[200%] gap-6">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex gap-6 shrink-0">
-                {[1,2,3,4].map((n) => (
-                  <div key={n} className="w-[350px] glass-card p-6 rounded-2xl shrink-0">
-                      <div className="flex gap-1 text-amber-400 mb-4">
-                         {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-current" />)}
-                      </div>
-                      <p className="text-slate-300 text-sm mb-6 leading-relaxed">"Craftify completely changed how I run my business. The automated shipping is a lifesaver!"</p>
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"></div>
-                         <div>
-                            <p className="text-white text-sm font-bold">Alex Johnson</p>
-                            <p className="text-slate-500 text-xs">Founder, PrintStyle</p>
-                         </div>
-                      </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-         </div>
-      </section>
-
       {/* --- CTA SECTION --- */}
       <section className="py-32 relative overflow-hidden">
-         {/* Background Effects */}
          <div className="absolute inset-0 bg-indigo-600/10"></div>
          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none"></div>
 
          <div className="max-w-4xl mx-auto px-6 relative z-10 text-center reveal">
-            <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight">Ready to revolutionize <br/>your business?</h2>
-            <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">Join 10,000+ creators who are earning over ₹1 Lakh/month on Craftify. No credit card required.</p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-               <Button variant="primary" className="py-5 px-12 text-lg h-14" onClick={() => onLoginClick('seller')}>
-                  Get Started Now <ArrowRight className="w-5 h-5 ml-2" />
-               </Button>
-            </div>
-            <div className="mt-12 flex justify-center gap-8 text-slate-500 text-sm font-medium">
-               <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Free 14-day trial</span>
-               <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Cancel anytime</span>
-            </div>
+           <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight">Ready to revolutionize <br/>your business?</h2>
+           <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">Join 10,000+ creators who are earning over ₹1 Lakh/month on Craftify. No credit card required.</p>
+           <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Button variant="primary" className="py-5 px-12 text-lg h-14" onClick={() => onLoginClick('seller')}>
+                 Get Started Now <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+           </div>
+           <div className="mt-12 flex justify-center gap-8 text-slate-500 text-sm font-medium">
+              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Free 14-day trial</span>
+              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Cancel anytime</span>
+           </div>
          </div>
       </section>
 
@@ -638,7 +633,6 @@ const LandingPage = ({ onLoginClick }) => {
                   <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
                 ))}
                 <li>
-                  {/* UPDATED: DIRECT ROUTE TO ADMIN LOGIN */}
                   <button onClick={() => navigate('/admin-login')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
                       <Lock className="w-3 h-3" /> Founder Access
                   </button>
