@@ -1,4 +1,3 @@
-// LandingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -189,8 +188,8 @@ const LiveActivity = () => {
   ];
 
   useEffect(() => {
-    // A. Connect to Real Socket
-    const socket = io(ENDPOINT);
+    // A. Connect to Real Socket (COOKIE UPDATE: withCredentials true)
+    const socket = io(ENDPOINT, { withCredentials: true });
 
     // Listener: Real Order
     socket.on("new_order_placed", (orderData) => {
@@ -397,21 +396,21 @@ const LandingPage = ({ onLoginClick }) => {
                                <svg className="w-full h-full" viewBox="0 0 100 20" preserveAspectRatio="none">
                                    <path d="M0,20 L0,15 L10,12 L20,16 L30,10 L40,14 L50,5 L60,8 L70,3 L80,10 L90,6 L100,0 L100,20 Z" fill="url(#grad)" />
                                    <defs>
-                                       <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                           <stop offset="0%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0.5}} />
-                                           <stop offset="100%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0}} />
-                                       </linearGradient>
+                                           <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                   <stop offset="0%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0.5}} />
+                                                   <stop offset="100%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0}} />
+                                           </linearGradient>
                                    </defs>
                                </svg>
                           </div>
                       </div>
 
                       <div className="absolute bottom-8 left-8 p-4 glass-card rounded-xl animate-float">
-                         <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
-                         <p className="text-2xl font-bold text-white">₹14,20,590</p>
-                         <div className="flex items-center gap-1 text-green-400 text-xs mt-1">
-                           <TrendingUp className="w-3 h-3" /> +24% this week
-                         </div>
+                          <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
+                          <p className="text-2xl font-bold text-white">₹14,20,590</p>
+                          <div className="flex items-center gap-1 text-green-400 text-xs mt-1">
+                            <TrendingUp className="w-3 h-3" /> +24% this week
+                          </div>
                       </div>
                   </div>
                </TiltCard>
@@ -633,6 +632,7 @@ const LandingPage = ({ onLoginClick }) => {
                   <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
                 ))}
                 <li>
+                  {/* Founder Access Button in Footer - Opens Modal via Router */}
                   <button onClick={() => navigate('/admin-login')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
                       <Lock className="w-3 h-3" /> Founder Access
                   </button>

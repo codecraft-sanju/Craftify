@@ -1,9 +1,9 @@
-// src/FounderAccess.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   Activity, Users, Store, Wallet, DollarSign, Search, TrendingUp, 
-  AlertCircle, CheckCircle, ArrowUpRight, MoreVertical, Filter, Download, XCircle
+  AlertCircle, CheckCircle, ArrowUpRight, MoreVertical, Filter, Download, XCircle, Home
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = "http://localhost:5000";
 
@@ -38,20 +38,26 @@ export default function FounderAccess({ currentUser }) {
     const [shops, setShops] = useState([]);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     // --- Fetch Live Data ---
     useEffect(() => {
         const fetchData = async () => {
-            if(!currentUser?.token) return;
+            // Note: Token check removed. We rely on the cookie existing in the browser.
+            // But we check currentUser to ensure React context is ready.
+            if(!currentUser) return;
+            
             setLoading(true);
-            const headers = { 'Authorization': `Bearer ${currentUser.token}` };
+            
+            // COOKIE UPDATE: credentials: 'include' is mandatory
+            const options = { credentials: 'include' };
 
             try {
                 // Fetch all data in parallel
                 const [usersRes, shopsRes, ordersRes] = await Promise.all([
-                    fetch(`${API_URL}/api/users`, { headers }),
-                    fetch(`${API_URL}/api/shops`, { headers }), // Founders see ALL shops
-                    fetch(`${API_URL}/api/orders`, { headers }) // Founders see ALL orders
+                    fetch(`${API_URL}/api/users`, options),
+                    fetch(`${API_URL}/api/shops`, options), // Founders see ALL shops
+                    fetch(`${API_URL}/api/orders`, options) // Founders see ALL orders
                 ]);
 
                 if (usersRes.ok) setUsers(await usersRes.json());
@@ -75,8 +81,9 @@ export default function FounderAccess({ currentUser }) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
+                    // Authorization header REMOVED
                 },
+                credentials: 'include', // COOKIE UPDATE
                 body: JSON.stringify({ isActive })
              });
 
@@ -89,6 +96,8 @@ export default function FounderAccess({ currentUser }) {
 
     // --- Analytics Logic ---
     const totalPlatformRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    // Assuming platform takes 10% commission
+    const platformProfit = Math.round(totalPlatformRevenue * 0.10); 
     const averageOrderValue = orders.length > 0 ? Math.round(totalPlatformRevenue / orders.length) : 0;
     const activeShopsCount = shops.filter(s => s.isActive).length;
 
@@ -119,6 +128,9 @@ export default function FounderAccess({ currentUser }) {
                     ))}
                 </nav>
                 <div className="p-4 border-t border-slate-800">
+                    <button onClick={() => navigate('/')} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl mb-4 transition-colors">
+                        <Home className="w-5 h-5" /> Back to Site
+                    </button>
                     <div className="flex items-center gap-3 px-4 py-3 bg-slate-900 rounded-xl border border-slate-800">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold ring-2 ring-slate-900">{currentUser?.name?.charAt(0)}</div>
                         <div className="text-sm overflow-hidden">
@@ -152,7 +164,7 @@ export default function FounderAccess({ currentUser }) {
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 {[
                                     { label: 'Total Revenue', val: `₹${totalPlatformRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: 'Live' },
-                                    { label: 'Active Shops', val: activeShopsCount, icon: Store, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: `of ${shops.length}` },
+                                    { label: 'Platform Profit', val: `₹${platformProfit.toLocaleString()}`, icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50', trend: '10% Cut' },
                                     { label: 'Total Users', val: users.length, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50', trend: 'Growing' },
                                     { label: 'Avg. Order Value', val: `₹${averageOrderValue}`, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', trend: 'Stable' },
                                 ].map((stat, i) => (
@@ -223,12 +235,12 @@ export default function FounderAccess({ currentUser }) {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
-                                        <tr>
-                                            <th className="px-6 py-4">Shop Details</th>
-                                            <th className="px-6 py-4">Owner Contact</th>
-                                            <th className="px-6 py-4">Status</th>
-                                            <th className="px-6 py-4">Actions</th>
-                                        </tr>
+                                            <tr>
+                                                <th className="px-6 py-4">Shop Details</th>
+                                                <th className="px-6 py-4">Owner Contact</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">Actions</th>
+                                            </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredShops.map(shop => (
@@ -286,6 +298,57 @@ export default function FounderAccess({ currentUser }) {
                                  </table>
                              </div>
                          </Card>
+                     )}
+
+                     {/* FINANCES TAB */}
+                     {activeTab === 'finances' && (
+                        <div className="grid grid-cols-1 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <Card className="p-6 bg-slate-900 text-white border-slate-800">
+                                    <p className="text-slate-400 text-sm mb-1">Total Platform Revenue</p>
+                                    <h3 className="text-3xl font-black">₹{totalPlatformRevenue.toLocaleString()}</h3>
+                                    <p className="text-xs text-slate-500 mt-2">Gross Volume</p>
+                                </Card>
+                                <Card className="p-6 bg-indigo-600 text-white border-indigo-500">
+                                    <p className="text-indigo-200 text-sm mb-1">Your Net Profit (10%)</p>
+                                    <h3 className="text-3xl font-black">₹{platformProfit.toLocaleString()}</h3>
+                                    <p className="text-xs text-indigo-200 mt-2">Pure Income</p>
+                                </Card>
+                                <Card className="p-6 bg-white border-slate-200">
+                                    <p className="text-slate-500 text-sm mb-1">Seller Payouts Pending</p>
+                                    <h3 className="text-3xl font-black text-slate-900">₹{(totalPlatformRevenue - platformProfit).toLocaleString()}</h3>
+                                    <p className="text-xs text-slate-400 mt-2">To be disbursed</p>
+                                </Card>
+                            </div>
+
+                            <Card className="p-0 overflow-hidden">
+                                <div className="p-6 border-b border-slate-100"><h3 className="font-bold text-slate-900 text-lg">Recent Financial Transactions</h3></div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
+                                            <tr>
+                                                <th className="px-6 py-4">Transaction ID</th>
+                                                <th className="px-6 py-4">Amount</th>
+                                                <th className="px-6 py-4">Platform Fee</th>
+                                                <th className="px-6 py-4">Seller Payout</th>
+                                                <th className="px-6 py-4">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {orders.map(o => (
+                                                <tr key={o._id} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-4 font-mono text-xs text-slate-500">TXN-{o._id.slice(-8).toUpperCase()}</td>
+                                                    <td className="px-6 py-4 font-bold text-slate-900">₹{o.totalAmount}</td>
+                                                    <td className="px-6 py-4 text-green-600 font-medium">+ ₹{Math.round(o.totalAmount * 0.10)}</td>
+                                                    <td className="px-6 py-4 text-slate-600">₹{Math.round(o.totalAmount * 0.90)}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-500">{new Date(o.createdAt).toLocaleDateString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+                        </div>
                      )}
                  </div>
              </main>

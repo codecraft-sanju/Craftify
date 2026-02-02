@@ -5,7 +5,7 @@ import {
   ShoppingBag, Search, X, Star, ArrowRight, Heart, 
   Send, Check, Trash2, Sparkles, MessageSquare, Paperclip, 
   User, Lock, Bell, Menu, RefreshCcw, Home, Grid, Store,
-  ChevronLeft, Palette, Eye, AlertCircle, CheckCircle
+  ChevronLeft, Palette, Eye, AlertCircle, CheckCircle, Package
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -19,7 +19,8 @@ import LandingPage from './LandingPage';
 import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView'; 
-import SellerRegister from './SellerRegister'; 
+import SellerRegister from './SellerRegister';
+import CustomizationChat from './CustomizationChat'; // <--- NEW IMPORT
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date));
@@ -80,7 +81,7 @@ const ToastContainer = ({ toasts, removeToast }) => (
 );
 
 // ==========================================
-// 2. FEATURE COMPONENTS (Chat & Customizer)
+// 2. FEATURE COMPONENTS (Customizer Only)
 // ==========================================
 
 const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCustomFont }) => {
@@ -96,146 +97,7 @@ const LiveCustomizer = ({ product, customText, setCustomText, customFont, setCus
     );
 };
 
-const CustomizationChat = ({ isOpen, onClose, product, currentUser }) => {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [chatId, setChatId] = useState(null);
-  const chatEndRef = useRef(null);
-
-  // Initialize Chat Session
-  useEffect(() => {
-    if (isOpen && currentUser && product) {
-        setLoading(true);
-        // POST to /api/chats to create or fetch existing chat
-        fetch(`${API_URL}/api/chats`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentUser.token}`
-            },
-            body: JSON.stringify({ productId: product._id })
-        })
-        .then(res => res.json())
-        .then(data => {
-            setChatId(data._id);
-            setMessages(data.messages || []);
-            setLoading(false);
-            socket.emit("join_chat", data._id); // Join Room
-        })
-        .catch(err => {
-            console.error("Chat Error:", err);
-            setLoading(false);
-        });
-    }
-  }, [isOpen, product, currentUser]);
-
-  // Listen for Incoming Messages
-  useEffect(() => {
-      if(!socket) return;
-      socket.on("new_message_received", (newMessageReceived) => {
-          if (chatId && chatId === newMessageReceived.chatId) {
-             setMessages(prev => [...prev, newMessageReceived.message]);
-             scrollToBottom();
-          }
-      });
-      return () => { socket.off("new_message_received"); }
-  }, [chatId]);
-
-  const scrollToBottom = () => {
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  };
-
-  const handleSend = async () => {
-    if (!message.trim() || !chatId) return;
-    try {
-        // Optimistic Update
-        const tempMsg = { text: message, sender: { _id: currentUser._id }, createdAt: new Date() };
-        setMessages(prev => [...prev, tempMsg]);
-        const msgToSend = message;
-        setMessage("");
-        scrollToBottom();
-        
-        await fetch(`${API_URL}/api/chats/message`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentUser.token}`
-            },
-            body: JSON.stringify({ chatId: chatId, content: msgToSend, type: 'text' })
-        });
-    } catch (error) { console.error("Send Error", error); }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-scale-in">
-        
-        {/* Chat Header */}
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-lg p-1 border border-slate-200">
-                  <img src={product.image} className="w-full h-full object-cover rounded" alt=""/>
-              </div>
-              <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Chat with Seller</h3>
-                  <p className="text-xs text-slate-500">Re: {product.name}</p>
-              </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><X className="w-5 h-5 text-slate-500" /></button>
-        </div>
-
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-          {loading ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                  <RefreshCcw className="w-6 h-6 animate-spin mb-2"/>
-                  <p className="text-xs">Connecting to seller...</p>
-              </div>
-          ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                  <MessageSquare className="w-10 h-10 mb-2 opacity-50"/>
-                  <p className="text-sm">Start the conversation!</p>
-                  <p className="text-xs">Ask about customization, stock, or shipping.</p>
-              </div>
-          ) : (
-            messages.map((msg, index) => {
-              const isMe = msg.sender?._id === currentUser?._id || msg.sender === currentUser?._id;
-              return (
-                <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'}`}>
-                    <p>{msg.text}</p>
-                    <span className={`text-[9px] block mt-1 ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </span>
-                  </div>
-                </div>
-              )
-            })
-          )}
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-white border-t border-slate-100 flex gap-2">
-            <input 
-                type="text" 
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
-                placeholder="Type your message..." 
-                value={message} 
-                onChange={(e) => setMessage(e.target.value)} 
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
-            />
-            <button onClick={handleSend} className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
-                <Send className="w-4 h-4" />
-            </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// --- CustomizationChat MOVED TO SEPARATE FILE ---
 
 const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + item.price, 0);
@@ -288,8 +150,8 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
   const isFounderLogin = initialMode === 'founder';
   
   useEffect(() => {
-    if(isFounderLogin) { setEmail('admin18@gmail.com'); setIsLogin(true); } 
-    else { setEmail(''); }
+    setEmail('');
+    setIsLogin(true); 
     setError("");
   }, [initialMode, isOpen]);
 
@@ -302,13 +164,21 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
     try {
         const endpoint = isLogin ? '/api/users/login' : '/api/users';
         const payload = isLogin ? { email, password } : { name, email, password };
+        
         const res = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(payload)
         });
+        
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Something went wrong");
+        
+        if (isFounderLogin && data.role !== 'founder') {
+            throw new Error("Access Denied: You are not a Founder.");
+        }
+
         onLogin(data);
         onClose();
     } catch (err) { setError(err.message); } finally { setLoading(false); }
@@ -318,7 +188,7 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative p-8">
         <button onClick={onClose} className="absolute top-4 right-4"><X className="w-5 h-5 text-slate-500"/></button>
-        <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">{isFounderLogin ? 'God Mode' : (isLogin ? 'Welcome Back' : 'Create Account')}</h2>
+        <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">{isFounderLogin ? 'Founder Access' : (isLogin ? 'Welcome Back' : 'Create Account')}</h2>
         {error && <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2"><AlertCircle className="w-4 h-4"/> {error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && !isFounderLogin && <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Full Name" required />}
@@ -336,7 +206,6 @@ const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
   );
 };
 
-// --- Product Detail View ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -384,7 +253,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
                     <Store className="w-4 h-4" /> Sold by <span className="font-bold text-slate-900">{product.shop?.name || 'Verified Seller'}</span>
                 </div>
                 
-                {/* CHAT TRIGGER */}
                 <button onClick={() => openChat(product)} className="mt-6 flex items-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50 px-5 py-3 rounded-xl hover:bg-indigo-100 transition-colors w-fit border border-indigo-100 shadow-sm">
                     <MessageSquare className="w-4 h-4" /> Chat with Seller
                 </button>
@@ -404,7 +272,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   );
 };
 
-// --- Profile View ---
 const ProfileView = ({ currentUser, orders, onLogout }) => (
     <div className="pt-24 pb-32 max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-6 mb-12 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
@@ -447,7 +314,13 @@ const ProfileView = ({ currentUser, orders, onLogout }) => (
 // --- PROTECTED ROUTE ---
 const ProtectedRoute = ({ user, allowedRoles, children, redirectPath = '/' }) => {
     if (!user) return <Navigate to={redirectPath} replace />;
-    if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to={redirectPath} replace />;
+    
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        if(user.role === 'founder') return <Navigate to="/founder" replace />;
+        if(user.role === 'seller') return <Navigate to="/my-shop" replace />;
+        return <Navigate to="/shop" replace />;
+    }
+    
     return children ? children : <Outlet />;
 };
 
@@ -482,14 +355,17 @@ const CraftifyContent = () => {
   const location = useLocation();
   
   useEffect(() => {
-    socket = io(ENDPOINT);
+    // Socket connection
+    socket = io(ENDPOINT, {
+        withCredentials: true 
+    });
+
     if(currentUser) {
-        fetchOrders(currentUser.token);
+        fetchOrders();
         socket.emit("setup", currentUser);
     }
     fetchProducts();
     
-    // Live Stock Updates
     socket.on("product_updated", (updatedProduct) => {
         setProducts(prev => prev.map(p => p._id === updatedProduct._id ? { ...p, ...updatedProduct } : p));
     });
@@ -507,10 +383,13 @@ const CraftifyContent = () => {
       finally { setProductsLoading(false); }
   };
 
-  const fetchOrders = async (token) => {
+  const fetchOrders = async () => {
       try {
           const res = await fetch(`${API_URL}/api/orders/myorders`, {
-              headers: { 'Authorization': `Bearer ${token}` }
+              headers: { 
+                  'Content-Type': 'application/json'
+              },
+              credentials: 'include' 
           });
           const data = await res.json();
           if(Array.isArray(data)) setOrders(data);
@@ -537,14 +416,21 @@ const CraftifyContent = () => {
       setIsChatOpen(true);
   };
 
-  const handleLogin = (user) => {
-    setCurrentUser(user);
-    localStorage.setItem("userInfo", JSON.stringify(user));
+  const handleLogin = (userData) => {
+    setCurrentUser(userData);
+    localStorage.setItem("userInfo", JSON.stringify(userData));
     setIsAuthOpen(false);
-    addToast("Welcome Back", `Signed in as ${user.name}`);
-    if(user.role === 'founder') navigate('/founder');
-    else if(user.role === 'seller') navigate('/my-shop');
-    else navigate('/shop');
+    addToast("Access Granted", `Signed in as ${userData.name}`);
+    
+    if(userData.role === 'founder') {
+        navigate('/founder', { replace: true });
+    }
+    else if(userData.role === 'seller') {
+        navigate('/my-shop');
+    }
+    else {
+        navigate('/shop');
+    }
   };
 
   const openLogin = (mode = 'customer') => {
@@ -553,23 +439,31 @@ const CraftifyContent = () => {
       setIsAuthOpen(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+      try {
+          await fetch(`${API_URL}/api/users/logout`, {
+              method: 'POST',
+              credentials: 'include'
+          });
+      } catch (error) {
+          console.error("Logout failed", error);
+      }
+
       localStorage.removeItem("userInfo");
       setCurrentUser(null);
       setOrders([]);
       socket.disconnect(); 
-      socket = io(ENDPOINT); // Reconnect as guest
+      socket = io(ENDPOINT, { withCredentials: true }); 
       navigate('/');
   };
 
   const handleCheckout = async () => {
     if (!currentUser) return openLogin();
     
-    // Map items to include shopId for backend multi-vendor logic
     const orderPayload = {
         orderItems: cart.map(item => ({
             product: item._id,
-            shop: item.shop._id || item.shop, // Ensure Shop ID is passed
+            shop: item.shop._id || item.shop, 
             name: item.name,
             image: item.image || item.coverImage,
             price: item.price,
@@ -590,9 +484,9 @@ const CraftifyContent = () => {
         const res = await fetch(`${API_URL}/api/orders`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentUser.token}`
+                'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify(orderPayload)
         });
 
@@ -628,7 +522,6 @@ const CraftifyContent = () => {
                  <Link to="/shop" className="hover:text-indigo-500 transition-colors">Marketplace</Link>
               </div>
               <div className="flex items-center gap-4">
-                 {currentUser?.role === 'founder' && <Button size="sm" onClick={() => navigate('/founder')}>Founder Mode</Button>}
                  {currentUser?.role === 'seller' && <Button size="sm" onClick={() => navigate('/my-shop')}>Seller Dashboard</Button>}
                  
                  <button onClick={() => currentUser ? navigate('/profile') : openLogin('customer')} className={`p-2 rounded-full hover:bg-black/10 transition-colors ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
@@ -663,8 +556,16 @@ const CraftifyContent = () => {
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onLogin={handleLogin} initialMode={authMode} />
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} setCart={setCart} onCheckout={handleCheckout} currentUser={currentUser} />
       
-      {/* CUSTOMIZATION CHAT COMPONENT */}
-      {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} />}
+      {activeChatProduct && (
+        <CustomizationChat 
+            isOpen={isChatOpen} 
+            onClose={() => setIsChatOpen(false)} 
+            product={activeChatProduct} 
+            currentUser={currentUser} 
+            socket={socket} 
+            API_URL={API_URL} 
+        />
+      )}
     </div>
   );
 };

@@ -1,82 +1,55 @@
-// backend/middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
-// @desc    Protect routes (Check for valid JWT Token)
-// @usage   Add this to any route that needs login
-const protect = async (req, res, next) => {
-    let token;
+// @desc    Protect routes (Check for valid Cookie)
+const protect = asyncHandler(async (req, res, next) => {
+  let token;
 
-    // Check if Authorization header exists and starts with 'Bearer'
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
-        try {
-            // Get token from header (Format: "Bearer <token>")
-            token = req.headers.authorization.split(' ')[1];
+  // Read token from cookie named 'jwt'
+  token = req.cookies.jwt;
 
-            // Verify Token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Get user from token
+      req.user = await User.findById(decoded.id).select('-password');
 
-            // ============================================================
-            // ⚡ GOD MODE BYPASS (For Founder Access without DB Entry)
-            // ============================================================
-            if (decoded.id === 'god_admin_001') {
-                req.user = {
-                    _id: 'god_admin_001',
-                    name: 'Sanjay Choudhary',
-                    email: 'admin18@gmail.com',
-                    role: 'founder', // Full access
-                    isAdmin: true
-                };
-                return next();
-            }
-            // ============================================================
+      if (!req.user) {
+          res.status(401);
+          throw new Error('User not found (Account deleted?)');
+      }
 
-            // Standard User: Get User from DB
-            // .select('-password') ka matlab password field mat lao
-            req.user = await User.findById(decoded.id).select('-password');
-
-            // SAFETY CHECK: If token is valid but user no longer exists in DB
-            if (!req.user) {
-                return res.status(401).json({ message: 'User not found (Account might be deleted)' });
-            }
-
-            next(); // Move to the next function (Controller)
-            
-        } catch (error) {
-            console.error("Auth Middleware Error:", error.message);
-            // Return here to prevent further execution
-            return res.status(401).json({ message: 'Not authorized, token failed' });
-        }
+      next();
+    } catch (error) {
+      console.error("Auth Error:", error);
+      res.status(401);
+      throw new Error('Not authorized, token failed');
     }
-
-    // If no token was found in the header
-    if (!token) {
-        res.status(401).json({ message: 'Not authorized, no token' });
-    }
-};
+  } else {
+    res.status(401);
+    throw new Error('Not authorized, no token (Please login)');
+  }
+});
 
 // @desc    Seller Guard
-// @usage   Add to routes like "Add Product", "Update Shop"
 const seller = (req, res, next) => {
-    // Access: Seller OR Founder OR Admin
     if (req.user && (req.user.role === 'seller' || req.user.role === 'founder' || req.user.role === 'admin')) {
         next();
     } else {
-        res.status(403).json({ message: 'Access Denied: Sellers only' });
+        res.status(403);
+        throw new Error('Access Denied: Sellers only');
     }
 };
 
 // @desc    Founder/Admin Guard
-// @usage   Add to routes like "Get All Users", "Delete Shop"
 const founder = (req, res, next) => {
-    // Access: Founder OR Admin ONLY
     if (req.user && (req.user.role === 'founder' || req.user.role === 'admin')) {
         next();
     } else {
-        res.status(403).json({ message: 'Access Denied: Founder/Admin only' });
+        res.status(403);
+        throw new Error('Access Denied: Founder/Admin only');
     }
 };
 

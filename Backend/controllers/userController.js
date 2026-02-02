@@ -1,46 +1,44 @@
-// backend/controllers/userController.js
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-
-// --- Utility: Generate JWT Token ---
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
-    });
-};
+const generateToken = require('../utils/generateToken'); // Make sure path is correct
 
 // @desc    Register a new user
 // @route   POST /api/users
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password } = req.body;
 
-        // 1. Validation
         if (!name || !email || !password) {
             return res.status(400).json({ message: 'Please add all fields' });
         }
 
-        // 2. Check if user already exists
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // 3. Create User
-        // By default role is 'customer'. Only admin can assign other roles directly, 
-        // or user upgrades by creating a shop.
+        // --- AUTOMATIC FOUNDER ASSIGNMENT ---
+        let role = 'customer';
+        // --- CHANGE: Updated email check for God Mode (admin@gmail.com) ---
+        if (email.toLowerCase() === 'admin@gmail.com') {
+            role = 'founder';
+        } else if (req.body.role === 'seller') {
+            role = 'seller';
+        }
+
         const user = await User.create({
             name,
             email,
             password,
-            role: role === 'seller' ? 'seller' : 'customer', // Allow manual role setting for now
+            role,
             avatar: name.charAt(0).toUpperCase()
         });
 
         if (user) {
-            // --- SOCKET IO: Notify Admin (Optional) ---
+            // Cookie Generate Karo
+            generateToken(res, user._id);
+
+            // Socket Notification
             if (req.io) {
                 req.io.emit('new_user_registered', {
                     _id: user._id,
@@ -57,7 +55,6 @@ const registerUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                token: generateToken(user._id),
             });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
@@ -68,39 +65,25 @@ const registerUser = async (req, res) => {
     }
 };
 
-// @desc    Authenticate user & get token (Login)
+// @desc    Authenticate user & set Cookie
 // @route   POST /api/users/login
 // @access  Public
 const authUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // ============================================================
-        // ⚡ GOD MODE ACCESS (Founder Login)
-        // ============================================================
-        if (email === 'admin18@gmail.com' && password === 'admin') {
-            // Check if God user exists in DB, if not create/use dummy
-            // Ideally, the founder should be a real user in DB.
-            // For now, we return the static response as requested.
-            const godId = 'god_admin_001'; 
-            
-            return res.json({
-                _id: godId,
-                name: 'Sanjay Choudhary',
-                email: 'admin18@gmail.com',
-                role: 'founder',
-                avatar: 'SC',
-                token: generateToken(godId),
-            });
-        }
-        // ============================================================
-
-        // Standard User Login Logic
         const user = await User.findOne({ email }).select('+password');
 
         if (user && (await user.matchPassword(password))) {
             
-            // --- SOCKET IO: User Came Online ---
+            // --- GOD MODE FIX (Backend Level) ---
+            // --- CHANGE: Updated email check to auto-promote admin@gmail.com to Founder ---
+            if (user.email === 'admin@gmail.com' && user.role !== 'founder') {
+                user.role = 'founder';
+                await user.save();
+            }
+
+            // Socket Notification
             if (req.io) {
                 req.io.emit('user_login', { 
                     userId: user._id, 
@@ -109,15 +92,16 @@ const authUser = async (req, res) => {
                 });
             }
 
+            // Generate Cookie (Ab Frontend ko token store karne ki zarurat nahi)
+            generateToken(res, user._id);
+
             res.json({
                 _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                // Note: We removed 'shop' from User model, so we don't send it here.
-                // The frontend should fetch shop details separately using /api/shops/my-shop
-                token: generateToken(user._id),
+                address: user.address
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
@@ -128,24 +112,23 @@ const authUser = async (req, res) => {
     }
 };
 
-// @desc    Get user profile (Current User)
+// @desc    Logout user / clear cookie
+// @route   POST /api/users/logout
+// @access  Public
+const logoutUser = async (req, res) => {
+    res.cookie('jwt', '', {
+        httpOnly: true,
+        expires: new Date(0), // Expire immediately
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
+};
+
+// @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = async (req, res) => {
     try {
-        // God Mode Check
-        if (req.user._id === 'god_admin_001') {
-            return res.json({
-                _id: 'god_admin_001',
-                name: 'Sanjay Choudhary',
-                email: 'admin18@gmail.com',
-                role: 'founder',
-                avatar: 'SC'
-            });
-        }
-
         const user = await User.findById(req.user._id);
-
         if (user) {
             res.json({
                 _id: user._id,
@@ -153,7 +136,7 @@ const getUserProfile = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                address: user.address // Include address in profile
+                address: user.address
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -177,21 +160,20 @@ const updateUserProfile = async (req, res) => {
             if (req.body.password) {
                 user.password = req.body.password;
             }
-
-            // Update Avatar if provided
             if (req.body.avatar) {
                 user.avatar = req.body.avatar;
             }
 
             const updatedUser = await user.save();
 
+            // Cookie refresh karne ki zarurat nahi unless session extend karna ho
+            
             res.json({
                 _id: updatedUser._id,
                 name: updatedUser.name,
                 email: updatedUser.email,
                 role: updatedUser.role,
                 avatar: updatedUser.avatar,
-                token: generateToken(updatedUser._id),
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -203,9 +185,6 @@ const updateUserProfile = async (req, res) => {
 
 // --- ADMIN / FOUNDER FUNCTIONS ---
 
-// @desc    Get all users
-// @route   GET /api/users
-// @access  Private/Admin
 const getUsers = async (req, res) => {
     try {
         const users = await User.find({});
@@ -215,13 +194,9 @@ const getUsers = async (req, res) => {
     }
 };
 
-// @desc    Delete user
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
 const deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-
         if (user) {
             await user.deleteOne();
             res.json({ message: 'User removed' });
@@ -233,9 +208,6 @@ const deleteUser = async (req, res) => {
     }
 };
 
-// @desc    Get user by ID
-// @route   GET /api/users/:id
-// @access  Private/Admin
 const getUserById = async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
@@ -249,20 +221,15 @@ const getUserById = async (req, res) => {
     }
 };
 
-// @desc    Update user (Admin functionality)
-// @route   PUT /api/users/:id
-// @access  Private/Admin
 const updateUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
             user.role = req.body.role || user.role;
 
             const updatedUser = await user.save();
-
             res.json({
                 _id: updatedUser._id,
                 name: updatedUser.name,
@@ -280,6 +247,7 @@ const updateUser = async (req, res) => {
 module.exports = {
     registerUser,
     authUser,
+    logoutUser, // NEW
     getUserProfile,
     updateUserProfile,
     getUsers,

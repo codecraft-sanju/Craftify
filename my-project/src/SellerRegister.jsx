@@ -1,4 +1,3 @@
-// src/SellerRegister.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -46,13 +45,13 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     password: '',
     shopName: '',
     category: 'Clothing',
-    phone: '', // Added: Required by Shop Model
-    description: 'Welcome to my new shop on Craftify!' // Default description
+    phone: '', 
+    description: 'Welcome to my new shop on Craftify!' 
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(""); // Clear error on typing
+    setError(""); 
   };
 
   // --- SUBMISSION HANDLER ---
@@ -67,6 +66,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             const res = await fetch(`${API_URL}/api/users/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // COOKIE UPDATE: Must include this
                 body: JSON.stringify({
                     email: formData.email,
                     password: formData.password
@@ -76,9 +76,8 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Login failed");
 
-            // Check if user is actually a seller
+            // Check if user is actually a seller or higher role
             if(data.role !== 'seller' && data.role !== 'founder' && data.role !== 'admin') {
-                 // Optional: Ask them to create a shop if they are just a customer
                  throw new Error("This account is not registered as a Seller.");
             }
 
@@ -87,40 +86,42 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         } else {
             // === REGISTER LOGIC (2 Steps) ===
             
-            // 1. Create User
+            // 1. Create User (Backend sets Cookie here)
             const userRes = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // COOKIE UPDATE: Receive cookie
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
                     password: formData.password,
-                    // Note: Role defaults to 'customer' in backend, we promote them in Step 2
+                    // Role will be updated to 'seller' in Step 2 via Shop creation
                 })
             });
 
             const userData = await userRes.json();
             if (!userRes.ok) throw new Error(userData.message || "User registration failed");
 
-            // 2. Create Shop (This promotes user to 'seller')
+            // 2. Create Shop (Browser automatically sends the Cookie from Step 1)
             const shopRes = await fetch(`${API_URL}/api/shops`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${userData.token}`
+                    // NO Authorization header needed anymore!
                 },
+                credentials: 'include', // COOKIE UPDATE: Send cookie
                 body: JSON.stringify({
                     name: formData.shopName,
                     description: formData.description,
                     phone: formData.phone,
-                    categories: [formData.category] // Backend expects array
+                    categories: [formData.category]
                 })
             });
 
             const shopData = await shopRes.json();
             if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
 
-            // 3. Update Local User Data with new Role
+            // 3. Update Local User Data with new Role (for UI only)
             const finalUser = { ...userData, role: 'seller', shop: shopData._id };
             onLoginSuccess(finalUser);
         }

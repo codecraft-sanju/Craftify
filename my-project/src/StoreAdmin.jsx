@@ -1,9 +1,8 @@
-// src/StoreAdmin.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, ShoppingBag, Package, Plus, X, 
   DollarSign, Star, Settings, Menu, RefreshCcw, Store,
-  MessageSquare, Send, User, ChevronRight
+  MessageSquare, Send, User, ChevronRight, Edit, Trash2
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -65,48 +64,78 @@ export default function StoreAdmin({ currentUser }) {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false); 
 
-    // --- CHAT STATES (NEW) ---
+    // --- NEW: EDITING STATE ---
+    const [editingProduct, setEditingProduct] = useState(null);
+
+    // --- CHAT STATES ---
     const [chats, setChats] = useState([]); 
     const [selectedChat, setSelectedChat] = useState(null); 
     const [messages, setMessages] = useState([]); 
     const [newMessage, setNewMessage] = useState("");
     const scrollRef = useRef();
+    const [socketConnected, setSocketConnected] = useState(false);
 
-    // --- SOCKET & INITIAL FETCH ---
+    // --- 1. SOCKET CONNECTION EFFECT (Runs Once) ---
     useEffect(() => {
-        // 1. Initialize Socket
-        socket = io(ENDPOINT);
+        // COOKIE UPDATE: Pass credentials to Socket
+        socket = io(ENDPOINT, { withCredentials: true });
+        
         if(currentUser) {
             socket.emit("setup", currentUser);
         }
-        socket.on("connected", () => console.log("Seller Socket Connected"));
-
-        // 2. Real-time Message Listener
-        socket.on("new_message_received", (newMessageReceived) => {
-            if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
-                setMessages(prev => [...prev, newMessageReceived.message]);
-                // Scroll to bottom on new message
-                setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-            }
-            // Refresh chat list to show unread/latest
-            if(activeTab === 'messages') fetchChats();
+        socket.on("connected", () => {
+            console.log("Seller Socket Connected");
+            setSocketConnected(true);
         });
 
-        // 3. Fetch Initial Data
-        fetchStoreData();
+        fetchStoreData(); // Fetch initial data
 
-        return () => { socket.disconnect(); }
-    }, [currentUser, selectedChat, activeTab]);
+        return () => { 
+            socket.disconnect(); 
+        }
+    }, [currentUser]); 
+
+    // --- 2. MESSAGE LISTENER EFFECT (Runs on Chat Selection) ---
+    useEffect(() => {
+        if(!socket) return;
+
+        const messageHandler = (newMessageReceived) => {
+            // Check if message belongs to the currently opened chat
+            if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
+                setMessages(prev => [...prev, newMessageReceived.message]);
+                setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+            }
+            
+            // Refresh chat list
+            if(activeTab === 'messages') {
+                 fetchChats(); 
+            }
+        };
+
+        socket.on("new_message_received", messageHandler);
+
+        return () => {
+            socket.off("new_message_received", messageHandler);
+        };
+    }, [selectedChat, activeTab]); 
+
+    // --- 3. FETCH CHATS ON TAB CHANGE ---
+    useEffect(() => {
+        if(activeTab === 'messages') {
+            fetchChats();
+        }
+    }, [activeTab]);
 
     // --- API FUNCTIONS ---
 
     const fetchStoreData = async () => {
-        if(!currentUser?.token) return;
+        if(!currentUser) return;
         
         try {
             setLoading(true);
+            // COOKIE UPDATE: credentials: 'include'
             const shopRes = await fetch(`${API_URL}/api/shops/my-shop`, {
-                headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                credentials: 'include' 
             });
             
             if (shopRes.ok) {
@@ -115,9 +144,9 @@ export default function StoreAdmin({ currentUser }) {
 
                 if(shopData && shopData._id) {
                     const [prodRes, ordRes] = await Promise.all([
-                        fetch(`${API_URL}/api/products/shop/${shopData._id}`),
+                        fetch(`${API_URL}/api/products/shop/${shopData._id}`), // Public route
                         fetch(`${API_URL}/api/orders/shop-orders`, {
-                            headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                            credentials: 'include' // Private Route
                         })
                     ]);
 
@@ -125,7 +154,6 @@ export default function StoreAdmin({ currentUser }) {
                     if(ordRes.ok) setOrders(await ordRes.json());
                 }
             } else {
-                console.warn("Shop not found or API error");
                 setShop(null);
             }
         } catch (error) {
@@ -137,29 +165,26 @@ export default function StoreAdmin({ currentUser }) {
 
     const fetchChats = async () => {
         try {
+            // COOKIE UPDATE: credentials: 'include'
             const res = await fetch(`${API_URL}/api/chats/shop-chats`, {
-                headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             setChats(data);
         } catch (error) { console.error("Fetch Chats Error", error); }
     };
 
-    // Load Chats when clicking "Messages" tab
-    useEffect(() => {
-        if(activeTab === 'messages') {
-            fetchChats();
-        }
-    }, [activeTab]);
-
     const openChat = async (chat) => {
         setSelectedChat(chat);
         setMessages([]); 
+        
+        // Join Room
         socket.emit("join_chat", chat._id);
 
         try {
+            // COOKIE UPDATE: credentials: 'include'
             const res = await fetch(`${API_URL}/api/chats/${chat._id}`, {
-                headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                credentials: 'include'
             });
             const data = await res.json();
             setMessages(data.messages || []);
@@ -181,12 +206,13 @@ export default function StoreAdmin({ currentUser }) {
             const msgToSend = newMessage;
             setNewMessage("");
 
+            // COOKIE UPDATE: credentials: 'include'
             await fetch(`${API_URL}/api/chats/message`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     chatId: selectedChat._id,
                     content: msgToSend,
@@ -209,8 +235,8 @@ export default function StoreAdmin({ currentUser }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
                 },
+                credentials: 'include', // Cookie
                 body: JSON.stringify({
                     name: formData.get('name'),
                     description: formData.get('description'),
@@ -222,15 +248,9 @@ export default function StoreAdmin({ currentUser }) {
 
             if (res.ok) {
                 setShop(data);
-                alert("Shop Created Successfully!");
                 fetchStoreData();
             } else {
-                if (res.status === 400 || data.message?.toLowerCase().includes('already')) {
-                    alert("System found your existing shop! Loading dashboard...");
-                    await fetchStoreData();
-                } else {
-                    alert(data.message || "Failed to create shop");
-                }
+                alert(data.message || "Failed to create shop");
             }
         } catch (error) {
             console.error(error);
@@ -248,8 +268,8 @@ export default function StoreAdmin({ currentUser }) {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
                 },
+                credentials: 'include', // Cookie
                 body: JSON.stringify({
                     name: formData.get('storeName'),
                     description: formData.get('description'),
@@ -266,45 +286,95 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); }
     };
 
-    const handleAddProduct = async (e) => {
+    // --- PRODUCT ACTIONS (CREATE / UPDATE / DELETE) ---
+
+    const handleOpenModal = (product = null) => {
+        setEditingProduct(product);
+        setIsAddModalOpen(true);
+    };
+
+    const handleSaveProduct = async (e) => {
         e.preventDefault();
         const shopId = shop?._id;
-        if (!shopId) {
-            alert("Error: Shop information is missing. Please refresh the page.");
-            return;
-        }
+        if (!shopId) return alert("Shop information missing.");
+        
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
+        const productData = {
+            shop: shopId,
+            name: formData.get('name'),
+            category: formData.get('category'),
+            price: Number(formData.get('price')),
+            stock: Number(formData.get('stock')),
+            description: formData.get('description'),
+            image: editingProduct?.image || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800",
+        };
+
         try {
-            const res = await fetch(`${API_URL}/api/products`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.token}`
-                },
-                body: JSON.stringify({
-                    shop: shopId,
-                    name: formData.get('name'),
-                    category: formData.get('category'),
-                    price: Number(formData.get('price')),
-                    stock: Number(formData.get('stock')),
-                    description: formData.get('description'),
-                    image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800",
-                })
-            });
-            const data = await res.json();
-            if(res.ok) {
-                setProducts([data, ...products]);
-                setIsAddModalOpen(false);
-                alert("Product Added Successfully!");
+            let res, data;
+            
+            if (editingProduct) {
+                // UPDATE EXISTING PRODUCT
+                res = await fetch(`${API_URL}/api/products/${editingProduct._id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', // Cookie
+                    body: JSON.stringify(productData)
+                });
             } else {
-                alert(`Error: ${data.message || "Failed to add product"}`);
+                // CREATE NEW PRODUCT
+                res = await fetch(`${API_URL}/api/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', // Cookie
+                    body: JSON.stringify(productData)
+                });
+            }
+
+            data = await res.json();
+
+            if(res.ok) {
+                if (editingProduct) {
+                    setProducts(prev => prev.map(p => p._id === data._id ? data : p));
+                    alert("Product Updated Successfully!");
+                } else {
+                    setProducts([data, ...products]);
+                    alert("Product Added Successfully!");
+                }
+                setIsAddModalOpen(false);
+            } else {
+                alert(`Error: ${data.message || "Operation failed"}`);
             }
         } catch (error) {
-            alert("Network error. Please try again.");
+            alert("Network error.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteProduct = async (productId) => {
+        if (!window.confirm("Are you sure you want to delete this product?")) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/products/${productId}`, {
+                method: 'DELETE',
+                credentials: 'include' // Cookie
+            });
+
+            if (res.ok) {
+                setProducts(prev => prev.filter(p => p._id !== productId));
+                alert("Product deleted.");
+            } else {
+                alert("Failed to delete product.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network error deleting product.");
         }
     };
 
@@ -319,7 +389,6 @@ export default function StoreAdmin({ currentUser }) {
         );
     }
 
-    // --- CREATE SHOP FORM ---
     if (!shop) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -356,7 +425,6 @@ export default function StoreAdmin({ currentUser }) {
     }
 
     const totalRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
         <button 
             onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
@@ -465,20 +533,20 @@ export default function StoreAdmin({ currentUser }) {
                                     <h2 className="text-2xl font-black text-slate-900">Product Management</h2>
                                     <p className="text-slate-500 text-sm">Manage your catalog, stock, and pricing.</p>
                                 </div>
-                                <Button onClick={() => setIsAddModalOpen(true)}><Plus className="w-4 h-4" /> Add New Product</Button>
+                                <Button onClick={() => handleOpenModal(null)}><Plus className="w-4 h-4" /> Add New Product</Button>
                             </div>
 
                             <Card className="overflow-hidden">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
                                     {products.length === 0 ? <p className="col-span-full text-center text-slate-400 py-10">No products added yet. Start selling!</p> : products.map(product => (
-                                        <div key={product._id} className="group bg-white rounded-2xl border border-slate-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
-                                            <div className="aspect-[4/3] bg-slate-100 rounded-t-2xl relative overflow-hidden">
+                                        <div key={product._id} className="group bg-white rounded-2xl border border-slate-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300 flex flex-col">
+                                            <div className="aspect-[4/3] bg-slate-100 rounded-t-2xl relative overflow-hidden shrink-0">
                                                 <img src={product.image || product.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                                                 <div className="absolute top-2 right-2">
                                                     <Badge color={product.stock > 10 ? 'green' : 'red'}>{product.stock > 0 ? 'In Stock' : 'OOS'}</Badge>
                                                 </div>
                                             </div>
-                                            <div className="p-4">
+                                            <div className="p-4 flex flex-col flex-1">
                                                 <div className="flex justify-between items-start mb-2">
                                                     <h3 className="font-bold text-slate-900 line-clamp-1">{product.name}</h3>
                                                     <span className="font-bold text-indigo-600">₹{product.price}</span>
@@ -487,6 +555,15 @@ export default function StoreAdmin({ currentUser }) {
                                                     <span>{product.category}</span>
                                                     <span>•</span>
                                                     <span>Stock: {product.stock}</span>
+                                                </div>
+                                                
+                                                <div className="mt-auto flex gap-2 pt-2 border-t border-slate-50">
+                                                    <button onClick={() => handleOpenModal(product)} className="flex-1 py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                                                        <Edit className="w-3 h-3" /> Edit
+                                                    </button>
+                                                    <button onClick={() => handleDeleteProduct(product._id)} className="flex-1 py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-red-50 hover:text-red-600 text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                                                        <Trash2 className="w-3 h-3" /> Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -544,10 +621,9 @@ export default function StoreAdmin({ currentUser }) {
                         </div>
                     )}
 
-                    {/* MESSAGES TAB (NEW) */}
+                    {/* MESSAGES TAB */}
                     {activeTab === 'messages' && (
                         <div className="flex h-full gap-6 animate-fade-in">
-                            {/* Left: Chat List */}
                             <Card className="w-1/3 flex flex-col overflow-hidden h-full">
                                 <div className="p-4 border-b border-slate-100 bg-slate-50">
                                     <h3 className="font-bold text-slate-800">Inbox ({chats.length})</h3>
@@ -581,11 +657,9 @@ export default function StoreAdmin({ currentUser }) {
                                 </div>
                             </Card>
 
-                            {/* Right: Chat Window */}
                             <Card className="flex-1 flex flex-col overflow-hidden h-full bg-slate-50/50">
                                 {selectedChat ? (
                                     <>
-                                        {/* Header */}
                                         <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shadow-sm">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
@@ -598,7 +672,6 @@ export default function StoreAdmin({ currentUser }) {
                                             </div>
                                         </div>
 
-                                        {/* Messages Area */}
                                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
                                             {messages.map((msg, i) => {
                                                 const isMe = msg.sender?._id === currentUser._id || msg.sender === currentUser._id;
@@ -606,7 +679,7 @@ export default function StoreAdmin({ currentUser }) {
                                                     <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                         <div className={`max-w-[70%] p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'}`}>
                                                             <p>{msg.text}</p>
-                                                            <span className={`text-[10px] block mt-1 ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                                            <span className={`text-[9px] block mt-1 ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>
                                                                 {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                                             </span>
                                                         </div>
@@ -616,7 +689,6 @@ export default function StoreAdmin({ currentUser }) {
                                             <div ref={scrollRef} />
                                         </div>
 
-                                        {/* Input Area */}
                                         <div className="p-4 bg-white border-t border-slate-100">
                                             <form onSubmit={sendMessage} className="flex gap-2">
                                                 <input 
@@ -680,24 +752,37 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             </main>
 
-            {/* ADD PRODUCT MODAL */}
+            {/* PRODUCT MODAL (Unified for Add & Edit) */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <h2 className="text-xl font-black text-slate-900">Add New Product</h2>
+                            <h2 className="text-xl font-black text-slate-900">
+                                {editingProduct ? `Edit ${editingProduct.name}` : 'Add New Product'}
+                            </h2>
                             <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5"/></button>
                         </div>
-                        <form onSubmit={handleAddProduct} className="p-8 space-y-6">
+                        <form onSubmit={handleSaveProduct} className="p-8 space-y-6">
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold uppercase text-slate-500">Product Name</label>
-                                        <input name="name" required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" placeholder="e.g. Neon Sign" />
+                                        <input 
+                                            name="name" 
+                                            required 
+                                            type="text" 
+                                            defaultValue={editingProduct?.name || ''}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
+                                            placeholder="e.g. Neon Sign" 
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold uppercase text-slate-500">Category</label>
-                                        <select name="category" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500">
+                                        <select 
+                                            name="category" 
+                                            defaultValue={editingProduct?.category || 'Tech Accessories'}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500"
+                                        >
                                             <option>Tech Accessories</option>
                                             <option>Clothing & Apparel</option>
                                             <option>Art & Decor</option>
@@ -708,21 +793,44 @@ export default function StoreAdmin({ currentUser }) {
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold uppercase text-slate-500">Price (₹)</label>
-                                        <input name="price" required type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" placeholder="999" />
+                                        <input 
+                                            name="price" 
+                                            required 
+                                            type="number" 
+                                            defaultValue={editingProduct?.price || ''}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
+                                            placeholder="999" 
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold uppercase text-slate-500">Stock Qty</label>
-                                        <input name="stock" required type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" placeholder="50" />
+                                        <input 
+                                            name="stock" 
+                                            required 
+                                            type="number" 
+                                            defaultValue={editingProduct?.stock || ''}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
+                                            placeholder="50" 
+                                        />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold uppercase text-slate-500">Description</label>
-                                    <textarea name="description" required rows="4" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" placeholder="Describe your product..."></textarea>
+                                    <textarea 
+                                        name="description" 
+                                        required 
+                                        rows="4" 
+                                        defaultValue={editingProduct?.description || ''}
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
+                                        placeholder="Describe your product..."
+                                    ></textarea>
                                 </div>
                             </div>
                             <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                                 <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                                <Button type="submit" loading={isSubmitting}>Create Product</Button>
+                                <Button type="submit" loading={isSubmitting}>
+                                    {editingProduct ? 'Save Changes' : 'Create Product'}
+                                </Button>
                             </div>
                         </form>
                     </div>

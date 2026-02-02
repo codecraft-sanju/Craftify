@@ -1,8 +1,9 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const http = require('http'); // 1. Node ka native HTTP server module
-const { Server } = require('socket.io'); // 2. Socket.io Import
+const cookieParser = require('cookie-parser'); // 1. Cookie Parser Import
+const http = require('http'); 
+const { Server } = require('socket.io'); 
 const connectDB = require('./config/db');
 
 // Import Routes
@@ -18,26 +19,33 @@ connectDB();
 
 const app = express();
 
-// 3. Create HTTP Server explicitly
-// Express app ko HTTP server ke andar wrap kar rahe hain
+// 2. Create HTTP Server explicitly
 const server = http.createServer(app);
 
-// 4. Initialize Socket.io
+// 3. Initialize Socket.io
 const io = new Server(server, {
-    pingTimeout: 60000, // 60s wait karega connection close karne se pehle
+    pingTimeout: 60000, 
     cors: {
-        origin: "http://localhost:5173", // Frontend ka URL (React)
+        origin: "http://localhost:5173", // Frontend URL
         methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true
+        credentials: true // Socket ke liye bhi cookies allow karein
     }
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json()); // Body Parser
+// --- MIDDLEWARE ---
 
-// 5. IMPORTANT: Inject 'io' into Request Object
-// Yeh middleware sabse zaroori hai. Iske bina controllers me 'req.io' nahi chalega.
+// 4. CORS Setup for Express (HTTP Requests)
+// Cookies allow karne ke liye specific origin aur credentials true hona zaroori hai
+app.use(cors({
+    origin: "http://localhost:5173", // Frontend URL match hona chahiye
+    credentials: true // Cookies allow karne ka switch
+}));
+
+app.use(express.json()); // JSON Body Parser
+app.use(express.urlencoded({ extended: true })); // URL Encoded Data
+app.use(cookieParser()); // 5. Cookie Parser Middleware (Req.cookies read karne ke liye)
+
+// 6. Inject 'io' into Request Object
 app.use((req, res, next) => {
     req.io = io;
     next();
@@ -52,7 +60,7 @@ app.use('/api/chats', chatRoutes);
 
 // Test Route
 app.get('/', (req, res) => {
-    res.send('API is running with Socket.io...');
+    res.send('API is running with Cookies & Socket.io...');
 });
 
 // Error Handling Middleware
@@ -65,12 +73,11 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 6. Socket.io Connection Logic
-// Jab frontend (React) connect karega, ye block chalega
+// 7. Socket.io Connection Logic
 io.on("connection", (socket) => {
     console.log("Connected to socket.io:", socket.id);
 
-    // Setup: User joins his own room (Setup event frontend se aayega)
+    // Setup: User joins his own room
     socket.on("setup", (userData) => {
         if(userData && userData._id) {
             socket.join(userData._id);
@@ -96,7 +103,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-// 7. Change app.listen to server.listen
+// 8. Start Server
 server.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
