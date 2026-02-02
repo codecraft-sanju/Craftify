@@ -1,5 +1,9 @@
+// backend/controllers/userController.js
 const User = require('../models/User');
-const generateToken = require('../utils/generateToken'); // Make sure path is correct
+// --- NEW IMPORT: GLOBAL SETTINGS ---
+const GlobalSettings = require('../models/GlobalSettings'); 
+// -----------------------------------
+const generateToken = require('../utils/generateToken'); 
 
 // @desc    Register a new user
 // @route   POST /api/users
@@ -19,7 +23,6 @@ const registerUser = async (req, res) => {
 
         // --- AUTOMATIC FOUNDER ASSIGNMENT ---
         let role = 'customer';
-        // --- CHANGE: Updated email check for God Mode (admin@gmail.com) ---
         if (email.toLowerCase() === 'admin@gmail.com') {
             role = 'founder';
         } else if (req.body.role === 'seller') {
@@ -35,10 +38,8 @@ const registerUser = async (req, res) => {
         });
 
         if (user) {
-            // Cookie Generate Karo
             generateToken(res, user._id);
 
-            // Socket Notification
             if (req.io) {
                 req.io.emit('new_user_registered', {
                     _id: user._id,
@@ -76,14 +77,12 @@ const authUser = async (req, res) => {
 
         if (user && (await user.matchPassword(password))) {
             
-            // --- GOD MODE FIX (Backend Level) ---
-            // --- CHANGE: Updated email check to auto-promote admin@gmail.com to Founder ---
+            // --- GOD MODE FIX ---
             if (user.email === 'admin@gmail.com' && user.role !== 'founder') {
                 user.role = 'founder';
                 await user.save();
             }
 
-            // Socket Notification
             if (req.io) {
                 req.io.emit('user_login', { 
                     userId: user._id, 
@@ -92,7 +91,6 @@ const authUser = async (req, res) => {
                 });
             }
 
-            // Generate Cookie (Ab Frontend ko token store karne ki zarurat nahi)
             generateToken(res, user._id);
 
             res.json({
@@ -118,7 +116,7 @@ const authUser = async (req, res) => {
 const logoutUser = async (req, res) => {
     res.cookie('jwt', '', {
         httpOnly: true,
-        expires: new Date(0), // Expire immediately
+        expires: new Date(0), 
     });
     res.status(200).json({ message: 'Logged out successfully' });
 };
@@ -165,8 +163,6 @@ const updateUserProfile = async (req, res) => {
             }
 
             const updatedUser = await user.save();
-
-            // Cookie refresh karne ki zarurat nahi unless session extend karna ho
             
             res.json({
                 _id: updatedUser._id,
@@ -244,14 +240,58 @@ const updateUser = async (req, res) => {
     }
 };
 
+// --- NEW: FOUNDER QR CODE FUNCTIONS (Integrated here) ---
+
+// @desc    Get Global QR Code (Public - for Customers)
+// @route   GET /api/users/qr
+const getGlobalQR = async (req, res) => {
+    try {
+        // Fetch the latest QR code
+        const settings = await GlobalSettings.findOne().sort({ createdAt: -1 });
+        if (settings) {
+            res.json({ qrCode: settings.paymentQrCode });
+        } else {
+            res.json({ qrCode: null });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update/Upload Founder QR (Private - Founder Only)
+// @route   POST /api/users/qr
+const updateGlobalQR = async (req, res) => {
+    try {
+        const { qrUrl } = req.body;
+        
+        if (!qrUrl) {
+            return res.status(400).json({ message: "QR URL is required" });
+        }
+
+        // Logic: Always keep only 1 document for simplicity (Singleton)
+        await GlobalSettings.deleteMany({}); 
+        
+        const newSettings = await GlobalSettings.create({
+            paymentQrCode: qrUrl,
+            updatedBy: req.user._id
+        });
+
+        res.status(201).json(newSettings);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     authUser,
-    logoutUser, // NEW
+    logoutUser,
     getUserProfile,
     updateUserProfile,
     getUsers,
     deleteUser,
     getUserById,
     updateUser,
+    getGlobalQR,
+    updateGlobalQR
 };

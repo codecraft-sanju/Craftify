@@ -5,7 +5,7 @@ import {
   DollarSign, Star, Settings, Menu, RefreshCcw, Store,
   MessageSquare, Send, User, Edit, Trash2, LogOut,
   ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
-  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle
+  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -69,6 +69,11 @@ export default function StoreAdmin({ currentUser }) {
     const [editingProduct, setEditingProduct] = useState(null);
     const [imageFile, setImageFile] = useState(null); 
     const [imagePreview, setImagePreview] = useState(""); 
+
+    // --- NEW: Seller QR Upload State ---
+    const [sellerQrFile, setSellerQrFile] = useState(null);
+    const [sellerQrPreview, setSellerQrPreview] = useState("");
+    const [uploadingQr, setUploadingQr] = useState(false);
     
     // Chat States
     const [chats, setChats] = useState([]); 
@@ -116,6 +121,9 @@ export default function StoreAdmin({ currentUser }) {
             if (shopRes.ok) {
                 const shopData = await shopRes.json();
                 setShop(shopData); 
+                if(shopData && shopData.paymentQrCode) {
+                    setSellerQrPreview(shopData.paymentQrCode); // Load Existing QR
+                }
                 if(shopData && shopData._id) {
                     const [prodRes, ordRes] = await Promise.all([
                         fetch(`${API_URL}/api/products/shop/${shopData._id}`),
@@ -174,16 +182,59 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); alert("Network Error"); } finally { setIsSubmitting(false); }
     };
 
+    // --- UPDATED: Handle Store Settings & QR Upload ---
     const handleUpdateStore = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         const formData = new FormData(e.target);
+        
+        let paymentQrCode = shop.paymentQrCode; // Keep existing if not changed
+
+        // 1. Upload QR if selected
+        if (sellerQrFile) {
+            const data = new FormData();
+            data.append("file", sellerQrFile);
+            data.append("upload_preset", UPLOAD_PRESET);
+            data.append("cloud_name", CLOUD_NAME);
+
+            try {
+                const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                    method: "POST", body: data
+                });
+                const fileData = await uploadRes.json();
+                if (uploadRes.ok) {
+                    paymentQrCode = fileData.secure_url;
+                } else {
+                    console.error("QR Upload Error:", fileData);
+                    alert("QR Upload Failed!");
+                    setIsSubmitting(false);
+                    return;
+                }
+            } catch (err) {
+                console.error("Upload error", err);
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
         try {
             const res = await fetch(`${API_URL}/api/shops/my-shop`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ name: formData.get('storeName'), description: formData.get('description'), phone: formData.get('phone'), tagline: formData.get('tagline') })
+                body: JSON.stringify({ 
+                    name: formData.get('storeName'), 
+                    description: formData.get('description'), 
+                    phone: formData.get('phone'), 
+                    tagline: formData.get('tagline'),
+                    paymentQrCode: paymentQrCode 
+                })
             });
-            if(res.ok) { setShop(await res.json()); alert("Store Updated Successfully!"); }
-        } catch (error) { console.error(error); }
+            if(res.ok) { 
+                const updatedShop = await res.json();
+                setShop(updatedShop); 
+                alert("Store Updated Successfully!"); 
+                setSellerQrFile(null); // Reset file input
+            }
+        } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
     };
 
     const handleImageChange = (e) => {
@@ -191,6 +242,15 @@ export default function StoreAdmin({ currentUser }) {
         if (file) {
             setImageFile(file);
             setImagePreview(URL.createObjectURL(file)); 
+        }
+    };
+
+    // --- NEW: Seller QR Change Handler ---
+    const handleSellerQrChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSellerQrFile(file);
+            setSellerQrPreview(URL.createObjectURL(file));
         }
     };
 
@@ -507,19 +567,42 @@ export default function StoreAdmin({ currentUser }) {
 
                     {/* SETTINGS TAB */}
                     {activeTab === 'settings' && (
-                        <div className="max-w-2xl animate-in slide-in-from-bottom-4 duration-300">
-                            <h2 className="text-2xl font-black text-slate-900 mb-6">Store Settings</h2>
-                            <Card className="p-8">
-                                <form onSubmit={handleUpdateStore} className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Store Name</label><input name="storeName" defaultValue={shop?.name} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" /></div>
-                                        <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Contact Phone</label><input name="phone" defaultValue={shop?.phone} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" /></div>
-                                    </div>
-                                    <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Tagline</label><input name="tagline" defaultValue={shop?.tagline} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="e.g. Best Electronics in Town" /></div>
-                                    <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Description</label><textarea name="description" defaultValue={shop?.description} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" rows="4"/></div>
-                                    <div className="pt-4 border-t border-slate-100 flex justify-end"><Button type="submit" size="lg">Save Changes</Button></div>
-                                </form>
-                            </Card>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 mb-6">Store Details</h2>
+                                <Card className="p-8">
+                                    <form onSubmit={handleUpdateStore} className="space-y-6">
+                                        <div className="grid grid-cols-1 gap-6">
+                                            <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Store Name</label><input name="storeName" defaultValue={shop?.name} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" /></div>
+                                            <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Contact Phone</label><input name="phone" defaultValue={shop?.phone} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" /></div>
+                                        </div>
+                                        <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Tagline</label><input name="tagline" defaultValue={shop?.tagline} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="e.g. Best Electronics in Town" /></div>
+                                        <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Description</label><textarea name="description" defaultValue={shop?.description} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" rows="4"/></div>
+                                        
+                                        {/* SELLER QR UPLOAD SECTION */}
+                                        <div className="pt-4 border-t border-slate-100">
+                                            <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><QrCode className="w-4 h-4 text-indigo-600"/> Payment QR Code</h4>
+                                            <p className="text-xs text-slate-500 mb-3">Upload your QR code to receive payouts from the admin.</p>
+                                            
+                                            <div className="flex items-center gap-4">
+                                                {sellerQrPreview ? (
+                                                    <img src={sellerQrPreview} className="w-20 h-20 object-contain border rounded-lg p-1" alt="QR Preview" />
+                                                ) : (
+                                                    <div className="w-20 h-20 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-xs border border-dashed border-slate-300">No QR</div>
+                                                )}
+                                                
+                                                <label className="cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-sm font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors">
+                                                    <UploadCloud className="w-4 h-4"/> 
+                                                    {sellerQrFile ? "Change File" : "Upload QR"}
+                                                    <input type="file" className="hidden" accept="image/*" onChange={handleSellerQrChange} />
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 flex justify-end"><Button type="submit" size="lg" loading={isSubmitting}>Save All Changes</Button></div>
+                                    </form>
+                                </Card>
+                            </div>
                         </div>
                     )}
                 </div>

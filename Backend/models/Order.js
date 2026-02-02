@@ -1,3 +1,4 @@
+// backend/models/Order.js
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
@@ -43,24 +44,31 @@ const orderSchema = new mongoose.Schema({
         country: { type: String, required: true },
         phone: { type: String, required: true }
     },
-    paymentMethod: {
-        type: String,
-        enum: ['Card', 'UPI', 'COD', 'PayPal'],
-        default: 'Card'
+    
+    // --- NEW: PAYMENT INFO SECTION ---
+    paymentInfo: {
+        method: { 
+            type: String, 
+            enum: ['Online', 'COD'], 
+            required: true 
+        },
+        // Store the Transaction ID / UTR provided by the customer
+        transactionId: { 
+            type: String 
+        }, 
+        status: {
+            type: String,
+            enum: ['Pending', 'Verified', 'Failed'],
+            default: 'Pending'
+        }
     },
-    paymentResult: { 
-        id: String,
-        status: String,
-        update_time: String,
-        email_address: String,
-        razorpay_order_id: String, 
-        razorpay_payment_id: String,
-        razorpay_signature: String
-    },
+    // ---------------------------------
+
     itemsPrice: { type: Number, required: true, default: 0.0 },
     taxPrice: { type: Number, required: true, default: 0.0 },
     shippingPrice: { type: Number, required: true, default: 0.0 },
     totalAmount: { type: Number, required: true, default: 0.0 },
+    
     isPaid: {
         type: Boolean,
         default: false
@@ -90,8 +98,7 @@ const orderSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// --- FIXED: Removed 'next' completely ---
-// Changed to async function for consistency
+// --- Pre-save hook ---
 orderSchema.pre('save', async function() {
     if (this.isModified('items')) {
         // Future logic

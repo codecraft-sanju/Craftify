@@ -11,7 +11,9 @@ const addOrderItems = async (req, res) => {
         const {
             orderItems,
             shippingAddress,
-            paymentMethod,
+            // --- CHANGE: Destructure paymentInfo object ---
+            paymentInfo, 
+            // ----------------------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
@@ -22,19 +24,33 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'No order items' });
         }
 
-        // --- NEW VALIDATION: Check Address & Phone ---
-        // Agar frontend se address ya phone nahi aaya, toh yahi rok denge
+        // --- VALIDATION: Check Address & Phone ---
         if (!shippingAddress || !shippingAddress.address || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.phone) {
             return res.status(400).json({ message: 'Please provide complete shipping address and phone number.' });
         }
-        // ---------------------------------------------
+
+        // --- CHANGE: VALIDATION Payment Info ---
+        if (!paymentInfo || !paymentInfo.method) {
+            return res.status(400).json({ message: 'Payment method is required' });
+        }
+        
+        // If Online payment, Transaction ID is mandatory
+        if (paymentInfo.method === 'Online' && !paymentInfo.transactionId) {
+            return res.status(400).json({ message: 'Transaction ID is required for Online payments' });
+        }
 
         // 1. Create the Order
         const order = new Order({
             customer: req.user._id,
-            items: orderItems, // Frontend sends shopId inside each item
-            shippingAddress,   // Ab isme phone number bhi included hoga
-            paymentMethod,
+            items: orderItems, 
+            shippingAddress,   
+            // --- CHANGE: Save structured payment info ---
+            paymentInfo: {
+                method: paymentInfo.method,
+                transactionId: paymentInfo.transactionId || null,
+                status: paymentInfo.method === 'Online' ? 'Pending' : 'Pending' 
+            },
+            // --------------------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
@@ -44,21 +60,17 @@ const addOrderItems = async (req, res) => {
         const createdOrder = await order.save();
 
         // 2. STOCK MANAGEMENT & REAL-TIME ALERTS
-        
-        // List of all unique shops involved in this order
         const involvedShops = [...new Set(orderItems.map(item => item.shop))];
 
-        // Loop through items to update stock
         for (const item of orderItems) {
-            // --- ATOMIC UPDATE: Safe & Fast ---
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-                { $inc: { stock: -item.qty } }, // Reduce stock
+                { $inc: { stock: -item.qty } }, 
                 { new: true } 
             );
 
             if (updatedProduct) {
-                // --- SOCKET IO: Live Stock Update for other customers ---
+                // --- SOCKET IO: Live Stock Update ---
                 if (req.io) {
                     req.io.emit('product_updated', {
                         _id: updatedProduct._id,
@@ -69,7 +81,6 @@ const addOrderItems = async (req, res) => {
         }
 
         // --- SOCKET IO: Notify Sellers ---
-        // Sellers frontend will listen: "Is this order ID for one of my shops?"
         if (req.io) {
             req.io.emit('new_order_placed', {
                 orderId: createdOrder._id,
@@ -81,6 +92,7 @@ const addOrderItems = async (req, res) => {
 
         res.status(201).json(createdOrder);
     } catch (error) {
+        console.error("Add Order Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -92,7 +104,7 @@ const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
             .populate('customer', 'name email')
-            .populate('items.product', 'name coverImage'); // Populate product details
+            .populate('items.product', 'name coverImage'); 
 
         if (order) {
             res.json(order);
@@ -104,7 +116,7 @@ const getOrderById = async (req, res) => {
     }
 };
 
-// @desc    Update order to paid
+// @desc    Update order to paid (Manually by Admin/Founder)
 // @route   PUT /api/orders/:id/pay
 // @access  Private
 const updateOrderToPaid = async (req, res) => {
@@ -114,12 +126,8 @@ const updateOrderToPaid = async (req, res) => {
         if (order) {
             order.isPaid = true;
             order.paidAt = Date.now();
-            order.paymentResult = {
-                id: req.body.id,
-                status: req.body.status,
-                update_time: req.body.update_time,
-                email_address: req.body.email_address,
-            };
+            // Update internal status
+            order.paymentInfo.status = 'Verified';
 
             const updatedOrder = await order.save();
 
@@ -151,9 +159,6 @@ const updateOrderStatus = async (req, res) => {
         const order = await Order.findById(req.params.id);
 
         if (order) {
-            // Note: In a strict multi-vendor system, we would update individual item statuses.
-            // For this MVP, updating the global status is acceptable.
-            
             order.orderStatus = req.body.status; 
             
             if (req.body.status === 'Delivered') {
@@ -196,30 +201,22 @@ const getMyOrders = async (req, res) => {
 
 // --- SELLER & ADMIN FEATURES ---
 
-// @desc    Get Seller's Shop Orders (MULTI-SHOP FIXED)
+// @desc    Get Seller's Shop Orders
 // @route   GET /api/orders/shop-orders
 // @access  Private (Seller)
 const getShopOrders = async (req, res) => {
     try {
-        // 1. User ki SAARI shops dhundo (Array of shops)
         const shops = await Shop.find({ owner: req.user._id });
         
         if (!shops || shops.length === 0) {
             return res.status(404).json({ message: 'No shops found for this seller' });
         }
 
-        // 2. Un sabhi shops ki IDs ka array banao
         const shopIds = shops.map(shop => shop._id);
 
-        // 3. Database mein wo orders dhundo jisme inme se KOI BHI shop involved ho
-        // $in operator checks if 'items.shop' matches ANY id in 'shopIds' array
         const orders = await Order.find({ 'items.shop': { $in: shopIds } })
             .populate('customer', 'name email')
             .sort({ createdAt: -1 });
-
-        // Note: Frontend will receive full orders. 
-        // Logic to calculate specific revenue for *this* seller needs to happen on frontend
-        // by filtering items inside the order that match the seller's shop IDs.
         
         res.json(orders);
     } catch (error) {
@@ -227,14 +224,21 @@ const getShopOrders = async (req, res) => {
     }
 };
 
-// @desc    Get all orders (Founder Dashboard)
+// @desc    Get all orders (Updated for Founder Dashboard)
 // @route   GET /api/orders
 // @access  Private (Admin/Founder)
 const getOrders = async (req, res) => {
     try {
+        // --- CHANGE: Deep populate Shop to get paymentQrCode ---
         const orders = await Order.find({})
-            .populate('customer', 'id name')
+            .populate('customer', 'id name email')
+            .populate({
+                path: 'items.shop',
+                model: 'Shop',
+                select: 'name owner paymentQrCode' // Fetch Seller Name & QR Code for Payout
+            })
             .sort({ createdAt: -1 });
+            
         res.json(orders);
     } catch (error) {
         res.status(500).json({ message: error.message });

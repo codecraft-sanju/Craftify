@@ -1,8 +1,9 @@
+// backend/routes/shopRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
     registerShop,
-    getMyShop,
+    getMyShop, 
     getShopById,
     updateShopProfile,
     getAllShops,
@@ -17,7 +18,7 @@ router.route('/')
     .get(protect, founder, getAllShops); // Founder View
 
 router.route('/my-shop')
-    .get(protect, getMyShop) // Seller Dashboard Data
+    .get(protect, getMyShop) // --- FIX: Updated variable name here too ---
     .put(protect, seller, updateShopProfile);
 
 // 2. Dynamic Routes (Parameters) - MUST BE BOTTOM

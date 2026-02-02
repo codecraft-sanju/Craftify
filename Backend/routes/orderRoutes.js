@@ -1,3 +1,4 @@
+// backend/routes/orderRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -13,8 +14,8 @@ const { protect, seller, founder } = require('../middleware/authMiddleware');
 
 // Base Route
 router.route('/')
-    .post(protect, addOrderItems) // Place Order
-    .get(protect, founder, getOrders); // Admin View
+    .post(protect, addOrderItems) // Place Order (Customer)
+    .get(protect, founder, getOrders); // Admin View (Global Orders)
 
 // Specific Lists (Static Paths)
 router.route('/myorders').get(protect, getMyOrders); // Customer History
@@ -22,7 +23,11 @@ router.route('/shop-orders').get(protect, seller, getShopOrders); // Seller Dash
 
 // Dynamic ID Routes (Last)
 router.route('/:id').get(protect, getOrderById);
-router.route('/:id/pay').put(protect, updateOrderToPaid); 
+
+// Payment Verification (FOUNDER ONLY) - Centralized Payment Flow
+router.route('/:id/pay').put(protect, founder, updateOrderToPaid); 
+
+// Delivery Status (SELLER Action)
 router.route('/:id/deliver').put(protect, seller, updateOrderStatus); 
 
 module.exports = router;

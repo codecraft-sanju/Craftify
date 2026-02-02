@@ -1,3 +1,4 @@
+// backend/models/Shop.js
 const mongoose = require('mongoose');
 
 const shopSchema = new mongoose.Schema({
@@ -86,6 +87,15 @@ const shopSchema = new mongoose.Schema({
         twitter: String,
         youtube: String
     },
+    
+    // --- NEW FIELD: SELLER QR CODE ---
+    // Sellers upload their QR here so you (Admin) can pay them.
+    paymentQrCode: { 
+        type: String,
+        default: '' 
+    },
+    // ---------------------------------
+
     categories: [{
         type: String,
         required: true
@@ -111,15 +121,13 @@ shopSchema.pre('save', async function() {
         .replace(/-+$/, '');       
 });
 
-// --- FIX: CASCADE DELETE PRODUCTS ---
-// Jab Shop delete ho, toh uske saare Products bhi delete ho jayein
+// --- CASCADE DELETE PRODUCTS ---
+// When a Shop is deleted, delete all associated Products
 shopSchema.pre('findOneAndDelete', async function(next) {
     try {
-        // Query execute hone se pehle document nikalo
         const doc = await this.model.findOne(this.getQuery());
         if (doc) {
             console.log(`Deleting products for shop: ${doc.name} (${doc._id})`);
-            // Products delete karo
             await mongoose.model('Product').deleteMany({ shop: doc._id });
         }
         next();

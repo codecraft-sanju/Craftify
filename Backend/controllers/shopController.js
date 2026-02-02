@@ -7,7 +7,8 @@ const User = require('../models/User');
 // @access  Private (Registered User)
 const registerShop = async (req, res) => {
     try {
-        const { name, tagline, description, phone, logo } = req.body;
+        // --- CHANGE: Added paymentQrCode to destructuring ---
+        const { name, tagline, description, phone, logo, paymentQrCode } = req.body;
 
         // 1. Create the Shop directly (No "Already Exists" check)
         const shop = await Shop.create({
@@ -17,6 +18,8 @@ const registerShop = async (req, res) => {
             description,
             phone,
             logo: logo || undefined, 
+            // Save Seller QR Code if provided
+            paymentQrCode: paymentQrCode || '', 
             isActive: true 
         });
 
@@ -51,24 +54,14 @@ const registerShop = async (req, res) => {
 const getMyShops = async (req, res) => {
     try {
         // Find ALL shops where owner is the logged-in user
-        // Returns an array: [{shop1}, {shop2}]
         const shops = await Shop.find({ owner: req.user._id });
 
-        // Frontend expects either null (no shop) or data
-        // If array is empty, return null or empty array based on your frontend logic
-        // For your current frontend which expects a single object initially:
-        // We will return the FIRST shop found for now to keep frontend working,
-        // but ideally frontend should handle an array.
-        
-        // TEMPORARY FIX FOR FRONTEND COMPATIBILITY:
-        // Return the first shop if exists, else null.
-        // (Later we can update frontend to show a list of shops)
+        // Frontend compatibility: Return first shop or null
         const primaryShop = shops.length > 0 ? shops[0] : null;
 
         if (primaryShop) {
             res.json(primaryShop);
         } else {
-            // Send null so frontend shows "Create Shop" form
             res.json(null); 
         }
     } catch (error) {
@@ -98,8 +91,7 @@ const getShopById = async (req, res) => {
 // @access  Private (Seller)
 const updateShopProfile = async (req, res) => {
     try {
-        // For now, updating the first shop found. 
-        // In future, pass shopId in params to update specific shop.
+        // Updating the first shop found for now
         const shop = await Shop.findOne({ owner: req.user._id });
 
         if (shop) {
@@ -108,6 +100,13 @@ const updateShopProfile = async (req, res) => {
             shop.description = req.body.description || shop.description;
             shop.phone = req.body.phone || shop.phone;
             shop.logo = req.body.logo || shop.logo;
+
+            // --- CHANGE: Update Seller QR Code ---
+            // This is critical for the Founder to pay the Seller
+            if (req.body.paymentQrCode) {
+                shop.paymentQrCode = req.body.paymentQrCode;
+            }
+            // -------------------------------------
 
             const updatedShop = await shop.save();
 
@@ -152,9 +151,6 @@ const deleteShop = async (req, res) => {
 
         if (shop) {
             await shop.deleteOne();
-            
-            // Note: Not downgrading user role automatically, 
-            // as they might have other shops.
             
             if (req.io) {
                 req.io.emit('shop_deleted', { shopId: req.params.id });

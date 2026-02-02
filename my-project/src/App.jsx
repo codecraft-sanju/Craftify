@@ -20,14 +20,11 @@ import ShopView from './ShopView';
 import SellerRegister from './SellerRegister';
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth'; 
-import CheckoutModal from './CheckoutModal'; // <--- NEW IMPORT
+import CheckoutModal from './CheckoutModal'; 
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date));
 
-// ==========================================
-// 1. UI COMPONENTS (No Changes)
-// ==========================================
 const Button = ({ children, variant = 'primary', className = '', icon: Icon, loading, ...props }) => {
   const base = "relative overflow-hidden transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
@@ -362,16 +359,19 @@ const CraftifyContent = () => {
   };
 
   // 2. Submit Order (Called from Modal)
-  const confirmOrder = async (shippingDetails) => {
+  // --- CHANGE: Accepting complete object with payment info ---
+  const confirmOrder = async (orderData) => {
     setOrderLoading(true);
+    const { shippingAddress, paymentInfo } = orderData; // Destructure the new data
+
     const orderPayload = {
         orderItems: cart.map(item => ({
             product: item._id, shop: item.shop._id || item.shop, name: item.name,
             image: item.image || item.coverImage, price: item.price, qty: 1,
             customization: item.customization
         })),
-        shippingAddress: shippingDetails, // Data from Modal
-        paymentMethod: "Card", 
+        shippingAddress: shippingAddress,
+        paymentInfo: paymentInfo, // --- SENDING PAYMENT INFO TO BACKEND ---
         itemsPrice: cart.reduce((acc, i) => acc + i.price, 0),
         taxPrice: 0, shippingPrice: 0, 
         totalPrice: cart.reduce((acc, i) => acc + i.price, 0)
@@ -392,7 +392,7 @@ const CraftifyContent = () => {
         setOrders(prev => [newOrder, ...prev]);
         setCart([]); 
         setIsCheckoutOpen(false); // Close modal
-        addToast("Order Placed!", "Thank you for your purchase.");
+        addToast("Order Placed!", "Thank you for your purchase. Please wait for verification.");
         navigate('/profile');
     } catch (error) { 
         console.error(error); 
