@@ -18,15 +18,16 @@ import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView'; 
 import SellerRegister from './SellerRegister';
-import CustomizationChat from './CustomizationChat'; 
+import CustomizationChat from './CustomizationChat';
+import CustomerAuth from './CustomerAuth'; 
+import CheckoutModal from './CheckoutModal'; // <--- NEW IMPORT
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date));
 
 // ==========================================
-// 1. UI COMPONENTS
+// 1. UI COMPONENTS (No Changes)
 // ==========================================
-
 const Button = ({ children, variant = 'primary', className = '', icon: Icon, loading, ...props }) => {
   const base = "relative overflow-hidden transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
@@ -129,63 +130,6 @@ const CartDrawer = ({ isOpen, onClose, cart, setCart, onCheckout, currentUser })
   );
 };
 
-const AuthModal = ({ isOpen, onClose, onLogin, initialMode }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const isFounderLogin = initialMode === 'founder';
-  
-  useEffect(() => {
-    setEmail(''); setIsLogin(true); setError("");
-  }, [initialMode, isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true); setError("");
-    try {
-        const endpoint = isLogin ? '/api/users/login' : '/api/users';
-        const payload = isLogin ? { email, password } : { name, email, password };
-        const res = await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Something went wrong");
-        if (isFounderLogin && data.role !== 'founder') throw new Error("Access Denied: You are not a Founder.");
-        onLogin(data);
-        onClose();
-    } catch (err) { setError(err.message); } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative p-8">
-        <button onClick={onClose} className="absolute top-4 right-4"><X className="w-5 h-5 text-slate-500"/></button>
-        <h2 className="text-2xl font-black text-slate-900 mb-6 text-center">{isFounderLogin ? 'Founder Access' : (isLogin ? 'Welcome Back' : 'Create Account')}</h2>
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2"><AlertCircle className="w-4 h-4"/> {error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && !isFounderLogin && <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Full Name" required />}
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Email" required />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="Password" required />
-            <Button type="submit" loading={loading} className="w-full mt-4">{isLogin ? 'Login' : 'Sign Up'}</Button>
-        </form>
-        {!isFounderLogin && (
-            <div className="mt-4 text-center">
-                <button onClick={() => setIsLogin(!isLogin)} className="text-sm text-indigo-600 hover:underline font-bold">{isLogin ? "Create Account" : "Sign In"}</button>
-            </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -254,18 +198,18 @@ const ProfileView = ({ currentUser, orders, onLogout }) => (
                 <h3 className="font-bold text-xl text-slate-800 mb-6 flex items-center gap-2"><Package className="w-5 h-5 text-indigo-600"/> Order History</h3>
                 <div className="space-y-4">
                       {orders.length === 0 ? <p className="text-slate-400 text-center py-10">No orders yet. Start shopping!</p> : 
-                          orders.map(o => (
-                             <div key={o._id} className="flex flex-col md:flex-row justify-between p-4 bg-slate-50 rounded-xl gap-4 border border-slate-100 hover:border-indigo-200 transition-colors">
-                                <div>
-                                    <p className="font-bold text-indigo-600">Order #{o._id.toString().slice(-6)}</p>
-                                    <p className="text-xs text-slate-500">{o.items?.length || 0} items • {formatDate(o.createdAt)}</p>
-                                </div>
-                                <div className="text-right flex flex-col items-end">
-                                    <span className="font-bold text-slate-900 text-lg block">₹{o.totalAmount}</span>
-                                    <Badge color={o.orderStatus === 'Delivered' ? 'green' : 'indigo'}>{o.orderStatus || 'Processing'}</Badge>
-                                </div>
-                             </div>
-                          ))
+                           orders.map(o => (
+                              <div key={o._id} className="flex flex-col md:flex-row justify-between p-4 bg-slate-50 rounded-xl gap-4 border border-slate-100 hover:border-indigo-200 transition-colors">
+                                 <div>
+                                     <p className="font-bold text-indigo-600">Order #{o._id.toString().slice(-6)}</p>
+                                     <p className="text-xs text-slate-500">{o.items?.length || 0} items • {formatDate(o.createdAt)}</p>
+                                 </div>
+                                 <div className="text-right flex flex-col items-end">
+                                     <span className="font-bold text-slate-900 text-lg block">₹{o.totalAmount}</span>
+                                     <Badge color={o.orderStatus === 'Delivered' ? 'green' : 'indigo'}>{o.orderStatus || 'Processing'}</Badge>
+                                 </div>
+                              </div>
+                           ))
                       }
                 </div>
           </Card>
@@ -279,40 +223,23 @@ const getCookie = (name) => {
     return match ? decodeURIComponent(match[2]) : null;
 };
 
-// ==========================================
-// 3. SECURITY ROUTES (THE FIX)
-// ==========================================
-
-// Fix 1: Protected Route now checks Cookies too
+// --- SECURITY ROUTES ---
 const ProtectedRoute = ({ user, allowedRoles, children, redirectPath = '/' }) => {
-    // 1. Check LocalStorage User
     if (!user) return <Navigate to={redirectPath} replace />;
-
-    // 2. COOKIE CHECK (Critical Fix)
-    // Agar user logged in hai par cookie gayab hai (manually deleted), logout and redirect.
-    // Note: Works if cookies are not HttpOnly. If HttpOnly, rely on API 401 response (handled in components).
-    // Assuming you can read the 'role' cookie or some token presence check:
     const cookieRole = getCookie('role') || getCookie('token'); 
-    // Agar aapke backend ne 'role' cookie set ki hai toh ye best hai.
-    // Agar nahi, toh hum 'StoreAdmin' ke andar API failure handle karenge (see StoreAdmin.jsx).
-    
-    // 3. Check Role Permission
     if (allowedRoles && !allowedRoles.includes(user.role)) {
         if(user.role === 'founder') return <Navigate to="/founder" replace />;
         if(user.role === 'seller') return <Navigate to="/my-shop" replace />;
         return <Navigate to="/shop" replace />;
     }
-    
     return children ? children : <Outlet />;
 };
 
-// Fix 2: Buyer Only Route (Blocks Sellers)
 const BuyerOnlyRoute = ({ children }) => {
     const cookieRole = getCookie('role');
     const savedUser = localStorage.getItem("userInfo");
     const localRole = savedUser ? JSON.parse(savedUser).role : null;
     const currentRole = cookieRole || localRole;
-
     if (currentRole === 'seller') {
         return <Navigate to="/my-shop" replace />;
     }
@@ -320,7 +247,7 @@ const BuyerOnlyRoute = ({ children }) => {
 };
 
 // ==========================================
-// 4. MAIN APP COMPONENT
+// 4. MAIN APP COMPONENT (UPDATED)
 // ==========================================
 
 const CraftifyContent = () => {
@@ -334,8 +261,12 @@ const CraftifyContent = () => {
   const [products, setProducts] = useState([]); 
   const [productsLoading, setProductsLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('customer');
+  
+  // --- NEW STATES FOR CHECKOUT ---
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  // -------------------------------
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatProduct, setActiveChatProduct] = useState(null);
@@ -374,7 +305,7 @@ const CraftifyContent = () => {
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include' 
           });
-          if (res.status === 401) { handleLogout(); return; } // Auto logout if unauthorized
+          if (res.status === 401) { handleLogout(); return; }
           const data = await res.json();
           if(Array.isArray(data)) setOrders(data);
       } catch (error) { console.error("Failed to fetch orders:", error); }
@@ -395,7 +326,7 @@ const CraftifyContent = () => {
   };
 
   const openCustomizationChat = (product) => {
-      if(!currentUser) { openLogin('customer'); return; }
+      if(!currentUser) { navigate('/login'); return; }
       setActiveChatProduct(product);
       setIsChatOpen(true);
   };
@@ -403,17 +334,10 @@ const CraftifyContent = () => {
   const handleLogin = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem("userInfo", JSON.stringify(userData));
-    setIsAuthOpen(false);
     addToast("Access Granted", `Signed in as ${userData.name}`);
     if(userData.role === 'founder') navigate('/founder', { replace: true });
     else if(userData.role === 'seller') navigate('/my-shop');
     else navigate('/shop');
-  };
-
-  const openLogin = (mode = 'customer') => {
-      if(mode === 'seller') { navigate('/seller-login'); return; }
-      setAuthMode(mode);
-      setIsAuthOpen(true);
   };
 
   const handleLogout = async () => {
@@ -428,33 +352,63 @@ const CraftifyContent = () => {
       navigate('/');
   };
 
-  const handleCheckout = async () => {
-    if (!currentUser) return openLogin();
+  // --- UPDATED CHECKOUT LOGIC ---
+  
+  // 1. Open Modal (instead of direct API call)
+  const handleCheckoutClick = () => {
+    if (!currentUser) { navigate('/login'); return; }
+    setIsCartOpen(false); // Close cart drawer
+    setIsCheckoutOpen(true); // Open address form
+  };
+
+  // 2. Submit Order (Called from Modal)
+  const confirmOrder = async (shippingDetails) => {
+    setOrderLoading(true);
     const orderPayload = {
         orderItems: cart.map(item => ({
             product: item._id, shop: item.shop._id || item.shop, name: item.name,
             image: item.image || item.coverImage, price: item.price, qty: 1,
             customization: item.customization
         })),
-        shippingAddress: { fullName: currentUser.name, address: "123 Test St", city: "Mumbai", postalCode: "400001", country: "India", phone: "9999999999" },
-        paymentMethod: "Card", itemsPrice: cart.reduce((acc, i) => acc + i.price, 0),
-        taxPrice: 0, shippingPrice: 0, totalPrice: cart.reduce((acc, i) => acc + i.price, 0)
+        shippingAddress: shippingDetails, // Data from Modal
+        paymentMethod: "Card", 
+        itemsPrice: cart.reduce((acc, i) => acc + i.price, 0),
+        taxPrice: 0, shippingPrice: 0, 
+        totalPrice: cart.reduce((acc, i) => acc + i.price, 0)
     };
+
     try {
         const res = await fetch(`${API_URL}/api/orders`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             credentials: 'include', body: JSON.stringify(orderPayload)
         });
-        if(!res.ok) throw new Error("Order failed");
+        
+        if(!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "Order failed");
+        }
+
         const newOrder = await res.json();
         setOrders(prev => [newOrder, ...prev]);
-        setCart([]); setIsCartOpen(false);
+        setCart([]); 
+        setIsCheckoutOpen(false); // Close modal
         addToast("Order Placed!", "Thank you for your purchase.");
         navigate('/profile');
-    } catch (error) { console.error(error); addToast("Error", "Could not place order", "error"); }
+    } catch (error) { 
+        console.error(error); 
+        addToast("Error", error.message, "error"); 
+    } finally {
+        setOrderLoading(false);
+    }
   };
+  // -----------------------------
 
-  const showNavbar = !['/founder', '/seller-register', '/seller-login', '/admin-login'].includes(location.pathname);
+  const showNavbar = !['/founder', '/seller-register', '/seller-login', '/admin-login', '/login', '/register'].includes(location.pathname);
+  
+  const handleLandingLoginClick = (type) => {
+      if(type === 'seller') navigate('/seller-register');
+      else navigate('/login');
+  }
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 pb-20 md:pb-0">
@@ -472,7 +426,7 @@ const CraftifyContent = () => {
               </div>
               <div className="flex items-center gap-4">
                  {currentUser?.role === 'seller' && <Button size="sm" onClick={() => navigate('/my-shop')}>Seller Dashboard</Button>}
-                 <button onClick={() => currentUser ? navigate('/profile') : openLogin('customer')} className={`p-2 rounded-full hover:bg-black/10 transition-colors ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
+                 <button onClick={() => currentUser ? navigate('/profile') : navigate('/login')} className={`p-2 rounded-full hover:bg-black/10 transition-colors ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
                     {currentUser ? <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-xs text-white border border-white">{currentUser.avatar || currentUser.name.charAt(0)}</div> : <User className="w-5 h-5" />}
                  </button>
                  <button onClick={() => setIsCartOpen(true)} className={`hidden md:block p-2 rounded-full hover:bg-black/10 relative ${location.pathname === '/' ? 'text-white' : 'text-slate-600'}`}>
@@ -485,12 +439,14 @@ const CraftifyContent = () => {
       )}
       <main className="min-h-screen">
          <Routes>
-             <Route path="/" element={<LandingPage onLoginClick={openLogin} />} />
+             <Route path="/" element={<LandingPage onLoginClick={handleLandingLoginClick} />} />
+             <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+             <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+
              <Route path="/seller-register" element={<SellerRegister onLoginSuccess={handleLogin} initialMode="register" />} />
              <Route path="/seller-login" element={<SellerRegister onLoginSuccess={handleLogin} initialMode="login" />} />
-             <Route path="/admin-login" element={<AuthModal isOpen={true} onClose={() => navigate('/')} onLogin={handleLogin} initialMode="founder"/>} />
+             <Route path="/admin-login" element={<FounderAccess currentUser={currentUser} />} /> 
              
-             {/* PROTECTED WITH COOKIE CHECK + BUYER ONLY */}
              <Route path="/shop" element={<BuyerOnlyRoute><ShopView activeCategory={activeCategory} setActiveCategory={setActiveCategory} searchQuery={searchQuery} setSearchQuery={setSearchQuery} addToCart={addToCart} products={products} shops={[]} isLoading={productsLoading} /></BuyerOnlyRoute>} />
              <Route path="/product/:id" element={<BuyerOnlyRoute><ProductDetail addToCart={addToCart} openChat={openCustomizationChat} currentUser={currentUser} products={products} /></BuyerOnlyRoute>} />
              
@@ -499,8 +455,19 @@ const CraftifyContent = () => {
              <Route path="/my-shop" element={<ProtectedRoute user={currentUser} allowedRoles={['seller']}><StoreAdmin currentUser={currentUser} /></ProtectedRoute>} />
          </Routes>
       </main>
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onLogin={handleLogin} initialMode={authMode} />
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} setCart={setCart} onCheckout={handleCheckout} currentUser={currentUser} />
+      
+      {/* UPDATED: Pass handleCheckoutClick instead of direct function */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} setCart={setCart} onCheckout={handleCheckoutClick} currentUser={currentUser} />
+      
+      {/* NEW: Checkout Modal */}
+      <CheckoutModal 
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          cartTotal={cart.reduce((acc, i) => acc + i.price, 0)}
+          onConfirmOrder={confirmOrder}
+          loading={orderLoading}
+      />
+      
       {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} socket={socket} API_URL={API_URL} />}
     </div>
   );

@@ -22,11 +22,18 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'No order items' });
         }
 
+        // --- NEW VALIDATION: Check Address & Phone ---
+        // Agar frontend se address ya phone nahi aaya, toh yahi rok denge
+        if (!shippingAddress || !shippingAddress.address || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.phone) {
+            return res.status(400).json({ message: 'Please provide complete shipping address and phone number.' });
+        }
+        // ---------------------------------------------
+
         // 1. Create the Order
         const order = new Order({
             customer: req.user._id,
-            items: orderItems, // Frontend sends shopId inside each item (Crucial for Multi-Vendor)
-            shippingAddress,
+            items: orderItems, // Frontend sends shopId inside each item
+            shippingAddress,   // Ab isme phone number bhi included hoga
             paymentMethod,
             itemsPrice,
             taxPrice,
@@ -240,6 +247,6 @@ module.exports = {
     updateOrderToPaid,
     updateOrderStatus,
     getMyOrders,
-    getShopOrders, // Fixed for Multi-Shop
+    getShopOrders,
     getOrders,     
 };
