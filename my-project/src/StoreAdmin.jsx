@@ -1,8 +1,10 @@
+// src/StoreAdmin.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, ShoppingBag, Package, Plus, X, 
   DollarSign, Star, Settings, Menu, RefreshCcw, Store,
-  MessageSquare, Send, User, ChevronRight, Edit, Trash2
+  MessageSquare, Send, User, Edit, Trash2, LogOut,
+  ChevronRight, Search, Bell, TrendingUp
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -10,182 +12,117 @@ const API_URL = "http://localhost:5000";
 const ENDPOINT = "http://localhost:5000";
 var socket;
 
-// ==========================================
-// 1. UI COMPONENTS
-// ==========================================
-
+// UI Components
 const Button = ({ children, variant = 'primary', className = '', loading, ...props }) => {
     const variants = {
-        primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/30",
-        secondary: "bg-white text-slate-900 border border-slate-200 hover:border-slate-50",
+        primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20",
+        secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300",
         danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100",
-        outline: "bg-transparent border border-slate-300 text-slate-600 hover:border-slate-800 hover:text-slate-900",
-        ghost: "bg-transparent text-slate-600 hover:bg-slate-100"
+        ghost: "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
     };
     return (
-        <button disabled={loading || props.disabled} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`} {...props}>
+        <button disabled={loading || props.disabled} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`} {...props}>
             {loading && <RefreshCcw className="w-4 h-4 animate-spin"/>}
             {children}
         </button>
     );
 };
 
-const Card = ({ children, className = "" }) => (
-    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300 ${className}`}>
-        {children}
-    </div>
-);
+const Card = ({ children, className = "" }) => <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>{children}</div>;
 
 const Badge = ({ children, color = 'slate' }) => {
-    const colors = {
-        green: 'bg-green-100 text-green-700',
-        blue: 'bg-blue-100 text-blue-700',
-        yellow: 'bg-amber-100 text-amber-700',
-        slate: 'bg-slate-100 text-slate-600',
-        indigo: 'bg-indigo-100 text-indigo-700',
-        red: 'bg-red-100 text-red-700'
+    const colors = { 
+        green: 'bg-emerald-100 text-emerald-700 border-emerald-200', 
+        blue: 'bg-blue-100 text-blue-700 border-blue-200', 
+        slate: 'bg-slate-100 text-slate-600 border-slate-200', 
+        red: 'bg-red-100 text-red-700 border-red-200',
+        amber: 'bg-amber-100 text-amber-700 border-amber-200'
     };
-    return <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${colors[color]}`}>{children}</span>;
+    return <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${colors[color]}`}>{children}</span>;
 };
 
 // ==========================================
-// 2. MAIN STORE ADMIN COMPONENT
+// STORE ADMIN COMPONENT
 // ==========================================
-
 export default function StoreAdmin({ currentUser }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    
-    // Data States
     const [shop, setShop] = useState(null); 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false); 
-
-    // --- NEW: EDITING STATE ---
     const [editingProduct, setEditingProduct] = useState(null);
-
-    // --- CHAT STATES ---
     const [chats, setChats] = useState([]); 
     const [selectedChat, setSelectedChat] = useState(null); 
     const [messages, setMessages] = useState([]); 
     const [newMessage, setNewMessage] = useState("");
     const scrollRef = useRef();
-    const [socketConnected, setSocketConnected] = useState(false);
 
-    // --- 1. SOCKET CONNECTION EFFECT (Runs Once) ---
     useEffect(() => {
-        // COOKIE UPDATE: Pass credentials to Socket
         socket = io(ENDPOINT, { withCredentials: true });
-        
-        if(currentUser) {
-            socket.emit("setup", currentUser);
-        }
-        socket.on("connected", () => {
-            console.log("Seller Socket Connected");
-            setSocketConnected(true);
-        });
-
-        fetchStoreData(); // Fetch initial data
-
-        return () => { 
-            socket.disconnect(); 
-        }
+        if(currentUser) socket.emit("setup", currentUser);
+        fetchStoreData();
+        return () => { socket.disconnect(); }
     }, [currentUser]); 
 
-    // --- 2. MESSAGE LISTENER EFFECT (Runs on Chat Selection) ---
     useEffect(() => {
         if(!socket) return;
-
         const messageHandler = (newMessageReceived) => {
-            // Check if message belongs to the currently opened chat
             if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
                 setMessages(prev => [...prev, newMessageReceived.message]);
                 setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
             }
-            
-            // Refresh chat list
-            if(activeTab === 'messages') {
-                 fetchChats(); 
-            }
+            if(activeTab === 'messages') fetchChats(); 
         };
-
         socket.on("new_message_received", messageHandler);
-
-        return () => {
-            socket.off("new_message_received", messageHandler);
-        };
+        return () => { socket.off("new_message_received", messageHandler); };
     }, [selectedChat, activeTab]); 
 
-    // --- 3. FETCH CHATS ON TAB CHANGE ---
-    useEffect(() => {
-        if(activeTab === 'messages') {
-            fetchChats();
-        }
-    }, [activeTab]);
-
-    // --- API FUNCTIONS ---
+    useEffect(() => { if(activeTab === 'messages') fetchChats(); }, [activeTab]);
 
     const fetchStoreData = async () => {
         if(!currentUser) return;
-        
         try {
             setLoading(true);
-            // COOKIE UPDATE: credentials: 'include'
-            const shopRes = await fetch(`${API_URL}/api/shops/my-shop`, {
-                credentials: 'include' 
-            });
+            const shopRes = await fetch(`${API_URL}/api/shops/my-shop`, { credentials: 'include' });
             
+            // --- SECURITY FIX: Redirect if Unauthorized (Cookie Missing) ---
+            if (shopRes.status === 401 || shopRes.status === 403) {
+                handleLogout(); // Use the standardized logout function
+                return;
+            }
+
             if (shopRes.ok) {
                 const shopData = await shopRes.json();
                 setShop(shopData); 
-
                 if(shopData && shopData._id) {
                     const [prodRes, ordRes] = await Promise.all([
-                        fetch(`${API_URL}/api/products/shop/${shopData._id}`), // Public route
-                        fetch(`${API_URL}/api/orders/shop-orders`, {
-                            credentials: 'include' // Private Route
-                        })
+                        fetch(`${API_URL}/api/products/shop/${shopData._id}`),
+                        fetch(`${API_URL}/api/orders/shop-orders`, { credentials: 'include' })
                     ]);
-
                     if(prodRes.ok) setProducts(await prodRes.json());
                     if(ordRes.ok) setOrders(await ordRes.json());
                 }
             } else {
                 setShop(null);
             }
-        } catch (error) {
-            console.error("Store Data Error:", error);
-        } finally {
-            setLoading(false);
-        }
+        } catch (error) { console.error("Store Data Error:", error); } 
+        finally { setLoading(false); }
     };
 
     const fetchChats = async () => {
         try {
-            // COOKIE UPDATE: credentials: 'include'
-            const res = await fetch(`${API_URL}/api/chats/shop-chats`, {
-                credentials: 'include'
-            });
-            const data = await res.json();
-            setChats(data);
+            const res = await fetch(`${API_URL}/api/chats/shop-chats`, { credentials: 'include' });
+            if (res.ok) setChats(await res.json());
         } catch (error) { console.error("Fetch Chats Error", error); }
     };
 
     const openChat = async (chat) => {
-        setSelectedChat(chat);
-        setMessages([]); 
-        
-        // Join Room
-        socket.emit("join_chat", chat._id);
-
+        setSelectedChat(chat); setMessages([]); socket.emit("join_chat", chat._id);
         try {
-            // COOKIE UPDATE: credentials: 'include'
-            const res = await fetch(`${API_URL}/api/chats/${chat._id}`, {
-                credentials: 'include'
-            });
+            const res = await fetch(`${API_URL}/api/chats/${chat._id}`, { credentials: 'include' });
             const data = await res.json();
             setMessages(data.messages || []);
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -195,69 +132,29 @@ export default function StoreAdmin({ currentUser }) {
     const sendMessage = async (e) => {
         e.preventDefault();
         if(!newMessage.trim() || !selectedChat) return;
-
         try {
-            const tempMsg = { 
-                text: newMessage, 
-                sender: { _id: currentUser._id }, 
-                createdAt: new Date().toISOString() 
-            };
+            const tempMsg = { text: newMessage, sender: { _id: currentUser._id }, createdAt: new Date().toISOString() };
             setMessages([...messages, tempMsg]);
-            const msgToSend = newMessage;
-            setNewMessage("");
-
-            // COOKIE UPDATE: credentials: 'include'
+            const msgToSend = newMessage; setNewMessage("");
             await fetch(`${API_URL}/api/chats/message`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    chatId: selectedChat._id,
-                    content: msgToSend,
-                    type: 'text'
-                })
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', body: JSON.stringify({ chatId: selectedChat._id, content: msgToSend, type: 'text' })
             });
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         } catch (error) { console.error("Send Error", error); }
     };
 
-    // --- SHOP ACTIONS ---
-
     const handleCreateShop = async (e) => {
-        e.preventDefault();
-        setIsSubmitting(true);
+        e.preventDefault(); setIsSubmitting(true);
         const formData = new FormData(e.target);
-
         try {
             const res = await fetch(`${API_URL}/api/shops`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include', // Cookie
-                body: JSON.stringify({
-                    name: formData.get('name'),
-                    description: formData.get('description'),
-                    phone: formData.get('phone')
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ name: formData.get('name'), description: formData.get('description'), phone: formData.get('phone') })
             });
-
             const data = await res.json();
-
-            if (res.ok) {
-                setShop(data);
-                fetchStoreData();
-            } else {
-                alert(data.message || "Failed to create shop");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Network Error");
-        } finally {
-            setIsSubmitting(false);
-        }
+            if (res.ok) { setShop(data); fetchStoreData(); } else { alert(data.message || "Failed"); }
+        } catch (error) { console.error(error); alert("Network Error"); } finally { setIsSubmitting(false); }
     };
 
     const handleUpdateStore = async (e) => {
@@ -265,259 +162,200 @@ export default function StoreAdmin({ currentUser }) {
         const formData = new FormData(e.target);
         try {
             const res = await fetch(`${API_URL}/api/shops/my-shop`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include', // Cookie
-                body: JSON.stringify({
-                    name: formData.get('storeName'),
-                    description: formData.get('description'),
-                    phone: formData.get('phone'),
-                    tagline: formData.get('tagline')
-                })
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ name: formData.get('storeName'), description: formData.get('description'), phone: formData.get('phone'), tagline: formData.get('tagline') })
             });
-
-            if(res.ok) {
-                const updated = await res.json();
-                setShop(updated);
-                alert("Store Updated Successfully!");
-            }
+            if(res.ok) { setShop(await res.json()); alert("Store Updated Successfully!"); }
         } catch (error) { console.error(error); }
     };
 
-    // --- PRODUCT ACTIONS (CREATE / UPDATE / DELETE) ---
-
-    const handleOpenModal = (product = null) => {
-        setEditingProduct(product);
-        setIsAddModalOpen(true);
-    };
+    const handleOpenModal = (product = null) => { setEditingProduct(product); setIsAddModalOpen(true); };
 
     const handleSaveProduct = async (e) => {
-        e.preventDefault();
-        const shopId = shop?._id;
-        if (!shopId) return alert("Shop information missing.");
-        
-        setIsSubmitting(true);
+        e.preventDefault(); setIsSubmitting(true);
         const formData = new FormData(e.target);
-        
         const productData = {
-            shop: shopId,
-            name: formData.get('name'),
-            category: formData.get('category'),
-            price: Number(formData.get('price')),
-            stock: Number(formData.get('stock')),
-            description: formData.get('description'),
-            image: editingProduct?.image || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800",
+            shop: shop?._id, name: formData.get('name'), category: formData.get('category'),
+            price: Number(formData.get('price')), stock: Number(formData.get('stock')),
+            description: formData.get('description'), image: editingProduct?.image || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800",
         };
-
         try {
-            let res, data;
-            
-            if (editingProduct) {
-                // UPDATE EXISTING PRODUCT
-                res = await fetch(`${API_URL}/api/products/${editingProduct._id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include', // Cookie
-                    body: JSON.stringify(productData)
-                });
-            } else {
-                // CREATE NEW PRODUCT
-                res = await fetch(`${API_URL}/api/products`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include', // Cookie
-                    body: JSON.stringify(productData)
-                });
-            }
-
-            data = await res.json();
-
+            const url = editingProduct ? `${API_URL}/api/products/${editingProduct._id}` : `${API_URL}/api/products`;
+            const method = editingProduct ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(productData) });
+            const data = await res.json();
             if(res.ok) {
-                if (editingProduct) {
-                    setProducts(prev => prev.map(p => p._id === data._id ? data : p));
-                    alert("Product Updated Successfully!");
-                } else {
-                    setProducts([data, ...products]);
-                    alert("Product Added Successfully!");
-                }
-                setIsAddModalOpen(false);
-            } else {
-                alert(`Error: ${data.message || "Operation failed"}`);
-            }
-        } catch (error) {
-            alert("Network error.");
-        } finally {
-            setIsSubmitting(false);
-        }
+                if (editingProduct) setProducts(prev => prev.map(p => p._id === data._id ? data : p));
+                else setProducts([data, ...products]);
+                alert(editingProduct ? "Product Updated!" : "Product Added!"); setIsAddModalOpen(false);
+            } else { alert(data.message || "Failed"); }
+        } catch (error) { alert("Network error."); } finally { setIsSubmitting(false); }
     };
 
     const handleDeleteProduct = async (productId) => {
-        if (!window.confirm("Are you sure you want to delete this product?")) return;
-
+        if (!window.confirm("Delete this product?")) return;
         try {
-            const res = await fetch(`${API_URL}/api/products/${productId}`, {
-                method: 'DELETE',
-                credentials: 'include' // Cookie
-            });
+            const res = await fetch(`${API_URL}/api/products/${productId}`, { method: 'DELETE', credentials: 'include' });
+            if (res.ok) setProducts(prev => prev.filter(p => p._id !== productId));
+        } catch (error) { console.error(error); }
+    };
 
-            if (res.ok) {
-                setProducts(prev => prev.filter(p => p._id !== productId));
-                alert("Product deleted.");
-            } else {
-                alert("Failed to delete product.");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Network error deleting product.");
+    const handleLogout = () => {
+        if(window.confirm("Are you sure you want to log out?")) {
+            localStorage.removeItem("userInfo");
+            window.location.href = '/seller-login';
         }
     };
 
-    // --- RENDER ---
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><RefreshCcw className="w-10 h-10 text-indigo-600 animate-spin" /></div>;
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-                <RefreshCcw className="w-10 h-10 text-indigo-600 animate-spin" />
-                <p className="text-slate-500 font-medium">Loading your store dashboard...</p>
-            </div>
-        );
-    }
-
-    if (!shop) {
-        return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-                <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-lg border border-slate-100 text-center animate-fade-in">
-                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Store className="w-10 h-10 text-indigo-600"/>
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900">Setup Your Store</h2>
-                    <p className="text-slate-500 mt-2 mb-8">Create your store profile to access the dashboard.</p>
-                    
-                    <form onSubmit={handleCreateShop} className="space-y-4 text-left">
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Store Name</label>
-                            <input name="name" required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-medium" placeholder="My Awesome Brand" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Phone Number</label>
-                            <input name="phone" required type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-medium" placeholder="+91 0000000000" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
-                            <textarea name="description" required rows="3" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-medium" placeholder="What do you sell?"></textarea>
-                        </div>
-                        <Button type="submit" className="w-full py-4 mt-4" loading={isSubmitting}>
-                            Create Store & Enter Dashboard
-                        </Button>
-                    </form>
-                    <div className="mt-4">
-                        <button onClick={fetchStoreData} className="text-xs text-indigo-600 hover:underline font-bold">I already have a shop? Reload Data</button>
-                    </div>
+    if (!shop) return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="bg-white p-10 rounded-3xl shadow-2xl shadow-indigo-100 w-full max-w-lg text-center border border-indigo-50">
+                <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Store className="w-10 h-10 text-indigo-600"/>
                 </div>
+                <h2 className="text-3xl font-black text-slate-900 mb-2">Setup Your Store</h2>
+                <p className="text-slate-500 mb-8">Start your digital journey by creating your shop profile.</p>
+                <form onSubmit={handleCreateShop} className="space-y-4 text-left">
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Store Name</label>
+                        <input name="name" required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="e.g. My Awesome Shop" />
+                    </div>
+                    <div>
+                         <label className="text-xs font-bold text-slate-500 uppercase ml-1">Phone Number</label>
+                        <input name="phone" required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="+91 98765 43210" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Description</label>
+                        <textarea name="description" required rows="3" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Tell us about your products..."></textarea>
+                    </div>
+                    <Button type="submit" className="w-full py-4 text-base" loading={isSubmitting}>Create Store</Button>
+                </form>
             </div>
-        );
-    }
+        </div>
+    );
 
-    const totalRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
-        <button 
-            onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium mb-1 ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-        >
-            <div className="flex items-center gap-3">
-                <Icon className="w-5 h-5" />
-                <span>{label}</span>
-            </div>
-            {badge && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{badge}</span>}
+        <button onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all duration-200 ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+            <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${activeTab === id ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} /> 
+            <span className="font-medium">{label}</span> 
+            {badge && <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-sm">{badge}</span>}
+            {activeTab === id && <ChevronRight className="w-4 h-4 ml-auto opacity-50"/>}
         </button>
     );
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans">
-            {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-white transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-                <div className="h-full flex flex-col p-6">
-                    <div className="flex items-center gap-3 mb-10 px-2">
-                        <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/50">C</div>
-                        <div>
-                            <h1 className="font-bold text-lg tracking-tight">Craftify Admin</h1>
-                            <p className="text-xs text-slate-400">Seller Console</p>
+        <div className="min-h-screen bg-slate-50/50 flex font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+            {/* SIDEBAR */}
+            <aside className={`fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-white transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl`}>
+                <div className="h-full flex flex-col">
+                    {/* Sidebar Header */}
+                    <div className="p-6 border-b border-slate-800">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">S</div>
+                            <div>
+                                <h1 className="font-bold text-lg leading-tight">Store Admin</h1>
+                                <p className="text-xs text-slate-500">Manage your empire</p>
+                            </div>
                         </div>
                     </div>
 
-                    <nav className="flex-1 space-y-2">
-                        <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Main Menu</p>
+                    {/* Navigation */}
+                    <nav className="flex-1 space-y-2 p-4 overflow-y-auto">
+                        <p className="text-xs font-bold text-slate-600 uppercase px-4 mb-2 mt-2">Menu</p>
                         <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <SidebarItem id="products" icon={ShoppingBag} label="Products" />
                         <SidebarItem id="orders" icon={Package} label="Orders" />
-                        <SidebarItem id="messages" icon={MessageSquare} label="Messages" badge={chats.length > 0 ? chats.length : null} />
+                        <SidebarItem id="messages" icon={MessageSquare} label="Messages" badge={chats.length || null} />
                         
-                        <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-8">Business</p>
-                        <SidebarItem id="settings" icon={Settings} label="Store Settings" />
+                        <p className="text-xs font-bold text-slate-600 uppercase px-4 mb-2 mt-6">System</p>
+                        <SidebarItem id="settings" icon={Settings} label="Settings" />
                     </nav>
 
-                    <div className="mt-auto pt-6 border-t border-slate-800">
-                        <div className="flex items-center gap-3 px-2">
-                            <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center font-bold text-white">
-                                {currentUser?.name?.charAt(0) || 'U'}
+                    {/* User Profile / Logout Section */}
+                    <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                                <User className="w-5 h-5 text-slate-300"/>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate">{currentUser?.name || 'User'}</p>
-                                <p className="text-xs text-slate-500 truncate">{currentUser?.email || 'email@example.com'}</p>
+                                <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Seller'}</p>
+                                <p className="text-xs text-slate-400 truncate">{shop?.name}</p>
                             </div>
+                            <button onClick={handleLogout} className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-red-400" title="Logout">
+                                <LogOut className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 md:ml-72 min-h-screen flex flex-col">
-                <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-slate-600">
-                            <Menu className="w-6 h-6" />
-                        </button>
-                        <h2 className="text-xl font-bold text-slate-800 capitalize">{activeTab}</h2>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-sm text-slate-600">
-                            <span className={`w-2 h-2 rounded-full ${shop?.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                            {shop?.isActive ? 'Shop Online' : 'Shop Offline'}
+            {/* MAIN CONTENT */}
+            <main className="flex-1 md:ml-72 min-h-screen flex flex-col bg-slate-50">
+                {/* Header */}
+                <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-6 py-4">
+                    <div className="flex items-center justify-between max-w-7xl mx-auto">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 hover:bg-slate-100 rounded-lg"><Menu className="w-5 h-5"/></button>
+                            <h2 className="text-xl font-bold capitalize text-slate-800">{activeTab}</h2>
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                            {/* Search Placeholder */}
+                            <div className="hidden md:flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg border border-transparent focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100 transition-all w-64">
+                                <Search className="w-4 h-4 text-slate-400"/>
+                                <input className="bg-transparent border-none outline-none text-sm w-full" placeholder="Search..." />
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+                                    <Bell className="w-5 h-5"/>
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                </button>
+                                <div className="h-6 w-px bg-slate-200"></div>
+                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${shop?.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                    <span className={`w-2 h-2 rounded-full ${shop?.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                    {shop?.isActive ? 'Online' : 'Offline'}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </header>
 
-                <div className="p-6 max-w-7xl mx-auto w-full h-[calc(100vh-80px)]">
+                <div className="p-6 max-w-7xl mx-auto w-full flex-1">
                     
                     {/* DASHBOARD TAB */}
                     {activeTab === 'dashboard' && (
-                        <div className="space-y-8 animate-fade-in">
-                            <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                                <h1 className="text-3xl font-black mb-2 relative z-10">Welcome back, {currentUser?.name}!</h1>
-                                <p className="opacity-90 max-w-xl relative z-10">Your store <strong>{shop?.name}</strong> dashboard is ready.</p>
-                            </div>
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="flex items-end justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-black text-slate-900">Overview</h1>
+                                    <p className="text-slate-500 mt-1">Here is what's happening with your store today.</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <select className="bg-white border border-slate-200 text-sm font-medium rounded-lg px-3 py-2 outline-none"><option>Last 7 Days</option><option>Last 30 Days</option></select>
+                                    <Button size="sm"><Package className="w-4 h-4"/> Export Report</Button>
+                                </div>
+                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {[
-                                    { label: 'Total Revenue', val: `₹${totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-100' },
-                                    { label: 'Total Orders', val: orders.length, icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
-                                    { label: 'Products', val: products.length, icon: ShoppingBag, color: 'text-purple-600', bg: 'bg-purple-100' },
-                                    { label: 'Rating', val: shop?.rating > 0 ? shop.rating : 'New', icon: Star, color: 'text-amber-600', bg: 'bg-amber-100' },
-                                ].map((stat, i) => (
-                                    <Card key={i} className="p-6 flex items-center gap-4 border-l-4 border-l-transparent hover:border-l-indigo-500 transition-all">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
-                                            <stat.icon className="w-6 h-6" />
+                                    { l: 'Total Revenue', v: `₹${orders.reduce((a,o)=>a+(o.totalAmount||0),0).toLocaleString()}`, i: DollarSign, c: 'text-emerald-600', b: 'bg-emerald-100', t: '+12.5%' }, 
+                                    { l: 'Total Orders', v: orders.length, i: Package, c: 'text-blue-600', b: 'bg-blue-100', t: '+4.2%' }, 
+                                    { l: 'Products', v: products.length, i: ShoppingBag, c: 'text-purple-600', b: 'bg-purple-100', t: 'In Stock' },
+                                    { l: 'Store Rating', v: '4.8', i: Star, c: 'text-amber-600', b: 'bg-amber-100', t: 'Top Rated' }
+                                ].map((s,i)=>(
+                                    <Card key={i} className="p-6 relative overflow-hidden group">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${s.b} ${s.c} group-hover:scale-110 transition-transform duration-300`}>
+                                                <s.i className="w-6 h-6"/>
+                                            </div>
+                                            <span className="flex items-center text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full"><TrendingUp className="w-3 h-3 mr-1"/>{s.t}</span>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-slate-400 uppercase">{stat.label}</p>
-                                            <h3 className="text-2xl font-black text-slate-900">{stat.val}</h3>
+                                            <p className="text-sm font-medium text-slate-500">{s.l}</p>
+                                            <h3 className="text-3xl font-black text-slate-900 mt-1">{s.v}</h3>
                                         </div>
                                     </Card>
                                 ))}
@@ -527,93 +365,79 @@ export default function StoreAdmin({ currentUser }) {
 
                     {/* PRODUCTS TAB */}
                     {activeTab === 'products' && (
-                        <div className="space-y-6 animate-fade-in">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-2xl font-black text-slate-900">Product Management</h2>
-                                    <p className="text-slate-500 text-sm">Manage your catalog, stock, and pricing.</p>
+                                    <h2 className="text-2xl font-black text-slate-900">Inventory</h2>
+                                    <p className="text-slate-500 text-sm">Manage your products and stock levels.</p>
                                 </div>
-                                <Button onClick={() => handleOpenModal(null)}><Plus className="w-4 h-4" /> Add New Product</Button>
+                                <Button onClick={() => handleOpenModal(null)} className="shadow-xl shadow-indigo-200"><Plus className="w-4 h-4"/> Add Product</Button>
                             </div>
-
-                            <Card className="overflow-hidden">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
-                                    {products.length === 0 ? <p className="col-span-full text-center text-slate-400 py-10">No products added yet. Start selling!</p> : products.map(product => (
-                                        <div key={product._id} className="group bg-white rounded-2xl border border-slate-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300 flex flex-col">
-                                            <div className="aspect-[4/3] bg-slate-100 rounded-t-2xl relative overflow-hidden shrink-0">
-                                                <img src={product.image || product.coverImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
-                                                <div className="absolute top-2 right-2">
-                                                    <Badge color={product.stock > 10 ? 'green' : 'red'}>{product.stock > 0 ? 'In Stock' : 'OOS'}</Badge>
-                                                </div>
-                                            </div>
-                                            <div className="p-4 flex flex-col flex-1">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h3 className="font-bold text-slate-900 line-clamp-1">{product.name}</h3>
-                                                    <span className="font-bold text-indigo-600">₹{product.price}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
-                                                    <span>{product.category}</span>
-                                                    <span>•</span>
-                                                    <span>Stock: {product.stock}</span>
-                                                </div>
-                                                
-                                                <div className="mt-auto flex gap-2 pt-2 border-t border-slate-50">
-                                                    <button onClick={() => handleOpenModal(product)} className="flex-1 py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 text-xs font-bold transition-colors flex items-center justify-center gap-1">
-                                                        <Edit className="w-3 h-3" /> Edit
-                                                    </button>
-                                                    <button onClick={() => handleDeleteProduct(product._id)} className="flex-1 py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-red-50 hover:text-red-600 text-xs font-bold transition-colors flex items-center justify-center gap-1">
-                                                        <Trash2 className="w-3 h-3" /> Delete
-                                                    </button>
-                                                </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {products.map(p => (
+                                    <div key={p._id} className="group bg-white rounded-2xl border border-slate-100 hover:border-indigo-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 overflow-hidden flex flex-col">
+                                        <div className="relative h-48 overflow-hidden">
+                                            <img src={p.image} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"/>
+                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold">
+                                                Stock: {p.stock}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </Card>
+                                        <div className="p-4 flex-1 flex flex-col">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h3 className="font-bold text-slate-900 line-clamp-1">{p.name}</h3>
+                                                <span className="text-indigo-600 font-black">₹{p.price}</span>
+                                            </div>
+                                            <p className="text-slate-500 text-xs line-clamp-2 mb-4 flex-1">{p.description}</p>
+                                            <div className="flex gap-2 pt-4 border-t border-slate-50 mt-auto">
+                                                <button onClick={() => handleOpenModal(p)} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors">
+                                                    <Edit className="w-3 h-3"/> Edit
+                                                </button>
+                                                <button onClick={() => handleDeleteProduct(p._id)} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 text-xs font-bold transition-colors">
+                                                    <Trash2 className="w-3 h-3"/> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 
                     {/* ORDERS TAB */}
                     {activeTab === 'orders' && (
-                        <div className="space-y-6 animate-fade-in">
-                            <h2 className="text-2xl font-black text-slate-900">Order Management</h2>
-                            <Card className="overflow-hidden">
+                        <div className="animate-in slide-in-from-right-4 duration-300">
+                            <h2 className="text-2xl font-black text-slate-900 mb-6">Recent Orders</h2>
+                            <Card className="overflow-hidden border-0 shadow-lg shadow-slate-200/50">
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase text-xs">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-slate-50/50 text-slate-500 uppercase text-xs font-bold tracking-wider">
                                             <tr>
-                                                <th className="p-4 font-bold">Order ID</th>
-                                                <th className="p-4 font-bold">Customer</th>
-                                                <th className="p-4 font-bold">Date</th>
-                                                <th className="p-4 font-bold">Status</th>
-                                                <th className="p-4 font-bold text-right">Amount</th>
+                                                <th className="p-5">Order ID</th>
+                                                <th className="p-5">Customer</th>
+                                                <th className="p-5">Date</th>
+                                                <th className="p-5">Amount</th>
+                                                <th className="p-5">Status</th>
+                                                <th className="p-5 text-right">Action</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {orders.length === 0 ? (
-                                                <tr><td colSpan="5" className="p-8 text-center text-slate-400">No orders found yet.</td></tr>
-                                            ) : (
-                                                orders.map(order => (
-                                                    <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="p-4 font-bold text-indigo-600">#{order._id.slice(0,6)}</td>
-                                                        <td className="p-4">
-                                                            <p className="font-bold text-slate-900">{order.customer?.name || 'Guest'}</p>
-                                                            <p className="text-xs text-slate-400">{order.customer?.email}</p>
-                                                        </td>
-                                                        <td className="p-4 text-slate-500">{new Date(order.createdAt).toLocaleDateString()}</td>
-                                                        <td className="p-4">
-                                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                                order.orderStatus === 'Processing' ? 'bg-amber-100 text-amber-700' :
-                                                                order.orderStatus === 'Shipped' ? 'bg-blue-100 text-blue-700' :
-                                                                'bg-green-100 text-green-700'
-                                                            }`}>
-                                                                {order.orderStatus}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-right font-bold">₹{order.totalAmount}</td>
-                                                    </tr>
-                                                ))
-                                            )}
+                                        <tbody className="divide-y divide-slate-50">
+                                            {orders.map(o => (
+                                                <tr key={o._id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-5 font-mono font-medium text-slate-600">#{o._id.slice(-6).toUpperCase()}</td>
+                                                    <td className="p-5 font-bold text-slate-900">{o.customer?.name}</td>
+                                                    <td className="p-5 text-slate-500">{new Date(o.createdAt).toLocaleDateString()}</td>
+                                                    <td className="p-5 font-bold text-slate-900">₹{o.totalAmount}</td>
+                                                    <td className="p-5">
+                                                        <Badge color={o.orderStatus === 'Delivered' ? 'green' : o.orderStatus === 'Cancelled' ? 'red' : 'blue'}>
+                                                            {o.orderStatus}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="p-5 text-right">
+                                                        <button className="text-indigo-600 hover:text-indigo-800 font-bold text-xs">View Details</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -623,93 +447,64 @@ export default function StoreAdmin({ currentUser }) {
 
                     {/* MESSAGES TAB */}
                     {activeTab === 'messages' && (
-                        <div className="flex h-full gap-6 animate-fade-in">
-                            <Card className="w-1/3 flex flex-col overflow-hidden h-full">
-                                <div className="p-4 border-b border-slate-100 bg-slate-50">
-                                    <h3 className="font-bold text-slate-800">Inbox ({chats.length})</h3>
+                        <div className="flex h-[calc(100vh-140px)] gap-6 animate-in fade-in duration-300">
+                            <Card className="w-full md:w-80 flex flex-col border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+                                <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                    <h3 className="font-bold text-slate-800">Inbox</h3>
                                 </div>
                                 <div className="flex-1 overflow-y-auto">
-                                    {chats.length === 0 ? <p className="p-6 text-center text-slate-400 text-sm">No chats yet.</p> : 
-                                        chats.map(chat => (
-                                            <div 
-                                                key={chat._id} 
-                                                onClick={() => openChat(chat)}
-                                                className={`p-4 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors ${selectedChat?._id === chat._id ? 'bg-indigo-50 border-indigo-100' : ''}`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold overflow-hidden">
-                                                        {chat.customer?.avatar || <User className="w-5 h-5" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex justify-between items-center">
-                                                            <h4 className="font-bold text-slate-900 text-sm truncate">{chat.customer?.name}</h4>
-                                                            <span className="text-[10px] text-slate-400">{new Date(chat.updatedAt).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <p className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1">
-                                                            <span className="font-medium text-indigo-600 bg-indigo-50 px-1 rounded">Product:</span> 
-                                                            {chat.product?.name}
-                                                        </p>
-                                                    </div>
+                                    {chats.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-400 text-sm">No conversations yet.</div>
+                                    ) : (
+                                        chats.map(c => (
+                                            <div key={c._id} onClick={() => openChat(c)} className={`p-4 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors ${selectedChat?._id===c._id ? 'bg-indigo-50/50 border-l-4 border-l-indigo-600' : 'border-l-4 border-l-transparent'}`}>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <h4 className="font-bold text-slate-900 text-sm">{c.customer?.name}</h4>
+                                                    <span className="text-[10px] text-slate-400">Now</span>
                                                 </div>
+                                                <p className="text-xs text-slate-500 truncate">{c.product?.name}</p>
                                             </div>
                                         ))
-                                    }
+                                    )}
                                 </div>
                             </Card>
-
-                            <Card className="flex-1 flex flex-col overflow-hidden h-full bg-slate-50/50">
+                            
+                            <Card className="hidden md:flex flex-1 flex-col border-0 shadow-xl shadow-slate-200/50 overflow-hidden bg-slate-50/30">
                                 {selectedChat ? (
                                     <>
-                                        <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shadow-sm">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                                                    {selectedChat.customer?.name?.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-slate-900">{selectedChat.customer?.name}</h3>
-                                                    <p className="text-xs text-slate-500">Inquiry about: <span className="font-medium text-indigo-600">{selectedChat.product?.name}</span></p>
-                                                </div>
+                                        <div className="p-4 bg-white border-b border-slate-100 flex items-center gap-3 shadow-sm z-10">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+                                                {selectedChat.customer?.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-slate-900">{selectedChat.customer?.name}</h3>
+                                                <p className="text-xs text-slate-500">Inquiry: {selectedChat.product?.name}</p>
                                             </div>
                                         </div>
-
-                                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                                            {messages.map((msg, i) => {
-                                                const isMe = msg.sender?._id === currentUser._id || msg.sender === currentUser._id;
+                                        
+                                        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-100/50">
+                                            {messages.map((m,i) => {
+                                                const isMe = m.sender._id === currentUser._id || m.sender === currentUser._id;
                                                 return (
                                                     <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                                        <div className={`max-w-[70%] p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'}`}>
-                                                            <p>{msg.text}</p>
-                                                            <span className={`text-[9px] block mt-1 ${isMe ? 'text-indigo-200' : 'text-slate-400'}`}>
-                                                                {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                            </span>
+                                                        <div className={`max-w-[70%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none'}`}>
+                                                            {m.text}
                                                         </div>
                                                     </div>
-                                                )
+                                                );
                                             })}
-                                            <div ref={scrollRef} />
+                                            <div ref={scrollRef}/>
                                         </div>
-
-                                        <div className="p-4 bg-white border-t border-slate-100">
-                                            <form onSubmit={sendMessage} className="flex gap-2">
-                                                <input 
-                                                    type="text" 
-                                                    value={newMessage}
-                                                    onChange={(e) => setNewMessage(e.target.value)}
-                                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors"
-                                                    placeholder="Type your reply..."
-                                                />
-                                                <button type="submit" className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
-                                                    <Send className="w-5 h-5" />
-                                                </button>
-                                            </form>
-                                        </div>
+                                        
+                                        <form onSubmit={sendMessage} className="p-4 bg-white border-t border-slate-100 flex gap-3">
+                                            <input value={newMessage} onChange={e=>setNewMessage(e.target.value)} className="flex-1 p-3 bg-slate-100 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none" placeholder="Type your message..." />
+                                            <Button type="submit" className="rounded-xl aspect-square px-0 w-12"><Send className="w-5 h-5"/></Button>
+                                        </form>
                                     </>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                            <MessageSquare className="w-10 h-10 text-slate-300" />
-                                        </div>
-                                        <p>Select a chat to view conversation</p>
+                                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                                        <MessageSquare className="w-16 h-16 opacity-10 mb-4"/>
+                                        <p>Select a chat to start messaging</p>
                                     </div>
                                 )}
                             </Card>
@@ -718,119 +513,78 @@ export default function StoreAdmin({ currentUser }) {
 
                     {/* SETTINGS TAB */}
                     {activeTab === 'settings' && (
-                        <div className="max-w-3xl space-y-6 animate-fade-in">
-                            <h2 className="text-2xl font-black text-slate-900">Store Settings</h2>
-                            <form onSubmit={handleUpdateStore} className="space-y-6">
-                                <Card className="p-8">
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-bold uppercase text-slate-500">Store Name</label>
-                                                <input name="storeName" type="text" defaultValue={shop?.name || ''} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-xs font-bold uppercase text-slate-500">Tagline</label>
-                                                <input name="tagline" type="text" defaultValue={shop?.tagline || ''} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" />
-                                            </div>
+                        <div className="max-w-2xl animate-in slide-in-from-bottom-4 duration-300">
+                            <h2 className="text-2xl font-black text-slate-900 mb-6">Store Settings</h2>
+                            <Card className="p-8">
+                                <form onSubmit={handleUpdateStore} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold uppercase text-slate-500">Store Name</label>
+                                            <input name="storeName" defaultValue={shop?.name} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                                         </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold uppercase text-slate-500">About Store</label>
-                                            <textarea name="description" rows="3" defaultValue={shop?.description || ''} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500"></textarea>
-                                        </div>
-                                        <div className="space-y-1">
+                                        <div className="space-y-2">
                                             <label className="text-xs font-bold uppercase text-slate-500">Contact Phone</label>
-                                            <input name="phone" type="text" defaultValue={shop?.phone || ''} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" />
+                                            <input name="phone" defaultValue={shop?.phone} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" />
                                         </div>
                                     </div>
-                                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                                        <Button type="submit">Save Changes</Button>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500">Tagline</label>
+                                        <input name="tagline" defaultValue={shop?.tagline} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="e.g. Best Electronics in Town" />
                                     </div>
-                                </Card>
-                            </form>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-slate-500">Description</label>
+                                        <textarea name="description" defaultValue={shop?.description} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" rows="4"/>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-100 flex justify-end">
+                                        <Button type="submit" size="lg">Save Changes</Button>
+                                    </div>
+                                </form>
+                            </Card>
                         </div>
                     )}
+
                 </div>
             </main>
 
-            {/* PRODUCT MODAL (Unified for Add & Edit) */}
+            {/* ADD/EDIT MODAL */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <h2 className="text-xl font-black text-slate-900">
-                                {editingProduct ? `Edit ${editingProduct.name}` : 'Add New Product'}
-                            </h2>
-                            <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5"/></button>
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-black text-slate-900">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                            <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X className="w-5 h-5 text-slate-600"/></button>
                         </div>
-                        <form onSubmit={handleSaveProduct} className="p-8 space-y-6">
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-slate-500">Product Name</label>
-                                        <input 
-                                            name="name" 
-                                            required 
-                                            type="text" 
-                                            defaultValue={editingProduct?.name || ''}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
-                                            placeholder="e.g. Neon Sign" 
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-slate-500">Category</label>
-                                        <select 
-                                            name="category" 
-                                            defaultValue={editingProduct?.category || 'Tech Accessories'}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500"
-                                        >
-                                            <option>Tech Accessories</option>
-                                            <option>Clothing & Apparel</option>
-                                            <option>Art & Decor</option>
-                                            <option>Handmade Goods</option>
-                                        </select>
-                                    </div>
+                        <form onSubmit={handleSaveProduct} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Product Name</label>
+                                <input name="name" defaultValue={editingProduct?.name} required className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. Wireless Headphones"/>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Price (₹)</label>
+                                    <input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00"/>
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-slate-500">Price (₹)</label>
-                                        <input 
-                                            name="price" 
-                                            required 
-                                            type="number" 
-                                            defaultValue={editingProduct?.price || ''}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
-                                            placeholder="999" 
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold uppercase text-slate-500">Stock Qty</label>
-                                        <input 
-                                            name="stock" 
-                                            required 
-                                            type="number" 
-                                            defaultValue={editingProduct?.stock || ''}
-                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
-                                            placeholder="50" 
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-slate-500">Description</label>
-                                    <textarea 
-                                        name="description" 
-                                        required 
-                                        rows="4" 
-                                        defaultValue={editingProduct?.description || ''}
-                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-indigo-500" 
-                                        placeholder="Describe your product..."
-                                    ></textarea>
+                                <div className="flex-1">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">Stock</label>
+                                    <input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0"/>
                                 </div>
                             </div>
-                            <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                                <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                                <Button type="submit" loading={isSubmitting}>
-                                    {editingProduct ? 'Save Changes' : 'Create Product'}
-                                </Button>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
+                                <select name="category" defaultValue={editingProduct?.category || "General"} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    <option value="Electronics">Electronics</option>
+                                    <option value="Fashion">Fashion</option>
+                                    <option value="Home">Home</option>
+                                    <option value="General">General</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
+                                <textarea name="description" defaultValue={editingProduct?.description} className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" rows="3" placeholder="Product details..."/>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+                                <Button type="submit" loading={isSubmitting}>Save Product</Button>
                             </div>
                         </form>
                     </div>
