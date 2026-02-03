@@ -10,7 +10,7 @@ import {
 import io from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL;
-const ENDPOINT =import.meta.env.VITE_API_URL;
+const ENDPOINT = import.meta.env.VITE_API_URL;
 
 // --- CLOUDINARY CONFIG ---
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -263,6 +263,14 @@ export default function StoreAdmin({ currentUser }) {
 
     const handleSaveProduct = async (e) => {
         e.preventDefault(); 
+        
+        // --- VALIDATION ADDED: Ensure image is uploaded for new products ---
+        if (!editingProduct && !imageFile) {
+            alert("Please upload an image for the product!");
+            return;
+        }
+        // ------------------------------------------------------------------
+
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
