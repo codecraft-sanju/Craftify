@@ -53,7 +53,7 @@ import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
 import ProfileView from './ProfileView'; 
-import WishlistView from './WishlistView'; // --- NEW IMPORT ---
+import WishlistView from './WishlistView'; 
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) =>
@@ -63,9 +63,7 @@ const formatDate = (date) =>
     year: 'numeric',
   }).format(new Date(date));
 
-/* -------------------------------------------------------------------------- */
-/* GLOBAL PREMIUM STYLES                                                      */
-/* -------------------------------------------------------------------------- */
+
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
