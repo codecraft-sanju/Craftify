@@ -5,7 +5,7 @@ import {
   DollarSign, Star, Settings, Menu, RefreshCcw, Store,
   MessageSquare, Send, User, Edit, Trash2, LogOut,
   ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
-  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft
+  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -94,6 +94,7 @@ export default function StoreAdmin({ currentUser }) {
     const [selectedChat, setSelectedChat] = useState(null); 
     const [messages, setMessages] = useState([]); 
     const [newMessage, setNewMessage] = useState("");
+    const [chatError, setChatError] = useState(""); // Warning state for Seller
     const scrollRef = useRef();
 
     useEffect(() => {
@@ -108,19 +109,27 @@ export default function StoreAdmin({ currentUser }) {
         return () => { socket.disconnect(); }
     }, [currentUser]); 
 
-    // Chat Listeners
+    // Chat Listeners (FIXED DOUBLE MESSAGE)
     useEffect(() => {
         if(!socket) return;
         const messageHandler = (newMessageReceived) => {
             if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
-                setMessages(prev => [...prev, newMessageReceived.message]);
-                setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                const incomingMsg = newMessageReceived.message;
+                
+                // --- FIX: Check if sender is ME (Seller) ---
+                // Agar maine hi bheja hai toh ignore karo, kyunki sendMessage ne already add kar diya hai
+                const isMe = incomingMsg.sender._id === currentUser._id || incomingMsg.sender === currentUser._id;
+                
+                if (!isMe) {
+                    setMessages(prev => [...prev, incomingMsg]);
+                    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+                }
             }
             if(activeTab === 'messages') fetchChats(); 
         };
         socket.on("new_message_received", messageHandler);
         return () => { socket.off("new_message_received", messageHandler); };
-    }, [selectedChat, activeTab]); 
+    }, [selectedChat, activeTab, currentUser]); 
 
     useEffect(() => { if(activeTab === 'messages') fetchChats(); }, [activeTab]);
 
@@ -158,7 +167,8 @@ export default function StoreAdmin({ currentUser }) {
     };
 
     const openChat = async (chat) => {
-        setSelectedChat(chat); setMessages([]); socket.emit("join_chat", chat._id);
+        setSelectedChat(chat); setMessages([]); setChatError("");
+        socket.emit("join_chat", chat._id);
         try {
             const res = await fetch(`${API_URL}/api/chats/${chat._id}`, { credentials: 'include' });
             const data = await res.json();
@@ -167,13 +177,58 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); }
     };
 
+    // --- SECURITY CHECK (Same as User Side + Socials) ---
+    const isMessageSafe = (text) => {
+        const lowerText = text.toLowerCase();
+        
+        // 1. Phone Numbers (Remove spaces/dashes)
+        const cleanText = text.replace(/[\s-]/g, ''); 
+        const phoneRegex = /(?:\+?91|0)?[6789]\d{9}/; 
+        if (phoneRegex.test(cleanText)) return false;
+
+        // 2. Email
+        const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+        if (emailRegex.test(text)) return false;
+
+        // 3. Instagram / Social Handles (New patterns)
+        // Detects: @username, ig: username, insta: username, instagram.com/...
+        const instaRegex = /(?:@|(?:instagram|insta|ig)(?:\.com)?\/|ig:? ?|insta:? ?)([a-zA-Z0-9_.]+)/i;
+        if (instaRegex.test(text)) return false;
+
+        // 4. Forbidden Keywords
+        const forbiddenWords = [
+            'call me', 'phone number', 'contact number', 'whatsapp', 
+            'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do',
+            'instagram', 'dm me', 'link in bio', 'facebook', 'snapchat'
+        ];
+
+        for (let word of forbiddenWords) {
+            if (lowerText.includes(word)) return false;
+        }
+
+        return true;
+    };
+
     const sendMessage = async (e) => {
         e.preventDefault();
         if(!newMessage.trim() || !selectedChat) return;
+
+        // --- SECURITY BLOCK ---
+        if (!isMessageSafe(newMessage)) {
+            setChatError("Sharing contact/social details is restricted to prevent platform leakage.");
+            setTimeout(() => setChatError(""), 4000);
+            return;
+        }
+        setChatError(""); // Clear error
+
         try {
+            // Optimistic UI Update
             const tempMsg = { text: newMessage, sender: { _id: currentUser._id }, createdAt: new Date().toISOString() };
             setMessages([...messages, tempMsg]);
-            const msgToSend = newMessage; setNewMessage("");
+            
+            const msgToSend = newMessage; 
+            setNewMessage("");
+            
             await fetch(`${API_URL}/api/chats/message`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', body: JSON.stringify({ chatId: selectedChat._id, content: msgToSend, type: 'text' })
@@ -577,15 +632,33 @@ export default function StoreAdmin({ currentUser }) {
                                                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">{selectedChat.customer?.name.charAt(0)}</div>
                                                 <div><h3 className="font-bold text-slate-900">{selectedChat.customer?.name}</h3><p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Inquiry: {selectedChat.product?.name}</p></div>
                                             </div>
-                                            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-100/50 custom-scrollbar">
+                                            
+                                            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-100/50 custom-scrollbar relative">
+                                                {/* Security Warning Alert */}
+                                                {chatError && (
+                                                    <div className="sticky top-0 z-20 bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center justify-center gap-2 animate-in slide-in-from-top-2 mx-auto w-fit mb-4">
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                        {chatError}
+                                                    </div>
+                                                )}
+
                                                 {messages.map((m,i) => {
                                                     const isMe = m.sender._id === currentUser._id || m.sender === currentUser._id;
                                                     return (<div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[75%] px-5 py-3 rounded-2xl shadow-sm text-sm leading-relaxed ${isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}`}>{m.text}</div></div>);
                                                 })}
                                                 <div ref={scrollRef}/>
                                             </div>
-                                            <form onSubmit={sendMessage} className="p-4 bg-white border-t border-slate-100 flex gap-3">
-                                                <input value={newMessage} onChange={e=>setNewMessage(e.target.value)} className="flex-1 p-3 bg-slate-100 border-0 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none font-medium text-sm" placeholder="Type your message..." />
+                                            
+                                            <form onSubmit={sendMessage} className="p-4 bg-white border-t border-slate-100 flex gap-3 relative">
+                                                <input 
+                                                    value={newMessage} 
+                                                    onChange={e => {
+                                                        setNewMessage(e.target.value);
+                                                        if(chatError) setChatError(""); 
+                                                    }} 
+                                                    className={`flex-1 p-3 bg-slate-100 border-0 rounded-xl focus:ring-2 focus:bg-white transition-all outline-none font-medium text-sm ${chatError ? 'ring-2 ring-red-500 bg-red-50' : 'focus:ring-indigo-500'}`} 
+                                                    placeholder="Type your message..." 
+                                                />
                                                 <Button type="submit" className="rounded-xl aspect-square px-0 w-12 shadow-none"><Send className="w-5 h-5"/></Button>
                                             </form>
                                         </>
