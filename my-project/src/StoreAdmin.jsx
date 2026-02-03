@@ -257,24 +257,27 @@ export default function StoreAdmin({ currentUser }) {
     const handleOpenModal = (product = null) => { 
         setEditingProduct(product); 
         setImageFile(null); 
-        setImagePreview(product ? product.image : ""); 
+        // --- FIX: Check both image and coverImage for preview ---
+        const existingImage = product ? (product.image || product.coverImage) : "";
+        setImagePreview(existingImage); 
         setIsAddModalOpen(true); 
     };
 
     const handleSaveProduct = async (e) => {
         e.preventDefault(); 
         
-        // --- VALIDATION ADDED: Ensure image is uploaded for new products ---
+        // --- VALIDATION: Ensure image is uploaded for new products ---
         if (!editingProduct && !imageFile) {
             alert("Please upload an image for the product!");
             return;
         }
-        // ------------------------------------------------------------------
 
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
-        let imageUrl = editingProduct?.image || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800";
+        // --- FIX: Logic to keep existing image (checks both fields) ---
+        let currentImage = editingProduct?.image || editingProduct?.coverImage;
+        let imageUrl = currentImage || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800";
 
         if (imageFile) {
             const data = new FormData();
@@ -487,23 +490,28 @@ export default function StoreAdmin({ currentUser }) {
                                             <ShoppingBag className="w-12 h-12 mb-2 opacity-20"/>
                                             <p className="font-bold">No products found.</p>
                                         </div>
-                                    ) : products.map(p => (
-                                        <div key={p._id} className="group bg-white rounded-3xl border border-slate-100 hover:border-indigo-200 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 overflow-hidden flex flex-col">
-                                            <div className="relative h-56 overflow-hidden bg-slate-100">
-                                                <img src={p.image} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
-                                                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide shadow-sm border border-slate-100">Stock: {p.stock}</div>
-                                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                            </div>
-                                            <div className="p-5 flex-1 flex flex-col">
-                                                <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-slate-900 line-clamp-1 text-lg">{p.name}</h3><span className="text-indigo-600 font-black text-lg">₹{p.price}</span></div>
-                                                <p className="text-slate-500 text-xs line-clamp-2 mb-6 flex-1 leading-relaxed">{p.description}</p>
-                                                <div className="flex gap-2 pt-4 border-t border-slate-50 mt-auto">
-                                                    <button onClick={() => handleOpenModal(p)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"><Edit className="w-3 h-3"/> Edit</button>
-                                                    <button onClick={() => handleDeleteProduct(p._id)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 text-xs font-bold transition-colors"><Trash2 className="w-3 h-3"/> Delete</button>
+                                    ) : products.map(p => {
+                                        // --- FIX: Robust image check like ShopView ---
+                                        const displayImage = p.image || p.coverImage || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800";
+                                        
+                                        return (
+                                            <div key={p._id} className="group bg-white rounded-3xl border border-slate-100 hover:border-indigo-200 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 overflow-hidden flex flex-col">
+                                                <div className="relative h-56 overflow-hidden bg-slate-100">
+                                                    <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
+                                                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide shadow-sm border border-slate-100">Stock: {p.stock}</div>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                                </div>
+                                                <div className="p-5 flex-1 flex flex-col">
+                                                    <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-slate-900 line-clamp-1 text-lg">{p.name}</h3><span className="text-indigo-600 font-black text-lg">₹{p.price}</span></div>
+                                                    <p className="text-slate-500 text-xs line-clamp-2 mb-6 flex-1 leading-relaxed">{p.description}</p>
+                                                    <div className="flex gap-2 pt-4 border-t border-slate-50 mt-auto">
+                                                        <button onClick={() => handleOpenModal(p)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors"><Edit className="w-3 h-3"/> Edit</button>
+                                                        <button onClick={() => handleDeleteProduct(p._id)} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 text-xs font-bold transition-colors"><Trash2 className="w-3 h-3"/> Delete</button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
