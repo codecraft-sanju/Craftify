@@ -205,6 +205,7 @@ const LiveCustomizer = ({ product, customText, setCustomText }) => (
   </div>
 );
 
+// --- FIXED CART DRAWER ---
 const CartDrawer = ({
   isOpen,
   onClose,
@@ -228,13 +229,17 @@ const CartDrawer = ({
   return (
     <>
       <div
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        // FIXED: z-[140] (was 80) to be above everything
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-full md:max-w-md bg-white z-[90] shadow-2xl flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        // FIXED: 
+        // 1. h-[100dvh] instead of h-full (fixes mobile address bar issue)
+        // 2. z-[150] instead of 90 (fixes overlapping with mobile nav)
+        className={`fixed top-0 right-0 h-[100dvh] w-full md:max-w-md bg-white z-[150] shadow-2xl flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
             My Cart{' '}
             <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
@@ -248,6 +253,8 @@ const CartDrawer = ({
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
+        
+        {/* FIXED: Added flex-1 to push footer down properly */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
@@ -305,8 +312,10 @@ const CartDrawer = ({
             ))
           )}
         </div>
+        
+        {/* FIXED: shrink-0 ensures this doesn't get squished */}
         {cart.length > 0 && (
-          <div className="p-6 border-t border-slate-100 bg-slate-50/50 pb-safe-area">
+          <div className="p-6 border-t border-slate-100 bg-slate-50/50 pb-safe-area shrink-0 z-20">
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Subtotal</span>
