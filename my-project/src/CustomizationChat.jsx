@@ -40,18 +40,32 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
     return () => { document.body.style.overflow = 'unset'; }
   }, [isOpen, product, currentUser, API_URL, socket]);
 
-  // Listen for Incoming Messages
+  // Listen for Incoming Messages (UPDATED FIX)
   useEffect(() => {
       if(!socket) return;
+
       const handleMessageReceived = (newMessageReceived) => {
+          // Check if message belongs to current chat
           if (chatId && chatId === newMessageReceived.chatId) {
-             setMessages(prev => [...prev, newMessageReceived.message]);
-             scrollToBottom();
+             const incomingMsg = newMessageReceived.message;
+             
+             // FIX: Check if the sender is ME (Current User)
+             // handleSend() already adds the message locally, so we skip it here
+             // handling both object populated ID or string ID
+             const isMe = incomingMsg.sender._id === currentUser?._id || incomingMsg.sender === currentUser?._id;
+
+             // Only add to state if it's NOT from me
+             if (!isMe) {
+                 setMessages(prev => [...prev, incomingMsg]);
+                 scrollToBottom();
+             }
           }
       };
+
       socket.on("new_message_received", handleMessageReceived);
+      
       return () => { socket.off("new_message_received", handleMessageReceived); }
-  }, [socket, chatId]);
+  }, [socket, chatId, currentUser]); // Added currentUser dependency
 
   const scrollToBottom = () => {
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -60,8 +74,10 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
   const handleSend = async () => {
     if (!message.trim() || !chatId) return;
     try {
+        // Optimistic UI Update: Add message immediately
         const tempMsg = { text: message, sender: { _id: currentUser._id }, createdAt: new Date() };
         setMessages(prev => [...prev, tempMsg]);
+        
         const msgToSend = message;
         setMessage("");
         inputRef.current?.focus();
