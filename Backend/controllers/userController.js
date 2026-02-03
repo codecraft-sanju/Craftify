@@ -282,6 +282,66 @@ const updateGlobalQR = async (req, res) => {
     }
 };
 
+// --- NEW: WISHLIST FUNCTIONS ---
+
+// @desc    Get user wishlist
+// @route   GET /api/users/wishlist
+// @access  Private
+const getWishlist = async (req, res) => {
+    try {
+        // Populate 'wishlist' to get full product details
+        const user = await User.findById(req.user._id).populate('wishlist');
+        
+        if (user) {
+            res.json(user.wishlist);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Add product to wishlist
+// @route   POST /api/users/wishlist
+// @access  Private
+const addToWishlist = async (req, res) => {
+    try {
+        const { productId } = req.body;
+        
+        // $addToSet ensures no duplicates
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $addToSet: { wishlist: productId } },
+            { new: true }
+        ).populate('wishlist');
+
+        res.json(user.wishlist);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Remove product from wishlist
+// @route   DELETE /api/users/wishlist/:id
+// @access  Private
+const removeFromWishlist = async (req, res) => {
+    try {
+        const productId = req.params.id;
+
+        // $pull removes the item from the array
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $pull: { wishlist: productId } },
+            { new: true }
+        ).populate('wishlist');
+
+        res.json(user.wishlist);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     authUser,
@@ -293,5 +353,8 @@ module.exports = {
     getUserById,
     updateUser,
     getGlobalQR,
-    updateGlobalQR
+    updateGlobalQR,
+    getWishlist,
+    addToWishlist,
+    removeFromWishlist
 };

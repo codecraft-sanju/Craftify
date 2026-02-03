@@ -5,9 +5,6 @@ import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Sparkles, ArrowLeft
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-/* -------------------------------------------------------------------------- */
-/* STYLES & ANIMATIONS (Identical to Seller Page)                             */
-/* -------------------------------------------------------------------------- */
 const styleInjection = `
   @keyframes blob {
     0% { transform: translate(0px, 0px) scale(1); }

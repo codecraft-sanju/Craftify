@@ -1,7 +1,7 @@
 // src/ShopView.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag } from 'lucide-react';
+import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart } from 'lucide-react'; // Added Heart
 
 // --- HELPER: BADGE ---
 const Badge = ({ children, color = "slate", className="" }) => {
@@ -44,10 +44,12 @@ const ShopView = ({
     setActiveCategory, 
     addToCart, 
     products = [], 
-    isLoading 
+    isLoading,
+    wishlist = [], // NEW PROP
+    toggleWishlist // NEW PROP
 }) => {
   
-  // Categories List (You can fetch this dynamically later if needed)
+  // Categories List
   const categories = ["All", "Clothing", "Home", "Art", "Tech", "Accessories"];
 
   // --- FILTER LOGIC ---
@@ -167,6 +169,9 @@ const ShopView = ({
                         const displayImage = product.image || product.coverImage || "https://via.placeholder.com/300";
                         const shopName = product.shop?.name || 'Verified Seller';
                         const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+                        
+                        // Check if product is in wishlist
+                        const isInWishlist = wishlist && wishlist.some(item => item._id === product._id);
 
                         return (
                            <Link to={`/product/${productId}`} key={productId} className="group bg-white rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 relative flex flex-col h-full transform hover:-translate-y-1">
@@ -174,10 +179,10 @@ const ShopView = ({
                                {/* Image Container */}
                                <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden">
                                  <img 
-                                    src={displayImage} 
-                                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`} 
-                                    alt={product.name} 
-                                    loading="lazy"
+                                   src={displayImage} 
+                                   className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`} 
+                                   alt={product.name} 
+                                   loading="lazy"
                                  />
                                  
                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
@@ -188,11 +193,23 @@ const ShopView = ({
                                      {isOutOfStock && <Badge color="red" className="shadow-sm">Sold Out</Badge>}
                                  </div>
 
+                                 {/* --- WISHLIST BUTTON (NEW) --- */}
+                                 <button 
+                                     onClick={(e) => {
+                                         e.preventDefault(); // Stop navigation to product detail
+                                         e.stopPropagation();
+                                         toggleWishlist(product);
+                                     }}
+                                     className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-md shadow-sm transition-all duration-200 active:scale-90 ${isInWishlist ? 'bg-white text-red-500' : 'bg-white/70 text-slate-400 hover:bg-white hover:text-red-500'}`}
+                                 >
+                                     <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} />
+                                 </button>
+
                                  {/* Quick Add Button (Slide Up) */}
                                  <button 
                                    onClick={(e) => { 
-                                      e.preventDefault(); 
-                                      if(!isOutOfStock) addToCart(product); 
+                                     e.preventDefault(); 
+                                     if(!isOutOfStock) addToCart(product); 
                                    }} 
                                    disabled={isOutOfStock}
                                    className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 py-3.5 rounded-xl font-bold shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-900 hover:text-white disabled:hidden"

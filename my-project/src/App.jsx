@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -51,7 +52,8 @@ import SellerRegister from './SellerRegister';
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
-import ProfileView from './ProfileView'; // Imported Component
+import ProfileView from './ProfileView'; 
+import WishlistView from './WishlistView'; // --- NEW IMPORT ---
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const formatDate = (date) =>
@@ -229,14 +231,10 @@ const CartDrawer = ({
   return (
     <>
       <div
-        // FIXED: z-[140] (was 80) to be above everything
         className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
       <div
-        // FIXED: 
-        // 1. h-[100dvh] instead of h-full (fixes mobile address bar issue)
-        // 2. z-[150] instead of 90 (fixes overlapping with mobile nav)
         className={`fixed top-0 right-0 h-[100dvh] w-full md:max-w-md bg-white z-[150] shadow-2xl flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
@@ -254,7 +252,6 @@ const CartDrawer = ({
           </button>
         </div>
         
-        {/* FIXED: Added flex-1 to push footer down properly */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
@@ -313,7 +310,6 @@ const CartDrawer = ({
           )}
         </div>
         
-        {/* FIXED: shrink-0 ensures this doesn't get squished */}
         {cart.length > 0 && (
           <div className="p-6 border-t border-slate-100 bg-slate-50/50 pb-safe-area shrink-0 z-20">
             <div className="space-y-3 mb-6">
@@ -347,11 +343,15 @@ const CartDrawer = ({
   );
 };
 
-const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
+// --- UPDATED PRODUCT DETAIL (Accepts Wishlist props) ---
+const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const product = products.find((p) => p._id === id);
   const [customText, setCustomText] = useState('');
+
+  // Check if product is in wishlist
+  const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
 
   if (!product)
     return (
@@ -450,8 +450,13 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
               >
                 <MessageSquare className="w-5 h-5" /> Chat with Seller
               </button>
-              <button className="p-4 rounded-2xl border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all active:scale-95">
-                <Heart className="w-6 h-6" />
+              
+              {/* --- WISHLIST BUTTON --- */}
+              <button 
+                onClick={() => toggleWishlist(product)}
+                className={`p-4 rounded-2xl border transition-all active:scale-95 ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500' : 'border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100'}`}
+              >
+                <Heart className={`w-6 h-6 ${isInWishlist ? 'fill-current' : ''}`} />
               </button>
             </div>
           </div>
@@ -478,7 +483,7 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products }) => {
   );
 };
 
-// --- MOBILE NAVIGATION BAR ---
+// --- UPDATED MOBILE NAVIGATION BAR ---
 const MobileNav = ({ cartCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -500,7 +505,7 @@ const MobileNav = ({ cartCount }) => {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/shop' },
-    { icon: Grid, label: 'Shop', path: '/shop' },
+    { icon: Heart, label: 'Wishlist', path: '/wishlist' }, // Added Wishlist Here
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
@@ -573,6 +578,10 @@ const CraftifyContent = () => {
 
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
+  
+  // --- WISHLIST STATE ---
+  const [wishlist, setWishlist] = useState([]);
+  
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
@@ -593,7 +602,10 @@ const CraftifyContent = () => {
     socket = io(ENDPOINT, { withCredentials: true });
     if (currentUser) {
       fetchOrders();
+      fetchWishlist(); // Fetch Wishlist
       socket.emit('setup', currentUser);
+    } else {
+      setWishlist([]); // Clear wishlist if logged out
     }
     fetchProducts();
     socket.on('product_updated', (updatedProduct) => {
@@ -637,6 +649,57 @@ const CraftifyContent = () => {
       console.error('Failed to fetch orders:', error);
     }
   };
+
+  // --- NEW: FETCH WISHLIST ---
+  const fetchWishlist = async () => {
+    try {
+        const res = await fetch(`${API_URL}/api/users/wishlist`, { credentials: 'include' });
+        if(res.ok) {
+            const data = await res.json();
+            setWishlist(data);
+        }
+    } catch (error) {
+        console.error("Wishlist error", error);
+    }
+  };
+
+  // --- NEW: TOGGLE WISHLIST ---
+  const toggleWishlist = async (product) => {
+    if(!currentUser) {
+        navigate('/login');
+        return;
+    }
+
+    const isInWishlist = wishlist.some(item => item._id === product._id);
+    
+    // Optimistic Update
+    if (isInWishlist) {
+        setWishlist(prev => prev.filter(item => item._id !== product._id));
+        addToast("Removed", "Removed from wishlist", "info");
+        // API Call (Delete)
+        try {
+            await fetch(`${API_URL}/api/users/wishlist/${product._id}`, { method: 'DELETE', credentials: 'include' });
+        } catch(e) { fetchWishlist(); } // Revert on error
+    } else {
+        setWishlist(prev => [...prev, product]);
+        addToast("Saved", "Added to your wishlist");
+        // API Call (Add)
+        try {
+            await fetch(`${API_URL}/api/users/wishlist`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: product._id }),
+                credentials: 'include' 
+            });
+        } catch(e) { fetchWishlist(); }
+    }
+  };
+
+  // Helper for WishlistView specifically
+  const removeFromWishlist = (id) => {
+    const product = products.find(p => p._id === id) || { _id: id };
+    toggleWishlist(product);
+  }
 
   const addToast = (title, message, type = 'success') => {
     const id = Date.now();
@@ -686,6 +749,7 @@ const CraftifyContent = () => {
     localStorage.removeItem('userInfo');
     setCurrentUser(null);
     setOrders([]);
+    setWishlist([]); // Clear Wishlist
     socket.disconnect();
     socket = io(ENDPOINT, { withCredentials: true });
     navigate('/');
@@ -796,6 +860,12 @@ const CraftifyContent = () => {
                 className="hover:text-slate-900 transition-colors"
               >
                 Marketplace
+              </Link>
+              <Link 
+                to="/wishlist" 
+                className="hover:text-slate-900 transition-colors flex items-center gap-1"
+              >
+                Wishlist {wishlist.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">{wishlist.length}</span>}
               </Link>
               <Link
                 to={currentUser ? '/profile' : '/login'}
@@ -920,10 +990,27 @@ const CraftifyContent = () => {
                   products={products}
                   shops={[]}
                   isLoading={productsLoading}
+                  wishlist={wishlist}
+                  toggleWishlist={toggleWishlist}
                 />
               </BuyerOnlyRoute>
             }
           />
+          
+          {/* --- NEW WISHLIST ROUTE --- */}
+          <Route 
+            path="/wishlist" 
+            element={
+              <ProtectedRoute user={currentUser} redirectPath="/login">
+                <WishlistView 
+                  wishlist={wishlist} 
+                  addToCart={addToCart} 
+                  removeFromWishlist={removeFromWishlist} 
+                />
+              </ProtectedRoute>
+            } 
+          />
+
           <Route
             path="/product/:id"
             element={
@@ -933,6 +1020,8 @@ const CraftifyContent = () => {
                   openChat={openCustomizationChat}
                   currentUser={currentUser}
                   products={products}
+                  wishlist={wishlist}
+                  toggleWishlist={toggleWishlist}
                 />
               </BuyerOnlyRoute>
             }
