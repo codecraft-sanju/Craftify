@@ -482,7 +482,7 @@ export default function StoreAdmin({ currentUser }) {
                                     ) : products.map(p => (
                                         <div key={p._id} className="group bg-white rounded-3xl border border-slate-100 hover:border-indigo-200 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 overflow-hidden flex flex-col">
                                             <div className="relative h-56 overflow-hidden bg-slate-100">
-                                                <img src={p.image || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800"} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
+                                                <img src={p.image} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
                                                 <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide shadow-sm border border-slate-100">Stock: {p.stock}</div>
                                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                             </div>
