@@ -2,21 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, ShoppingBag, Store, ShieldCheck, Zap, Globe, 
-  CreditCard, Play, Star, Menu, X, ChevronRight, Lock, 
-  TrendingUp, Users, Package, Box, Check, Activity, Heart, Gift, Timer
+  Menu, X, ChevronRight, Lock, TrendingUp, Activity, Heart, Gift, Timer, Box, Check
 } from 'lucide-react';
-import io from 'socket.io-client';
-
-const ENDPOINT = "http://localhost:5000";
 
 /* -------------------------------------------------------------------------- */
-/* STYLES & ANIMATIONS                                                        */
+/* STYLES & ANIMATIONS (CSS-IN-JS)                                            */
 /* -------------------------------------------------------------------------- */
 const styleInjection = `
   html, body {
-    background-color: #020617;
+    background-color: #020617 !important;
     margin: 0; padding: 0; overflow-x: hidden; width: 100%;
+    scroll-behavior: smooth;
   }
+  
+  /* Animations */
   @keyframes blob {
     0% { transform: translate(0px, 0px) scale(1); }
     33% { transform: translate(30px, -50px) scale(1.1); }
@@ -29,7 +28,7 @@ const styleInjection = `
   }
   @keyframes scroll-left {
     from { transform: translateX(0); }
-    to { transform: translateX(-100%); }
+    to { transform: translateX(-50%); }
   }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -45,7 +44,8 @@ const styleInjection = `
     70% { box-shadow: 0 0 0 20px rgba(225, 29, 72, 0); }
     100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
   }
-  
+
+  /* Utilities */
   .animate-blob { animation: blob 10s infinite; }
   .animate-grid { animation: grid-move 3s linear infinite; }
   .animate-scroll-left { animation: scroll-left 30s linear infinite; }
@@ -56,18 +56,15 @@ const styleInjection = `
   .animation-delay-2000 { animation-delay: 2s; }
   .animation-delay-4000 { animation-delay: 4s; }
   
+  /* Glass Effects */
   .glass-card {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   }
-  .glass-nav {
-    background: rgba(2, 6, 23, 0.8);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
   
+  /* Text Gradients */
   .text-gradient {
     background: linear-gradient(135deg, #FFF 0%, #94a3b8 100%);
     -webkit-background-clip: text;
@@ -84,6 +81,7 @@ const styleInjection = `
     -webkit-text-fill-color: transparent;
   }
   
+  /* Backgrounds */
   .cyber-grid {
     background-size: 40px 40px;
     background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -91,6 +89,7 @@ const styleInjection = `
     mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
+  /* Reveal on Scroll */
   .reveal {
     opacity: 0;
     transform: translateY(30px);
@@ -102,7 +101,6 @@ const styleInjection = `
   }
 `;
 
-// --- Hook for Scroll Animations ---
 const useScrollReveal = () => {
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -119,7 +117,7 @@ const useScrollReveal = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* COMPONENTS                                                                 */
+/* HELPER COMPONENTS                                                          */
 /* -------------------------------------------------------------------------- */
 
 const TiltCard = ({ children, className }) => {
@@ -175,64 +173,36 @@ const Button = ({ children, variant = 'primary', className = '', icon: Icon, onC
   );
 };
 
-// --- DYNAMIC LIVE ACTIVITY (Hybrid: Real Socket + Mock Fallback) ---
+// --- MOCK LIVE ACTIVITY ONLY (No Sockets) ---
 const LiveActivity = () => {
   const [visible, setVisible] = useState(false);
   const [data, setData] = useState({ name: '', action: '', time: '' });
 
-  // 1. Mock Data for "Busy" Look
   const mockActivities = [
     { name: 'Rahul from Delhi', action: 'started a new store', time: '2s ago' },
     { name: 'Sarah from Mumbai', action: 'sold a Custom Hoodie', time: '12s ago' },
     { name: 'Amit from Bangalore', action: 'earned ₹12,000', time: '1m ago' },
+    { name: 'Priya from Pune', action: 'created a new design', time: '5s ago' },
+    { name: 'Vikram from Jaipur', action: 'joined Craftify', time: 'Just now' },
   ];
 
   useEffect(() => {
-    // A. Connect to Real Socket (COOKIE UPDATE: withCredentials true)
-    const socket = io(ENDPOINT, { withCredentials: true });
-
-    // Listener: Real Order
-    socket.on("new_order_placed", (orderData) => {
-        setData({
-            name: orderData.customerName || 'A Customer',
-            action: `purchased for ₹${orderData.totalAmount}`,
-            time: 'Just now'
-        });
-        setVisible(true);
-        setTimeout(() => setVisible(false), 5000);
-    });
-
-    // Listener: New User
-    socket.on("new_user_registered", (userData) => {
-        setData({
-            name: userData.name,
-            action: 'joined Craftify',
-            time: 'Just now'
-        });
-        setVisible(true);
-        setTimeout(() => setVisible(false), 5000);
-    });
-
-    // B. Mock Loop (Fallback) - Only runs if no real event happens for a while
     const loop = setInterval(() => {
-      // 30% chance to show mock data every 10 seconds (less aggressive)
+      // 30% chance to show mock data every 10 seconds for a "live" feel
       if (Math.random() > 0.7) {
-          const randomActivity = mockActivities[Math.floor(Math.random() * mockActivities.length)];
-          setData(randomActivity);
-          setVisible(true);
-          setTimeout(() => setVisible(false), 4000);
+        const randomActivity = mockActivities[Math.floor(Math.random() * mockActivities.length)];
+        setData(randomActivity);
+        setVisible(true);
+        setTimeout(() => setVisible(false), 4000);
       }
     }, 10000);
 
-    return () => {
-        clearInterval(loop);
-        socket.disconnect();
-    };
+    return () => clearInterval(loop);
   }, []);
 
   return (
     <div className={`fixed bottom-8 right-8 z-40 transition-all duration-500 transform ${visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-      <div className="glass-card p-4 rounded-xl flex items-center gap-4 max-w-sm border-l-4 border-l-green-500">
+      <div className="glass-card p-4 rounded-xl flex items-center gap-4 max-w-sm border-l-4 border-l-green-500 shadow-2xl">
         <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
           <Activity className="w-5 h-5 text-green-400" />
         </div>
@@ -245,7 +215,6 @@ const LiveActivity = () => {
   );
 };
 
-// --- Navbar ---
 const Navbar = ({ onLoginClick }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -258,9 +227,15 @@ const Navbar = ({ onLoginClick }) => {
   }, []);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'glass-nav py-3' : 'bg-transparent py-6'}`}>
+    <nav 
+        className={`fixed top-0 w-full z-[999] transition-all duration-300 ${scrolled ? 'py-3 shadow-2xl border-b border-slate-800' : 'py-6 border-b border-transparent'}`}
+        style={{ 
+            backgroundColor: scrolled ? 'rgba(2, 6, 23, 0.85)' : 'transparent',
+            backdropFilter: scrolled ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none'
+        }}
+    >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}>
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
             <Box className="text-white w-6 h-6" />
@@ -268,16 +243,14 @@ const Navbar = ({ onLoginClick }) => {
           <span className="text-2xl font-bold text-white tracking-tight">Craftify<span className="text-indigo-500">.</span></span>
         </div>
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/5 backdrop-blur-md">
-          {['Marketplace', 'Features', 'Showcase', 'Offers'].map((item) => (
+        <div className={`hidden md:flex items-center gap-1 p-1 rounded-full transition-all ${scrolled ? 'bg-white/5 border border-white/5' : 'bg-transparent border border-transparent'}`}>
+          {['Marketplace', 'Features', 'Offers'].map((item) => (
             <a key={item} href={`#${item.toLowerCase()}`} className="px-5 py-2 rounded-full text-sm font-medium text-slate-400 hover:text-white hover:bg-white/10 transition-all">
               {item}
             </a>
           ))}
         </div>
 
-        {/* Actions */}
         <div className="hidden md:flex items-center gap-4">
           <button onClick={() => onLoginClick('customer')} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
             Sign In
@@ -287,17 +260,15 @@ const Navbar = ({ onLoginClick }) => {
           </Button>
         </div>
 
-        {/* Mobile Toggle */}
         <button className="md:hidden text-white p-2 rounded-lg hover:bg-white/10" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X /> : <Menu />}
         </button>
       </div>
 
-      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-slate-950 border-b border-slate-800 p-6 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-5 shadow-2xl">
-           <Button variant="outline" className="w-full justify-center" onClick={() => navigate('/shop')}>Shop Marketplace</Button>
-           <Button variant="glow" className="w-full justify-center" onClick={() => onLoginClick('seller')}>Become a Seller</Button>
+        <div className="absolute top-full left-0 w-full bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 p-6 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-5 shadow-2xl">
+           <Button variant="outline" className="w-full justify-center" onClick={() => { onLoginClick('customer'); setMobileMenuOpen(false); }}>Customer Login</Button>
+           <Button variant="glow" className="w-full justify-center" onClick={() => { onLoginClick('seller'); setMobileMenuOpen(false); }}>Become a Seller</Button>
         </div>
       )}
     </nav>
@@ -305,7 +276,7 @@ const Navbar = ({ onLoginClick }) => {
 };
 
 /* -------------------------------------------------------------------------- */
-/* MAIN PAGE                                                                  */
+/* MAIN LANDING PAGE COMPONENT                                                */
 /* -------------------------------------------------------------------------- */
 
 const LandingPage = ({ onLoginClick }) => {
@@ -313,14 +284,14 @@ const LandingPage = ({ onLoginClick }) => {
   useScrollReveal();
 
   return (
-    <div className="bg-slate-950 min-h-screen text-slate-200 selection:bg-indigo-500/30 font-sans overflow-x-hidden">
+    <div className="bg-slate-950 min-h-screen text-slate-200 selection:bg-indigo-500/30 font-sans overflow-x-hidden" style={{ backgroundColor: '#020617' }}>
       <style>{styleInjection}</style>
       <Navbar onLoginClick={onLoginClick} />
       <LiveActivity />
 
       {/* --- HERO SECTION --- */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 cyber-grid animate-grid opacity-30"></div>
           <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] animate-blob mix-blend-screen"></div>
           <div className="absolute top-[20%] right-[20%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-blob animation-delay-2000 mix-blend-screen"></div>
@@ -329,7 +300,6 @@ const LandingPage = ({ onLoginClick }) => {
 
         <div className="container max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center text-center">
-            
             <div className="animate-float inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-10 cursor-pointer hover:bg-indigo-500/20 transition-colors">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
@@ -340,7 +310,7 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
 
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.1] reveal active">
-              <span className="text-gradient block">Design. Sell.</span>
+              <span className="text-gradient block pb-3">Design. Sell.</span>
               <span className="text-gradient-primary block">Dominate.</span>
             </h1>
 
@@ -358,57 +328,27 @@ const LandingPage = ({ onLoginClick }) => {
               </Button>
             </div>
 
-            {/* Dashboard Mockup */}
             <div className="mt-24 relative w-full max-w-5xl mx-auto px-6 reveal">
                <TiltCard className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-indigo-500/10 bg-slate-900/80 backdrop-blur-xl relative group">
-                  <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                  <div className="h-10 border-b border-white/5 flex items-center px-4 gap-2">
+                  <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
+                  <div className="h-10 border-b border-white/5 flex items-center px-4 gap-2 bg-slate-900/90 z-20 relative">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
                       <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
                       <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
                     </div>
                   </div>
-                  
-                  {/* Dashboard Graphic Placeholder - Simulating UI */}
-                  <div className="aspect-[16/9] bg-slate-900 relative flex items-center justify-center overflow-hidden p-8">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-900/10 to-purple-900/10"></div>
-                      
-                      {/* Abstract Chart Representation */}
-                      <div className="w-full h-full flex flex-col gap-6">
-                          <div className="flex gap-6">
-                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
-                                  <div className="h-2 w-20 bg-indigo-500/50 rounded mb-2"></div>
-                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
-                              </div>
-                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
-                                  <div className="h-2 w-20 bg-purple-500/50 rounded mb-2"></div>
-                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
-                              </div>
-                              <div className="flex-1 h-32 rounded-xl bg-white/5 border border-white/5 p-4">
-                                  <div className="h-2 w-20 bg-emerald-500/50 rounded mb-2"></div>
-                                  <div className="h-8 w-32 bg-white/10 rounded"></div>
-                              </div>
-                          </div>
-                          <div className="flex-1 rounded-xl bg-white/5 border border-white/5 p-4 relative overflow-hidden">
-                               <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-indigo-500/20 to-transparent"></div>
-                               {/* Mock Graph Line */}
-                               <svg className="w-full h-full" viewBox="0 0 100 20" preserveAspectRatio="none">
-                                   <path d="M0,20 L0,15 L10,12 L20,16 L30,10 L40,14 L50,5 L60,8 L70,3 L80,10 L90,6 L100,0 L100,20 Z" fill="url(#grad)" />
-                                   <defs>
-                                           <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                   <stop offset="0%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0.5}} />
-                                                   <stop offset="100%" style={{stopColor:'rgb(99, 102, 241)', stopOpacity:0}} />
-                                           </linearGradient>
-                                   </defs>
-                               </svg>
-                          </div>
-                      </div>
-
-                      <div className="absolute bottom-8 left-8 p-4 glass-card rounded-xl animate-float">
-                          <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
-                          <p className="text-2xl font-bold text-white">₹14,20,590</p>
-                          <div className="flex items-center gap-1 text-green-400 text-xs mt-1">
+                  <div className="aspect-[16/9] bg-slate-950 relative overflow-hidden group">
+                      <img 
+                        src="/dashboard.png" 
+                        alt="Dashboard Preview" 
+                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none"></div>
+                      <div className="hidden md:block absolute bottom-8 left-8 z-10 p-4 glass-card rounded-xl animate-float border-l-4 border-l-green-500 shadow-2xl">
+                          <p className="text-xs text-slate-400 mb-1 font-medium tracking-wide">Total Revenue</p>
+                          <p className="text-2xl font-bold text-white tracking-tight">₹14,20,590</p>
+                          <div className="flex items-center gap-1 text-green-400 text-xs mt-1 font-bold">
                             <TrendingUp className="w-3 h-3" /> +24% this week
                           </div>
                       </div>
@@ -423,10 +363,10 @@ const LandingPage = ({ onLoginClick }) => {
       {/* --- MARQUEE SECTION --- */}
       <div className="py-12 border-y border-white/5 bg-slate-950/50 overflow-hidden">
         <div className="flex animate-scroll-left w-[200%] gap-16 items-center">
-             {[...Array(2)].map((_, i) => (
+             {[...Array(4)].map((_, i) => (
                 <div key={i} className="flex gap-16 shrink-0">
                   {['Google', 'Spotify', 'Amazon', 'Stripe', 'Nike', 'Adobe', 'Shopify', 'Webflow'].map((brand) => (
-                    <span key={brand} className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-slate-400 to-slate-600 uppercase tracking-widest hover:to-white transition-all cursor-default">
+                    <span key={brand} className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-slate-400 to-slate-700 uppercase tracking-widest hover:to-white transition-all cursor-default">
                       {brand}
                     </span>
                   ))}
@@ -455,7 +395,6 @@ const LandingPage = ({ onLoginClick }) => {
          <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="glass-card rounded-[3rem] border-rose-500/30 overflow-hidden relative shadow-[0_0_100px_-20px_rgba(225,29,72,0.3)]">
                <div className="grid grid-cols-1 lg:grid-cols-2">
-                 
                  <div className="p-10 md:p-16 flex flex-col justify-center">
                      <div className="inline-flex items-center gap-2 text-rose-400 font-bold tracking-widest uppercase text-xs mb-4">
                         <Gift className="w-4 h-4" /> Valentine's Exclusive
@@ -483,7 +422,7 @@ const LandingPage = ({ onLoginClick }) => {
                      </div>
 
                      <div className="flex gap-4">
-                        <Button variant="love" icon={Heart} className="animate-pulse-red" onClick={() => navigate('/shop?collection=valentine')}>
+                        <Button variant="love" icon={Heart} className="animate-pulse-red" onClick={() => navigate('/shop')}>
                            Claim Offer
                         </Button>
                         <Button variant="ghost" onClick={() => navigate('/shop')}>
@@ -492,19 +431,18 @@ const LandingPage = ({ onLoginClick }) => {
                      </div>
                  </div>
 
-                 <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10">
+                 <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10 overflow-hidden">
                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
-                     
                      <div className="relative w-full max-w-md aspect-square">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-rose-500 rounded-full blur-[80px] opacity-40 animate-pulse"></div>
                         <div className="absolute top-10 left-0 w-48 glass-card p-3 rounded-2xl rotate-[-12deg] animate-float">
-                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden">
+                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden border border-slate-700">
                               <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">His Hoodie</div>
                            </div>
                            <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
                         </div>
                         <div className="absolute bottom-10 right-0 w-48 glass-card p-3 rounded-2xl rotate-[12deg] animate-float animation-delay-2000">
-                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden">
+                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden border border-slate-700">
                               <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">Her Hoodie</div>
                            </div>
                            <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
@@ -632,7 +570,6 @@ const LandingPage = ({ onLoginClick }) => {
                   <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
                 ))}
                 <li>
-                  {/* Founder Access Button in Footer - Opens Modal via Router */}
                   <button onClick={() => navigate('/admin-login')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
                       <Lock className="w-3 h-3" /> Founder Access
                   </button>
