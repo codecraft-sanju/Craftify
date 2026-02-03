@@ -199,7 +199,7 @@ export default function StoreAdmin({ currentUser }) {
         const forbiddenWords = [
             'call me', 'phone number', 'contact number', 'whatsapp', 
             'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do',
-            'instagram', 'dm me', 'link in bio', 'facebook', 'snapchat'
+            'instagram', 'insta','dm me', 'link in bio', 'facebook', 'snapchat'
         ];
 
         for (let word of forbiddenWords) {

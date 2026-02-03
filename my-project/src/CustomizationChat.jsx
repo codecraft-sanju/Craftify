@@ -73,7 +73,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  // --- SECURITY CHECK FUNCTION ---
+  // --- SECURITY CHECK FUNCTION (UPDATED) ---
   const isMessageSafe = (text) => {
       const lowerText = text.toLowerCase();
       
@@ -84,19 +84,25 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
 
       if (phoneRegex.test(cleanText)) return false;
 
-      // 2. Check for Keywords
+      // 2. Email Check
+      const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+      if (emailRegex.test(text)) return false;
+
+      // 3. Instagram / Social Handles (Strict Check)
+      // Detects: @username, ig: username, insta: username, instagram.com/...
+      const instaRegex = /(?:@|(?:instagram|insta|ig)(?:\.com)?\/|ig:? ?|insta:? ?)([a-zA-Z0-9_.]+)/i;
+      if (instaRegex.test(text)) return false;
+
+      // 4. Forbidden Keywords
       const forbiddenWords = [
           'call me', 'phone number', 'contact number', 'whatsapp', 
-          'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do'
+          'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do',
+          'instagram', 'insta', 'dm me', 'link in bio', 'facebook', 'snapchat', 'telegram'
       ];
 
       for (let word of forbiddenWords) {
           if (lowerText.includes(word)) return false;
       }
-
-      // 3. Email Check
-      const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-      if (emailRegex.test(text)) return false;
 
       return true;
   };
@@ -110,7 +116,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
 
     // --- SECURITY BLOCK ---
     if (!isMessageSafe(contentToSend)) {
-        setErrorMsg("Sharing contact/payment details is restricted!");
+        setErrorMsg("Sharing contact, social IDs or payment details is restricted!");
         // Clear error after 3 seconds
         setTimeout(() => setErrorMsg(""), 3000);
         return; // Stop execution
