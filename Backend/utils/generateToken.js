@@ -8,8 +8,8 @@ const generateToken = (res, userId) => {
   // Set HTTP-Only Cookie
   res.cookie('jwt', token, {
     httpOnly: true, // XSS protection
-    secure: process.env.NODE_ENV !== 'development', // HTTPS in production
-    sameSite: 'strict', // CSRF protection
+    secure: process.env.NODE_ENV !== 'development', 
+    sameSite: 'none', // CSRF protection
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   });
 };
