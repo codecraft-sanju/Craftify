@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Activity, Users, Store, Wallet, DollarSign, Search, TrendingUp, 
-  AlertCircle, CheckCircle, ArrowUpRight, UploadCloud, QrCode, X, Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck
+  AlertCircle, CheckCircle, ArrowUpRight, UploadCloud, QrCode, X, 
+  Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
+  Trash2, AlertTriangle, RefreshCcw 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +38,7 @@ export default function FounderAccess({ currentUser }) {
     const [users, setUsers] = useState([]);
     const [shops, setShops] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [products, setProducts] = useState([]); // --- NEW: Store Products for deletion ---
     const [loading, setLoading] = useState(true);
     
     // QR & Payment States
@@ -44,6 +47,11 @@ export default function FounderAccess({ currentUser }) {
     const [qrPreview, setQrPreview] = useState("");
     const [uploadingQr, setUploadingQr] = useState(false);
     
+    // --- NEW: Batch Delete States ---
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteProgress, setDeleteProgress] = useState(0);
+    const [deleteStatus, setDeleteStatus] = useState("");
+
     // Payout Modal State
     const [selectedOrderForPayout, setSelectedOrderForPayout] = useState(null);
 
@@ -56,16 +64,19 @@ export default function FounderAccess({ currentUser }) {
         const options = { credentials: 'include' };
 
         try {
-            const [usersRes, shopsRes, ordersRes, qrRes] = await Promise.all([
+            // --- UPDATED: Included products fetch ---
+            const [usersRes, shopsRes, ordersRes, qrRes, productsRes] = await Promise.all([
                 fetch(`${API_URL}/api/users`, options),
                 fetch(`${API_URL}/api/shops`, options),
                 fetch(`${API_URL}/api/orders`, options),
-                fetch(`${API_URL}/api/users/qr`) 
+                fetch(`${API_URL}/api/users/qr`),
+                fetch(`${API_URL}/api/products`) 
             ]);
 
             if (usersRes.ok) setUsers(await usersRes.json());
             if (shopsRes.ok) setShops(await shopsRes.json());
             if (ordersRes.ok) setOrders(await ordersRes.json());
+            if (productsRes.ok) setProducts(await productsRes.json());
             if (qrRes.ok) {
                 const data = await qrRes.json();
                 setMyQr(data.qrCode);
@@ -157,6 +168,64 @@ export default function FounderAccess({ currentUser }) {
         }
     };
 
+    // --- NEW: SMART BATCH DELETE ALGORITHM ---
+    const handleBatchDelete = async () => {
+        if (!products || products.length === 0) return alert("No products found to delete.");
+
+        const confirm1 = window.confirm("⚠️ DANGER ZONE: Are you sure you want to delete ALL products?");
+        if (!confirm1) return;
+
+        const confirm2 = window.confirm("This action is IRREVERSIBLE. All products from all shops will be wiped. Confirm?");
+        if (!confirm2) return;
+
+        setIsDeleting(true);
+        setDeleteProgress(0);
+        setDeleteStatus("Initializing cleanup...");
+
+        // 1. Prepare Batches
+        const allIds = products.map(p => p._id);
+        const BATCH_SIZE = 20; // Safe chunk size
+        const totalBatches = Math.ceil(allIds.length / BATCH_SIZE);
+        
+        try {
+            for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+                // Slice current batch
+                const batchIds = allIds.slice(i, i + BATCH_SIZE);
+                const currentBatchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+                setDeleteStatus(`Deleting batch ${currentBatchNum} of ${totalBatches}...`);
+
+                // Call Backend API
+                const res = await fetch(`${API_URL}/api/products/batch`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productIds: batchIds }),
+                    credentials: 'include'
+                });
+
+                if (!res.ok) throw new Error("Batch failed");
+
+                // Update Progress UI
+                const progress = Math.round(((i + batchIds.length) / allIds.length) * 100);
+                setDeleteProgress(progress);
+
+                // Small delay to prevent server choking
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            setDeleteStatus("Cleanup Complete!");
+            alert("All products have been successfully deleted.");
+            fetchData(); // Refresh Data
+
+        } catch (error) {
+            console.error("Batch Delete Error", error);
+            alert("Error during batch deletion. Check console.");
+        } finally {
+            setIsDeleting(false);
+            setDeleteProgress(0);
+        }
+    };
+
     // --- Filtering ---
     const filteredShops = shops.filter(shop => shop.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     const filteredUsers = users.filter(user => user.name?.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -168,12 +237,16 @@ export default function FounderAccess({ currentUser }) {
     if (loading) return <div className="flex h-screen items-center justify-center bg-[#F8FAFC]"><Loader2 className="w-12 h-12 text-indigo-600 animate-spin"/></div>;
 
     // --- Nav Item Component ---
-    const NavItem = ({ id, label, icon: Icon }) => (
+    const NavItem = ({ id, label, icon: Icon, isDanger }) => (
         <button 
             onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
-            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 group ${activeTab === id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-slate-400 hover:text-white hover:bg-white/10'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 group ${
+                activeTab === id 
+                ? isDanger ? 'bg-red-600 text-white shadow-lg shadow-red-900/50' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' 
+                : isDanger ? 'text-red-400 hover:text-red-100 hover:bg-red-500/20' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            }`}
         >
-            <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${activeTab === id ? 'text-white' : 'text-slate-500 group-hover:text-white'}`}/> 
+            <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${activeTab === id ? 'text-white' : isDanger ? 'text-red-500' : 'text-slate-500'} ${isDanger && 'group-hover:text-white'}`}/> 
             <span className="flex-1 text-left">{label}</span>
             {activeTab === id && <ChevronRight className="w-4 h-4 opacity-50"/>}
         </button>
@@ -205,6 +278,11 @@ export default function FounderAccess({ currentUser }) {
                     <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">Management</p>
                     <NavItem id="shops" label="Manage Shops" icon={Store} />
                     <NavItem id="users" label="User Base" icon={Users} />
+
+                    {/* --- NEW DANGER ZONE LINK --- */}
+                    <div className="mt-8 pt-4 border-t border-white/10">
+                        <NavItem id="danger" label="Danger Zone" icon={AlertTriangle} isDanger={true} />
+                    </div>
                 </nav>
 
                 <div className="p-6 bg-slate-950/30 border-t border-white/5">
@@ -447,6 +525,53 @@ export default function FounderAccess({ currentUser }) {
                                      </table>
                                  </div>
                              </Card>
+                         )}
+
+                         {/* TAB: DANGER ZONE (NEW) */}
+                         {activeTab === 'danger' && (
+                             <div className="max-w-2xl mx-auto animate-in zoom-in-95 duration-300">
+                                 <Card className="p-8 border-red-100 shadow-2xl shadow-red-100/50">
+                                     <div className="flex flex-col items-center text-center">
+                                         <div className="w-16 h-16 bg-red-50 text-red-600 rounded-3xl flex items-center justify-center mb-6">
+                                             <AlertTriangle className="w-8 h-8" />
+                                         </div>
+                                         <h2 className="text-3xl font-black text-slate-900 mb-2">Platform Cleanse</h2>
+                                         <p className="text-slate-500 leading-relaxed mb-8 max-w-md">
+                                             Use this tool to wipe <strong>all products</strong> from the entire database. This is useful for resetting the platform during development or testing.
+                                         </p>
+
+                                         <div className="bg-red-50 border border-red-100 rounded-2xl p-4 w-full mb-8 text-left flex gap-3">
+                                             <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                             <div className="text-sm text-red-800">
+                                                 <p className="font-bold mb-1">Warning: Irreversible Action</p>
+                                                 <p>This will permanently delete {products.length} products from all shops. Images will also be removed.</p>
+                                             </div>
+                                         </div>
+
+                                         {!isDeleting ? (
+                                             <button 
+                                                 onClick={handleBatchDelete}
+                                                 className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl shadow-xl shadow-red-600/20 transition-all flex items-center justify-center gap-2"
+                                             >
+                                                 <Trash2 className="w-5 h-5" /> Delete All {products.length} Products
+                                             </button>
+                                         ) : (
+                                             <div className="w-full space-y-3">
+                                                 <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
+                                                     <div 
+                                                        className="h-full bg-red-500 transition-all duration-500 ease-out"
+                                                        style={{ width: `${deleteProgress}%` }}
+                                                     ></div>
+                                                 </div>
+                                                 <div className="flex justify-between text-xs font-bold">
+                                                     <span className="text-red-600 animate-pulse">{deleteStatus}</span>
+                                                     <span className="text-slate-400">{deleteProgress}%</span>
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </div>
+                                 </Card>
+                             </div>
                          )}
                      </div>
 

@@ -1,4 +1,3 @@
-// backend/controllers/productController.js
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 
@@ -314,6 +313,63 @@ const getProductsByShop = async (req, res) => {
     }
 };
 
+// --- NEW FEATURE: BATCH DELETE ---
+// @desc    Delete multiple products by IDs (Smart Chunk Deletion)
+// @route   DELETE /api/products/batch
+// @access  Private (Founder or Seller Owner)
+const deleteProductsBatch = async (req, res) => {
+    try {
+        const { productIds } = req.body; // Array of IDs
+
+        // 1. Validation
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({ message: 'No product IDs provided' });
+        }
+
+        // 2. Fetch Products to Check Ownership
+        const products = await Product.find({ _id: { $in: productIds } });
+
+        if (products.length === 0) {
+            return res.status(404).json({ message: 'No matching products found' });
+        }
+
+        // 3. Security Check
+        // Agar user Founder hai, toh woh kuch bhi delete kar sakta hai
+        if (req.user.role !== 'founder') {
+            // Agar Founder nahi hai, toh check karo kya yeh products user ki shop ke hain?
+            // (Hum pehle product se shop ID check kar rahe hain, assuming batch same shop ka hai)
+            const firstProduct = products[0];
+            const shop = await Shop.findById(firstProduct.shop);
+
+            if (!shop || shop.owner.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: 'Not authorized. You can only delete your own products.' });
+            }
+        }
+
+        // 4. (Optional) Cloudinary Image Cleanup code yahan aa sakta hai
+
+        // 5. Delete from Database
+        const result = await Product.deleteMany({ _id: { $in: productIds } });
+
+        // 6. Socket Notification
+        if (req.io) {
+            req.io.emit('products_batch_deleted', { 
+                productIds,
+                count: result.deletedCount 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Deleted ${result.deletedCount} products successfully` 
+        });
+
+    } catch (error) {
+        console.error("Batch Delete Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getProducts,
     getProductById,
@@ -322,5 +378,6 @@ module.exports = {
     deleteProduct,
     createProductReview,
     getTopProducts,
-    getProductsByShop
+    getProductsByShop,
+    deleteProductsBatch 
 };
