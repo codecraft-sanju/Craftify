@@ -34,11 +34,11 @@ import {
   Clock,
   MapPin,
   Box,
+  Image as ImageIcon // Added for the loader icon
 } from 'lucide-react';
 import io from 'socket.io-client';
 
 // --- CONFIGURATION ---
-// Updated to use .env variable
 const API_URL = import.meta.env.VITE_API_URL;
 const ENDPOINT = import.meta.env.VITE_API_URL;
 var socket;
@@ -90,6 +90,37 @@ const GlobalStyles = () => (
 );
 
 // --- PREMIUM UI COMPONENTS ---
+
+// 1. NEW: Premium Image Loader Component
+const PremiumImage = ({ src, alt, className = "", objectFit = "cover" }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
+      {/* Skeleton / Shimmer Loader */}
+      {!isLoaded && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
+           <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse" />
+           <ImageIcon className="w-6 h-6 text-slate-300 relative z-20 opacity-50" />
+        </div>
+      )}
+
+      {/* Actual Image with Transition */}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setIsLoaded(true)}
+        className={`w-full h-full transition-all duration-700 ease-out ${
+          isLoaded 
+            ? 'opacity-100 scale-100 grayscale-0 blur-0' 
+            : 'opacity-0 scale-110 grayscale blur-sm'
+        } ${className}`} // Apply custom classes here to preserve hover effects
+        style={{ objectFit }}
+      />
+    </div>
+  );
+};
 
 const Button = ({
   children,
@@ -184,10 +215,11 @@ const ToastContainer = ({ toasts, removeToast }) => (
 // 2. FEATURE COMPONENTS
 // ==========================================
 
-const LiveCustomizer = ({ product, customText, setCustomText }) => (
+// --- UPDATED LIVE CUSTOMIZER: Uses PremiumImage ---
+const LiveCustomizer = ({ product, customText, setCustomText, activeImage }) => (
   <div className="relative w-full aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-inner group border border-slate-200">
-    <img
-      src={product.image || product.coverImage}
+    <PremiumImage
+      src={activeImage || product.coverImage || product.image}
       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       alt="Preview"
     />
@@ -268,7 +300,8 @@ const CartDrawer = ({
                 className="flex gap-4 p-3 border border-slate-100 rounded-2xl bg-white shadow-sm hover:border-indigo-100 transition-colors group"
               >
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                  <img
+                  {/* Premium Image Loader in Cart */}
+                  <PremiumImage
                     src={item.image || item.coverImage}
                     alt=""
                     className="w-full h-full object-cover"
@@ -341,12 +374,23 @@ const CartDrawer = ({
   );
 };
 
-// --- UPDATED PRODUCT DETAIL (Accepts Wishlist props) ---
+// --- UPDATED PRODUCT DETAIL (Now with Gallery) ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const product = products.find((p) => p._id === id);
   const [customText, setCustomText] = useState('');
+  
+  // --- NEW: Image Gallery State ---
+  const [activeImage, setActiveImage] = useState(null);
+
+  useEffect(() => {
+    if (product) {
+        // Prefer coverImage, fallback to first image in array, fallback to legacy image
+        const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
+        setActiveImage(initialImage);
+    }
+  }, [product]);
 
   // Check if product is in wishlist
   const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
@@ -371,12 +415,35 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
         Back
       </button>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20">
+        
+        {/* --- LEFT COLUMN: GALLERY --- */}
         <div className="space-y-6">
           <LiveCustomizer
             product={product}
             customText={customText}
             setCustomText={setCustomText}
+            activeImage={activeImage} // Pass active image
           />
+
+          {/* --- NEW: THUMBNAILS GRID (With Premium Loader) --- */}
+          {product.images && product.images.length > 0 && (
+            <div className="grid grid-cols-4 gap-4">
+                {product.images.map((img, index) => (
+                    <button 
+                        key={index}
+                        onClick={() => setActiveImage(img.url)}
+                        className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${activeImage === img.url ? 'border-indigo-600 ring-4 ring-indigo-50 scale-95' : 'border-transparent hover:border-slate-200'}`}
+                    >
+                        <PremiumImage 
+                            src={img.url} 
+                            className="w-full h-full object-cover" 
+                            alt={`view-${index}`} 
+                        />
+                    </button>
+                ))}
+            </div>
+          )}
+
           {product.customizationAvailable && (
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-bl-[4rem] -mr-4 -mt-4 z-0"></div>
@@ -407,6 +474,8 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
             </div>
           )}
         </div>
+
+        {/* --- RIGHT COLUMN: DETAILS --- */}
         <div className="flex flex-col h-full lg:pt-4">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
@@ -503,7 +572,7 @@ const MobileNav = ({ cartCount }) => {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/shop' },
-    { icon: Heart, label: 'Wishlist', path: '/wishlist' }, // Added Wishlist Here
+    { icon: Heart, label: 'Wishlist', path: '/wishlist' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
@@ -685,7 +754,7 @@ const CraftifyContent = () => {
         try {
             await fetch(`${API_URL}/api/users/wishlist`, { 
                 method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ productId: product._id }),
                 credentials: 'include' 
             });
@@ -891,7 +960,6 @@ const CraftifyContent = () => {
               >
                 {currentUser ? (
                   <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white shadow-md overflow-hidden">
-                    {/* --- UPDATED LOGIC HERE: Checks for valid URL --- */}
                     {currentUser.avatar && currentUser.avatar.includes('http') ? (
                       <img
                         src={currentUser.avatar}

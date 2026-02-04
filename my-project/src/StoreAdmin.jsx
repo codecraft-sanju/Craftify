@@ -5,7 +5,7 @@ import {
   DollarSign, Star, Settings, Menu, RefreshCcw, Store,
   MessageSquare, Send, User, Edit, Trash2, LogOut,
   ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
-  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle
+  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -82,8 +82,10 @@ export default function StoreAdmin({ currentUser }) {
     
     // Product Editing & Image Upload States
     const [editingProduct, setEditingProduct] = useState(null);
-    const [imageFile, setImageFile] = useState(null); 
-    const [imagePreview, setImagePreview] = useState(""); 
+    
+    // --- UPDATED: Multiple Images State ---
+    const [images, setImages] = useState([]); 
+    const [uploading, setUploading] = useState(false);
 
     // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
@@ -94,7 +96,7 @@ export default function StoreAdmin({ currentUser }) {
     const [selectedChat, setSelectedChat] = useState(null); 
     const [messages, setMessages] = useState([]); 
     const [newMessage, setNewMessage] = useState("");
-    const [chatError, setChatError] = useState(""); // Warning state for Seller
+    const [chatError, setChatError] = useState(""); 
     const scrollRef = useRef();
 
     useEffect(() => {
@@ -109,15 +111,12 @@ export default function StoreAdmin({ currentUser }) {
         return () => { socket.disconnect(); }
     }, [currentUser]); 
 
-    // Chat Listeners (FIXED DOUBLE MESSAGE)
+    // Chat Listeners
     useEffect(() => {
         if(!socket) return;
         const messageHandler = (newMessageReceived) => {
             if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
                 const incomingMsg = newMessageReceived.message;
-                
-                // --- FIX: Check if sender is ME (Seller) ---
-                // Agar maine hi bheja hai toh ignore karo, kyunki sendMessage ne already add kar diya hai
                 const isMe = incomingMsg.sender._id === currentUser._id || incomingMsg.sender === currentUser._id;
                 
                 if (!isMe) {
@@ -177,52 +176,33 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); }
     };
 
-    // --- SECURITY CHECK (Same as User Side + Socials) ---
     const isMessageSafe = (text) => {
         const lowerText = text.toLowerCase();
-        
-        // 1. Phone Numbers (Remove spaces/dashes)
         const cleanText = text.replace(/[\s-]/g, ''); 
         const phoneRegex = /(?:\+?91|0)?[6789]\d{9}/; 
         if (phoneRegex.test(cleanText)) return false;
-
-        // 2. Email
         const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
         if (emailRegex.test(text)) return false;
-
-        // 3. Instagram / Social Handles (New patterns)
-        // Detects: @username, ig: username, insta: username, instagram.com/...
         const instaRegex = /(?:@|(?:instagram|insta|ig)(?:\.com)?\/|ig:? ?|insta:? ?)([a-zA-Z0-9_.]+)/i;
         if (instaRegex.test(text)) return false;
-
-        // 4. Forbidden Keywords
-        const forbiddenWords = [
-            'call me', 'phone number', 'contact number', 'whatsapp', 
-            'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do',
-            'instagram', 'insta','dm me', 'link in bio', 'facebook', 'snapchat'
-        ];
-
+        const forbiddenWords = ['call me', 'phone number', 'contact number', 'whatsapp', 'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do', 'instagram', 'insta','dm me', 'link in bio', 'facebook', 'snapchat'];
         for (let word of forbiddenWords) {
             if (lowerText.includes(word)) return false;
         }
-
         return true;
     };
 
     const sendMessage = async (e) => {
         e.preventDefault();
         if(!newMessage.trim() || !selectedChat) return;
-
-        // --- SECURITY BLOCK ---
         if (!isMessageSafe(newMessage)) {
             setChatError("Sharing contact/social details is restricted to prevent platform leakage.");
             setTimeout(() => setChatError(""), 4000);
             return;
         }
-        setChatError(""); // Clear error
+        setChatError(""); 
 
         try {
-            // Optimistic UI Update
             const tempMsg = { text: newMessage, sender: { _id: currentUser._id }, createdAt: new Date().toISOString() };
             setMessages([...messages, tempMsg]);
             
@@ -293,12 +273,43 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
     };
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImageFile(file);
-            setImagePreview(URL.createObjectURL(file)); 
+    // --- UPDATED: Multiple Image Upload Handler ---
+    const handleImageUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (images.length + files.length > 4) {
+            alert("Maximum 4 images allowed.");
+            return;
         }
+
+        setUploading(true);
+        try {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', UPLOAD_PRESET);
+                formData.append('cloud_name', CLOUD_NAME);
+
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    setImages(prev => [...prev, { url: data.secure_url, public_id: data.public_id }]);
+                } else {
+                    alert('Upload failed for one or more images');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Upload error');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const removeImage = (indexToRemove) => {
+        setImages(images.filter((_, index) => index !== indexToRemove));
     };
 
     const handleSellerQrChange = (e) => {
@@ -311,42 +322,31 @@ export default function StoreAdmin({ currentUser }) {
 
     const handleOpenModal = (product = null) => { 
         setEditingProduct(product); 
-        setImageFile(null); 
-        // --- FIX: Check both image and coverImage for preview ---
-        const existingImage = product ? (product.image || product.coverImage) : "";
-        setImagePreview(existingImage); 
+        
+        // --- POPULATE IMAGES FOR EDIT ---
+        if (product && product.images && product.images.length > 0) {
+            setImages(product.images);
+        } else if (product && (product.image || product.coverImage)) {
+            // Backward compatibility for single image products
+            setImages([{ url: product.image || product.coverImage }]);
+        } else {
+            setImages([]);
+        }
+
         setIsAddModalOpen(true); 
     };
 
     const handleSaveProduct = async (e) => {
         e.preventDefault(); 
         
-        // --- VALIDATION: Ensure image is uploaded for new products ---
-        if (!editingProduct && !imageFile) {
-            alert("Please upload an image for the product!");
+        if (images.length === 0) {
+            alert("Please upload at least 1 image!");
             return;
         }
 
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
-        // --- FIX: Logic to keep existing image (checks both fields) ---
-        let currentImage = editingProduct?.image || editingProduct?.coverImage;
-        let imageUrl = currentImage || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800";
-
-        if (imageFile) {
-            const data = new FormData();
-            data.append("file", imageFile);
-            data.append("upload_preset", UPLOAD_PRESET);
-            data.append("cloud_name", CLOUD_NAME);
-            try {
-                const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: data });
-                const fileData = await uploadRes.json();
-                if (uploadRes.ok) { imageUrl = fileData.secure_url; } 
-                else { alert("Image Upload Failed!"); setIsSubmitting(false); return; }
-            } catch (err) { alert("Network error."); setIsSubmitting(false); return; }
-        }
-
         const productData = {
             shop: shop?._id, 
             name: formData.get('name'), 
@@ -354,7 +354,8 @@ export default function StoreAdmin({ currentUser }) {
             price: Number(formData.get('price')), 
             stock: Number(formData.get('stock')),
             description: formData.get('description'), 
-            image: imageUrl,
+            images: images, // Send the array
+            coverImage: images[0].url // First image is cover
         };
 
         try {
@@ -522,7 +523,6 @@ export default function StoreAdmin({ currentUser }) {
                                             <h4 className="font-bold text-slate-700">Sales Velocity</h4>
                                             <select className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-500 outline-none"><option>Last 7 Days</option><option>Last 30 Days</option></select>
                                         </div>
-                                        {/* CSS-Only Bar Chart Placeholder */}
                                         <CssBarChart data={[40, 70, 45, 90, 60, 80, 50, 40, 70, 45, 90, 60]} />
                                         <div className="flex justify-between text-xs text-slate-400 font-bold mt-4 uppercase">
                                             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
@@ -546,15 +546,19 @@ export default function StoreAdmin({ currentUser }) {
                                             <p className="font-bold">No products found.</p>
                                         </div>
                                     ) : products.map(p => {
-                                        // --- FIX: Robust image check like ShopView ---
-                                        const displayImage = p.image || p.coverImage || "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800";
+                                        const displayImage = p.coverImage || (p.images && p.images[0]?.url) || p.image || "https://via.placeholder.com/300";
                                         
                                         return (
                                             <div key={p._id} className="group bg-white rounded-3xl border border-slate-100 hover:border-indigo-200 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 overflow-hidden flex flex-col">
                                                 <div className="relative h-56 overflow-hidden bg-slate-100">
                                                     <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" />
                                                     <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide shadow-sm border border-slate-100">Stock: {p.stock}</div>
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                                    {/* Image Count Badge */}
+                                                    {p.images && p.images.length > 1 && (
+                                                        <div className="absolute bottom-3 left-3 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+                                                            <ImageIcon className="w-3 h-3" /> {p.images.length}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="p-5 flex-1 flex flex-col">
                                                     <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-slate-900 line-clamp-1 text-lg">{p.name}</h3><span className="text-indigo-600 font-black text-lg">₹{p.price}</span></div>
@@ -634,7 +638,6 @@ export default function StoreAdmin({ currentUser }) {
                                             </div>
                                             
                                             <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-100/50 custom-scrollbar relative">
-                                                {/* Security Warning Alert */}
                                                 {chatError && (
                                                     <div className="sticky top-0 z-20 bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center justify-center gap-2 animate-in slide-in-from-top-2 mx-auto w-fit mb-4">
                                                         <AlertTriangle className="w-4 h-4" />
@@ -712,28 +715,61 @@ export default function StoreAdmin({ currentUser }) {
             {/* ADD/EDIT MODAL */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white p-8 rounded-[2.5rem] w-full max-w-lg shadow-2xl scale-100 animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
+                    <div className="bg-white p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl scale-100 animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
                             <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><X className="w-5 h-5 text-slate-600"/></button>
                         </div>
                         <form onSubmit={handleSaveProduct} className="space-y-5">
+                            
+                            {/* --- NEW: MULTIPLE IMAGE UPLOAD GRID --- */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Product Image</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
-                                        {imagePreview ? ( <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" /> ) : ( <ImageIcon className="w-8 h-8 text-slate-400" /> )}
-                                    </div>
-                                    <label className="flex-1">
-                                        <div className="flex flex-col items-center justify-center w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
-                                            <UploadCloud className="w-6 h-6 text-indigo-500 mb-1" />
-                                            <span className="text-slate-600 font-bold text-sm">Upload Photo</span>
-                                            <span className="text-[10px] text-slate-400">PNG, JPG up to 5MB</span>
-                                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                    Product Images (Max 4)
+                                </label>
+                                <div className="grid grid-cols-4 gap-3">
+                                    {/* Existing Images */}
+                                    {images.map((imgObj, idx) => (
+                                        <div key={idx} className="aspect-square relative rounded-xl overflow-hidden border border-slate-200 group">
+                                            <img src={imgObj.url} alt="product" className="w-full h-full object-cover" />
+                                            {/* Delete Button */}
+                                            <button 
+                                                type="button"
+                                                onClick={() => removeImage(idx)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                            {/* Cover Badge */}
+                                            {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-indigo-600 text-white text-[9px] font-bold text-center py-0.5">Cover</div>}
                                         </div>
-                                    </label>
+                                    ))}
+
+                                    {/* Upload Button Placeholder (if less than 4) */}
+                                    {images.length < 4 && (
+                                        <label className={`aspect-square rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                            {uploading ? (
+                                                <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Plus className="w-6 h-6 text-slate-400 mb-1" />
+                                                    <span className="text-[10px] font-bold text-slate-400">Add</span>
+                                                </>
+                                            )}
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                multiple
+                                                disabled={uploading}
+                                                onChange={handleImageUpload} 
+                                            />
+                                        </label>
+                                    )}
                                 </div>
+                                <p className="text-[10px] text-slate-400 mt-2">The first image will be used as the cover photo.</p>
                             </div>
+
                             <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="e.g. Wireless Headphones"/></div>
                             <div className="flex gap-4">
                                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="0.00"/></div>

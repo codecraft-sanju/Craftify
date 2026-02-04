@@ -58,7 +58,8 @@ const createProduct = async (req, res) => {
             name, price, description, category, 
             stock, tags, specs, colors, sizes,
             customizationAvailable, customizationType,
-            image, coverImage, sku 
+            image, coverImage, sku,
+            images // --- NEW: Array of images ---
         } = req.body;
 
         // 1. Validation: Ensure Shop ID is provided
@@ -77,8 +78,22 @@ const createProduct = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to add products to this shop.' });
         }
 
+        // --- NEW: Max 4 Images Validation ---
+        if (images && images.length > 4) {
+            return res.status(400).json({ message: 'You can upload a maximum of 4 images only.' });
+        }
+
+        // --- NEW: Smart Cover Image Logic ---
+        // Agar coverImage nahi di, toh pehli uploaded image ko cover bana do
+        let finalCoverImage = coverImage;
+        if (!finalCoverImage && images && images.length > 0) {
+            finalCoverImage = images[0].url;
+        } else if (!finalCoverImage) {
+            // Fallback for backward compatibility
+            finalCoverImage = image || 'https://via.placeholder.com/300';
+        }
+
         // 3. SKU Logic (Auto-generate if empty to avoid E11000 error)
-        // sparse: true in model handles nulls, but we generate one to be safe.
         const finalSku = sku && sku.trim() !== '' 
             ? sku 
             : `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -89,7 +104,8 @@ const createProduct = async (req, res) => {
             name,
             price,
             description,
-            coverImage: coverImage || image || 'https://via.placeholder.com/300',
+            coverImage: finalCoverImage,
+            images: images || [], // --- NEW: Saving images array ---
             category,
             stock,
             tags, 
@@ -134,7 +150,8 @@ const updateProduct = async (req, res) => {
             name, price, description, category,
             stock, tags, specs, colors, sizes,
             customizationAvailable, customizationType,
-            image, coverImage
+            image, coverImage,
+            images // --- NEW: Handle images update ---
         } = req.body;
 
         const product = await Product.findById(req.params.id);
@@ -148,11 +165,31 @@ const updateProduct = async (req, res) => {
                 return res.status(403).json({ message: 'Not authorized to update this product' });
             }
 
+            // --- NEW: Max 4 Images Validation ---
+            if (images && images.length > 4) {
+                return res.status(400).json({ message: 'You can upload a maximum of 4 images only.' });
+            }
+
             // 3. Update fields
             product.name = name || product.name;
             product.price = price || product.price;
             product.description = description || product.description;
-            product.coverImage = coverImage || image || product.coverImage;
+            
+            // --- NEW: Update Images Logic ---
+            if (images) {
+                product.images = images;
+            }
+            
+            // --- NEW: Update Cover Image Logic ---
+            if (coverImage) {
+                product.coverImage = coverImage;
+            } else if (image) {
+                product.coverImage = image;
+            } else if (images && images.length > 0 && !product.coverImage) {
+                // If cover image is missing but we have new images, use the first one
+                product.coverImage = images[0].url;
+            }
+
             product.category = category || product.category;
             product.stock = stock || product.stock;
             product.tags = tags || product.tags;
