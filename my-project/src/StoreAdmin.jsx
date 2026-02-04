@@ -347,6 +347,13 @@ export default function StoreAdmin({ currentUser }) {
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
+        // --- NEW: Convert sizes string to array ---
+        const sizesString = formData.get('sizes');
+        let sizesArray = [];
+        if (sizesString && sizesString.trim() !== '') {
+            sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
+        }
+
         const productData = {
             shop: shop?._id, 
             name: formData.get('name'), 
@@ -355,7 +362,8 @@ export default function StoreAdmin({ currentUser }) {
             stock: Number(formData.get('stock')),
             description: formData.get('description'), 
             images: images, // Send the array
-            coverImage: images[0].url // First image is cover
+            coverImage: images[0].url, // First image is cover
+            sizes: sizesArray // --- SEND SIZES ARRAY ---
         };
 
         try {
@@ -556,7 +564,7 @@ export default function StoreAdmin({ currentUser }) {
                                                     {/* Image Count Badge */}
                                                     {p.images && p.images.length > 1 && (
                                                         <div className="absolute bottom-3 left-3 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
-                                                            <ImageIcon className="w-3 h-3" /> {p.images.length}
+                                                                <ImageIcon className="w-3 h-3" /> {p.images.length}
                                                         </div>
                                                     )}
                                                 </div>
@@ -771,10 +779,26 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
 
                             <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="e.g. Wireless Headphones"/></div>
+                            
                             <div className="flex gap-4">
                                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="0.00"/></div>
                                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="0"/></div>
                             </div>
+
+                            {/* --- NEW: SIZE INPUT FIELD --- */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                    Sizes (Optional - Comma Separated)
+                                </label>
+                                <input 
+                                    name="sizes" 
+                                    defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} 
+                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 placeholder:text-slate-400" 
+                                    placeholder="e.g. S, M, L, XL (Leave blank for wallets/bags)"
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1 ml-1">If adding clothing, specify sizes like: S, M, L. For accessories, leave blank.</p>
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
                                 <select name="category" defaultValue={editingProduct?.category || "General"} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900">
@@ -827,6 +851,12 @@ export default function StoreAdmin({ currentUser }) {
                                                 <div>
                                                     <p className="font-bold text-slate-900 text-sm line-clamp-1">{item.name}</p>
                                                     <p className="text-xs text-slate-500 font-bold mt-1">Qty: {item.qty} × ₹{item.price}</p>
+                                                    
+                                                    {/* --- DISPLAY SIZE IN ORDER --- */}
+                                                    {item.selectedSize && (
+                                                        <span className="inline-block mt-1.5 mr-2 text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-bold">Size: {item.selectedSize}</span>
+                                                    )}
+
                                                     {item.customization?.text && (<span className="inline-block mt-1.5 text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 font-bold">Custom: "{item.customization.text}"</span>)}
                                                 </div>
                                             </div>

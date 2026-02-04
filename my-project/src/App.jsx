@@ -237,7 +237,7 @@ const LiveCustomizer = ({ product, customText, setCustomText, activeImage }) => 
   </div>
 );
 
-// --- FIXED CART DRAWER ---
+// --- FIXED CART DRAWER (With Size Display) ---
 const CartDrawer = ({
   isOpen,
   onClose,
@@ -320,6 +320,16 @@ const CartDrawer = ({
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {/* --- DISPLAY SELECTED SIZE --- */}
+                    {item.selectedSize && (
+                       <div className="mt-1 flex items-center gap-2">
+                         <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                           Size: {item.selectedSize}
+                         </span>
+                       </div>
+                    )}
+
                     {item.customization && (
                       <div className="mt-1 flex items-center gap-1">
                         <Palette className="w-3 h-3 text-indigo-500" />
@@ -374,7 +384,7 @@ const CartDrawer = ({
   );
 };
 
-// --- UPDATED PRODUCT DETAIL (Now with Gallery) ---
+// --- UPDATED PRODUCT DETAIL (Now with Size Selection & Gallery) ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -384,16 +394,42 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
   // --- NEW: Image Gallery State ---
   const [activeImage, setActiveImage] = useState(null);
 
+  // --- NEW: Size State ---
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [sizeError, setSizeError] = useState(false);
+
   useEffect(() => {
     if (product) {
         // Prefer coverImage, fallback to first image in array, fallback to legacy image
         const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
         setActiveImage(initialImage);
+        
+        // Reset selections on product change
+        setSelectedSize(null);
+        setSizeError(false);
     }
   }, [product]);
 
   // Check if product is in wishlist
   const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
+
+  // Check if product has sizes
+  const hasSizes = product?.sizes && product.sizes.length > 0;
+
+  const handleAddToCart = () => {
+      // Logic: Agar product me sizes hain aur user ne select nahi kiya
+      if (hasSizes && !selectedSize) {
+          setSizeError(true);
+          // Shake effect or simple alert can be added here
+          return;
+      }
+
+      addToCart({
+        ...product,
+        selectedSize: selectedSize, // Add size to cart item
+        customization: customText ? { text: customText } : null,
+      });
+  };
 
   if (!product)
     return (
@@ -507,6 +543,42 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 ₹{product.price}
               </div>
             </div>
+
+            {/* --- NEW: SIZE SELECTION UI --- */}
+            {hasSizes && (
+                <div className="mb-8 animate-in slide-in-right">
+                    <div className="flex justify-between items-center mb-3">
+                        <h3 className={`font-bold text-sm ${sizeError ? 'text-red-600' : 'text-slate-900'}`}>
+                            Select Size {sizeError && <span className="text-red-500 font-normal">- Required</span>}
+                        </h3>
+                        <span className="text-xs text-indigo-600 font-bold cursor-pointer hover:underline">Size Guide</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {product.sizes.map((size) => (
+                            <button
+                                key={size}
+                                onClick={() => {
+                                    setSelectedSize(size);
+                                    setSizeError(false);
+                                }}
+                                className={`min-w-[3.5rem] h-12 px-4 rounded-xl font-bold border-2 transition-all active:scale-95 ${
+                                    selectedSize === size
+                                    ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                                }`}
+                            >
+                                {size}
+                            </button>
+                        ))}
+                    </div>
+                    {sizeError && (
+                        <p className="text-xs text-red-500 mt-2 font-medium flex items-center gap-1 animate-pulse">
+                            <AlertCircle className="w-3 h-3" /> Please select a size to continue
+                        </p>
+                    )}
+                </div>
+            )}
+
             <p className="text-slate-600 leading-relaxed text-lg mb-10">
               {product.description}
             </p>
@@ -518,7 +590,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 <MessageSquare className="w-5 h-5" /> Chat with Seller
               </button>
               
-              {/* --- WISHLIST BUTTON --- */}
               <button 
                 onClick={() => toggleWishlist(product)}
                 className={`p-4 rounded-2xl border transition-all active:scale-95 ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500' : 'border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100'}`}
@@ -528,14 +599,10 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
             </div>
           </div>
           <div className="mt-auto sticky bottom-6 md:static z-20">
+            {/* Call handleAddToCart instead of direct addToCart */}
             <Button
               size="lg"
-              onClick={() =>
-                addToCart({
-                  ...product,
-                  customization: customText ? { text: customText } : null,
-                })
-              }
+              onClick={handleAddToCart}
               className="w-full shadow-2xl shadow-indigo-600/30 text-lg py-5"
               disabled={product.stock <= 0}
               variant="primary"
@@ -844,6 +911,8 @@ const CraftifyContent = () => {
         price: item.price,
         qty: 1,
         customization: item.customization,
+        // --- PASS SELECTED SIZE TO BACKEND ---
+        selectedSize: item.selectedSize || null 
       })),
       shippingAddress: shippingAddress,
       paymentInfo: paymentInfo,
