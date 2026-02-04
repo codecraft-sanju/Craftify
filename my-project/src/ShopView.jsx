@@ -1,7 +1,7 @@
 // src/ShopView.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart } from 'lucide-react'; // Added Heart
+import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight } from 'lucide-react'; 
 
 // --- HELPER: BADGE ---
 const Badge = ({ children, color = "slate", className="" }) => {
@@ -37,6 +37,150 @@ const ProductSkeleton = () => (
     </div>
 );
 
+// --- NEW COMPONENT: OFFER CAROUSEL (Auto-Scroll, Swipe & Responsive) ---
+const OfferCarousel = () => {
+    // Dummy Data for Offer Section
+    const offers = [
+      {
+        id: 1,
+        image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
+        title: "Super Sale Live",
+        subtitle: "Up to 50% Off on Handmade Goods"
+      },
+      {
+        id: 2,
+        image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
+        title: "New Arrivals",
+        subtitle: "Check out the latest fashion trends"
+      },
+      {
+        id: 3,
+        // --- UPDATED IMAGE (Clean Tech Workspace) ---
+        image: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1964&auto=format&fit=crop",
+        title: "Premium Tech",
+        subtitle: "Upgrade your workspace today"
+      },
+      {
+        id: 4,
+        image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
+        title: "Artisan Selection",
+        subtitle: "Curated for the creative soul"
+      }
+    ];
+  
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
+  
+    // Auto-Scroll Logic
+    useEffect(() => {
+      const interval = setInterval(() => {
+        nextSlide();
+      }, 3000); // Changes every 3 seconds
+      
+      return () => clearInterval(interval);
+    }, [currentIndex]);
+  
+    const nextSlide = () => {
+      setCurrentIndex((prev) => (prev === offers.length - 1 ? 0 : prev + 1));
+    };
+  
+    const prevSlide = () => {
+      setCurrentIndex((prev) => (prev === 0 ? offers.length - 1 : prev - 1));
+    };
+  
+    // Swipe Handlers
+    const handleTouchStart = (e) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+  
+    const handleTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+  
+    const handleTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+  
+        if (isLeftSwipe) {
+            nextSlide();
+        } else if (isRightSwipe) {
+            prevSlide();
+        }
+        
+        // Reset
+        setTouchStart(0);
+        setTouchEnd(0);
+    };
+  
+    return (
+      <div 
+        // UPDATED CLASS: h-[500px] for mobile, aspect-[3/1] for desktop
+        className="relative w-full h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] rounded-3xl overflow-hidden mb-8 shadow-lg group bg-slate-900"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {offers.map((offer, index) => (
+          <div
+            key={offer.id}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+            }`}
+          >
+            <img 
+              src={offer.image} 
+              alt={offer.title} 
+              className="w-full h-full object-cover opacity-80"
+            />
+            {/* Dark Overlay Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
+               <div className="transform transition-all duration-700 translate-y-0 opacity-100">
+                   <span className="bg-indigo-600 text-white text-xs md:text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-wider shadow-lg shadow-indigo-600/30">
+                     Featured
+                   </span>
+                   <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">
+                     {offer.title}
+                   </h2>
+                   <p className="text-slate-200 text-lg md:text-lg font-medium max-w-lg drop-shadow-sm leading-snug">
+                     {offer.subtitle}
+                   </p>
+               </div>
+            </div>
+          </div>
+        ))}
+  
+        {/* Navigation Arrows (Hidden on Mobile) */}
+        <button 
+           onClick={(e) => { e.preventDefault(); prevSlide(); }}
+           className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
+        >
+           <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button 
+           onClick={(e) => { e.preventDefault(); nextSlide(); }}
+           className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
+        >
+           <ChevronRight className="w-6 h-6" />
+        </button>
+  
+        {/* Dots Indicator */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+           {offers.map((_, idx) => (
+               <button 
+                 key={idx}
+                 onClick={() => setCurrentIndex(idx)}
+                 className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/40 w-2 hover:bg-white/60'}`}
+               />
+           ))}
+        </div>
+      </div>
+    );
+  };
+
 const ShopView = ({ 
     searchQuery, 
     setSearchQuery, 
@@ -45,8 +189,8 @@ const ShopView = ({
     addToCart, 
     products = [], 
     isLoading,
-    wishlist = [], // NEW PROP
-    toggleWishlist // NEW PROP
+    wishlist = [],
+    toggleWishlist
 }) => {
   
   // Categories List
@@ -112,8 +256,8 @@ const ShopView = ({
                                 className={`
                                     whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 border
                                     ${activeCategory === cat 
-                                        ? 'bg-slate-900 text-white border-slate-900 shadow-md transform scale-105' 
-                                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}
+                                      ? 'bg-slate-900 text-white border-slate-900 shadow-md transform scale-105' 
+                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}
                                 `}
                             >
                                 {cat}
@@ -125,6 +269,10 @@ const ShopView = ({
 
             {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-6 py-8">
+                
+                {/* --- NEW: INSERTED OFFER CAROUSEL HERE --- */}
+                <OfferCarousel />
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 
                     {/* CASE 1: LOADING (Skeletons) */}
