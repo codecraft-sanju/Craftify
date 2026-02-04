@@ -1,5 +1,5 @@
 // src/ShopView.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight } from 'lucide-react'; 
 
@@ -26,7 +26,7 @@ const ProductSkeleton = () => (
         <div className="aspect-[4/5] bg-slate-100 animate-pulse relative">
             <div className="absolute top-4 right-4 w-8 h-8 bg-slate-200 rounded-full"></div>
         </div>
-        <div className="p-5 space-y-3">
+        <div className="p-3 md:p-5 space-y-3">
             <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse"></div>
             <div className="h-3 bg-slate-100 rounded w-1/2 animate-pulse"></div>
             <div className="pt-4 flex justify-between items-center">
@@ -37,9 +37,8 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- NEW COMPONENT: OFFER CAROUSEL (Auto-Scroll, Swipe & Responsive) ---
+// --- COMPONENT: OFFER CAROUSEL (Auto-Scroll, Swipe & Responsive) ---
 const OfferCarousel = () => {
-    // Dummy Data for Offer Section
     const offers = [
       {
         id: 1,
@@ -55,7 +54,6 @@ const OfferCarousel = () => {
       },
       {
         id: 3,
-        // --- UPDATED IMAGE (Clean Tech Workspace) ---
         image: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1964&auto=format&fit=crop",
         title: "Premium Tech",
         subtitle: "Upgrade your workspace today"
@@ -72,12 +70,10 @@ const OfferCarousel = () => {
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
   
-    // Auto-Scroll Logic
     useEffect(() => {
       const interval = setInterval(() => {
         nextSlide();
-      }, 3000); // Changes every 3 seconds
-      
+      }, 3000); 
       return () => clearInterval(interval);
     }, [currentIndex]);
   
@@ -89,7 +85,6 @@ const OfferCarousel = () => {
       setCurrentIndex((prev) => (prev === 0 ? offers.length - 1 : prev - 1));
     };
   
-    // Swipe Handlers
     const handleTouchStart = (e) => {
         setTouchStart(e.targetTouches[0].clientX);
     };
@@ -100,25 +95,19 @@ const OfferCarousel = () => {
   
     const handleTouchEnd = () => {
         if (!touchStart || !touchEnd) return;
-        
         const distance = touchStart - touchEnd;
         const isLeftSwipe = distance > 50;
         const isRightSwipe = distance < -50;
   
-        if (isLeftSwipe) {
-            nextSlide();
-        } else if (isRightSwipe) {
-            prevSlide();
-        }
+        if (isLeftSwipe) nextSlide();
+        else if (isRightSwipe) prevSlide();
         
-        // Reset
         setTouchStart(0);
         setTouchEnd(0);
     };
   
     return (
       <div 
-        // UPDATED CLASS: h-[500px] for mobile, aspect-[3/1] for desktop
         className="relative w-full h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] rounded-3xl overflow-hidden mb-8 shadow-lg group bg-slate-900"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -136,7 +125,6 @@ const OfferCarousel = () => {
               alt={offer.title} 
               className="w-full h-full object-cover opacity-80"
             />
-            {/* Dark Overlay Gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
                    <span className="bg-indigo-600 text-white text-xs md:text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-wider shadow-lg shadow-indigo-600/30">
@@ -152,8 +140,6 @@ const OfferCarousel = () => {
             </div>
           </div>
         ))}
-  
-        {/* Navigation Arrows (Hidden on Mobile) */}
         <button 
            onClick={(e) => { e.preventDefault(); prevSlide(); }}
            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
@@ -166,8 +152,6 @@ const OfferCarousel = () => {
         >
            <ChevronRight className="w-6 h-6" />
         </button>
-  
-        {/* Dots Indicator */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
            {offers.map((_, idx) => (
                <button 
@@ -179,7 +163,62 @@ const OfferCarousel = () => {
         </div>
       </div>
     );
-  };
+};
+
+// --- NEW COMPONENT: CIRCULAR CATEGORY HIGHLIGHT (Visual Strip) ---
+const CategoryHighlight = ({ activeCategory, setActiveCategory }) => {
+  // Mapping categories to nice Unsplash images
+  const visualCategories = [
+    { name: "All", image: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop" },
+    { name: "Clothing", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop" },
+    { name: "Accessories", image: "https://images.unsplash.com/photo-1512163143273-bde0e3cc540f?q=80&w=2070&auto=format&fit=crop" },
+    { name: "Tech", image: "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2042&auto=format&fit=crop" },
+    { name: "Home", image: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=1974&auto=format&fit=crop" },
+    { name: "Art", image: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2071&auto=format&fit=crop" },
+    // Extra visual fillers to make it scrollable like the image
+    { name: "Pendants", image: "https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1974&auto=format&fit=crop", isVisualOnly: true, mapTo: "Accessories" },
+    { name: "Wallets", image: "https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=1974&auto=format&fit=crop", isVisualOnly: true, mapTo: "Clothing" },
+  ];
+
+  return (
+    <div className="mb-12">
+        <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
+        
+        {/* Scrollable Container with Hidden Scrollbar */}
+        <div className="flex gap-6 overflow-x-auto px-4 pb-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
+            {visualCategories.map((cat, idx) => {
+                const isActive = activeCategory === cat.name || (cat.isVisualOnly && activeCategory === cat.mapTo);
+                
+                return (
+                  <button 
+                    key={idx}
+                    onClick={() => setActiveCategory(cat.isVisualOnly ? cat.mapTo : cat.name)}
+                    className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1"
+                  >
+                      <div className={`
+                        w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md
+                        ${isActive ? 'border-indigo-600 scale-105' : 'border-white group-hover:border-indigo-200'}
+                      `}>
+                         <div className="w-full h-full rounded-full overflow-hidden relative">
+                            <img 
+                               src={cat.image} 
+                               alt={cat.name} 
+                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                            {/* Dark tint on hover */}
+                            <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
+                         </div>
+                      </div>
+                      <span className={`text-sm font-bold tracking-wide ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                         {cat.name}
+                      </span>
+                  </button>
+                );
+            })}
+        </div>
+    </div>
+  );
+};
 
 const ShopView = ({ 
     searchQuery, 
@@ -193,9 +232,6 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
-  // Categories List
-  const categories = ["All", "Clothing", "Home", "Art", "Tech", "Accessories"];
-
   // --- FILTER LOGIC ---
   const filteredProducts = products.filter(p => {
       // 1. Search Filter
@@ -213,67 +249,55 @@ const ShopView = ({
       <div className="min-h-screen bg-[#F8FAFC]">
             
             {/* 1. STICKY HEADER & FILTERS */}
-            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200 pt-4 pb-2 px-4 shadow-sm transition-all">
-                <div className="max-w-7xl mx-auto space-y-4">
+            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200 pt-4 pb-4 px-4 shadow-sm transition-all">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
                     
-                    {/* Top Row: Title & Search */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="hidden md:block">
-                           <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                              Marketplace
-                           </h2>
-                           <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
-                        </div>
-                        
-                        <div className="relative group w-full md:w-96">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                            </div>
-                            <input 
-                                type="text" 
-                                placeholder="Search products..." 
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="block w-full pl-10 pr-10 py-3 bg-slate-100/50 border border-slate-200 text-slate-900 text-sm placeholder-slate-400 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none font-bold"
-                            />
-                             {searchQuery && (
-                                <button 
-                                  onClick={() => setSearchQuery('')}
-                                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </button>
-                             )}
-                        </div>
+                    {/* Left: Title */}
+                    <div className="hidden md:block">
+                       <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                          Marketplace
+                       </h2>
+                       <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
                     </div>
-
-                    {/* Bottom Row: Category Pills */}
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                        {categories.map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setActiveCategory && setActiveCategory(cat)}
-                                className={`
-                                    whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 border
-                                    ${activeCategory === cat 
-                                      ? 'bg-slate-900 text-white border-slate-900 shadow-md transform scale-105' 
-                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}
-                                `}
+                    
+                    {/* Right: Search */}
+                    <div className="relative group w-full md:w-96">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Search products..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="block w-full pl-10 pr-10 py-3 bg-slate-100/50 border border-slate-200 text-slate-900 text-sm placeholder-slate-400 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none font-bold"
+                        />
+                         {searchQuery && (
+                            <button 
+                              onClick={() => setSearchQuery('')}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600"
                             >
-                                {cat}
+                              <XCircle className="h-4 w-4" />
                             </button>
-                        ))}
+                         )}
                     </div>
                 </div>
             </div>
 
             {/* 2. MAIN CONTENT AREA */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 
-                {/* --- NEW: INSERTED OFFER CAROUSEL HERE --- */}
+                {/* --- OFFER CAROUSEL --- */}
                 <OfferCarousel />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {/* --- NEW: VISUAL CATEGORY STRIP (Like the Image) --- */}
+                <CategoryHighlight 
+                    activeCategory={activeCategory} 
+                    setActiveCategory={setActiveCategory} 
+                />
+
+                {/* --- PRODUCT GRID (MODIFIED: grid-cols-2 on mobile) --- */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                 
                     {/* CASE 1: LOADING (Skeletons) */}
                     {isLoading && [...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
@@ -322,7 +346,7 @@ const ShopView = ({
                         const isInWishlist = wishlist && wishlist.some(item => item._id === product._id);
 
                         return (
-                           <Link to={`/product/${productId}`} key={productId} className="group bg-white rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 relative flex flex-col h-full transform hover:-translate-y-1">
+                           <Link to={`/product/${productId}`} key={productId} className="group bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 relative flex flex-col h-full transform hover:-translate-y-1">
                                
                                {/* Image Container */}
                                <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden">
@@ -336,60 +360,60 @@ const ShopView = ({
                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                                  
                                  {/* Overlays */}
-                                 <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
-                                     {product.customizationAvailable && <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md">Customizable</Badge>}
+                                 <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 items-start max-w-[70%]">
+                                     {product.customizationAvailable && <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px]">Custom</Badge>}
                                      {isOutOfStock && <Badge color="red" className="shadow-sm">Sold Out</Badge>}
                                  </div>
 
-                                 {/* --- WISHLIST BUTTON (NEW) --- */}
+                                 {/* --- WISHLIST BUTTON --- */}
                                  <button 
                                      onClick={(e) => {
                                          e.preventDefault(); // Stop navigation to product detail
                                          e.stopPropagation();
                                          toggleWishlist(product);
                                      }}
-                                     className={`absolute top-4 right-4 p-2.5 rounded-full backdrop-blur-md shadow-sm transition-all duration-200 active:scale-90 ${isInWishlist ? 'bg-white text-red-500' : 'bg-white/70 text-slate-400 hover:bg-white hover:text-red-500'}`}
+                                     className={`absolute top-3 right-3 md:top-4 md:right-4 p-2 md:p-2.5 rounded-full backdrop-blur-md shadow-sm transition-all duration-200 active:scale-90 ${isInWishlist ? 'bg-white text-red-500' : 'bg-white/70 text-slate-400 hover:bg-white hover:text-red-500'}`}
                                  >
-                                     <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} />
+                                     <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isInWishlist ? 'fill-current' : ''}`} />
                                  </button>
 
-                                 {/* Quick Add Button (Slide Up) */}
+                                 {/* Quick Add Button (Slide Up - Hidden on Mobile to save space/touch) */}
                                  <button 
                                    onClick={(e) => { 
                                      e.preventDefault(); 
                                      if(!isOutOfStock) addToCart(product); 
                                    }} 
                                    disabled={isOutOfStock}
-                                   className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 py-3.5 rounded-xl font-bold shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 hover:bg-slate-900 hover:text-white disabled:hidden"
+                                   className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 py-3.5 rounded-xl font-bold shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-slate-900 hover:text-white disabled:hidden"
                                  >
                                    <ShoppingBag className="w-4 h-4" /> Quick Add
                                  </button>
                                </div>
 
                                {/* Details */}
-                               <div className="p-5 flex-1 flex flex-col">
+                               <div className="p-3 md:p-5 flex-1 flex flex-col">
                                  <div className="mb-2">
-                                     <div className="flex justify-between items-start gap-2">
-                                         <h3 className="font-bold text-slate-900 line-clamp-1 text-lg group-hover:text-indigo-600 transition-colors">{product.name}</h3>
+                                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-2">
+                                         <h3 className="font-bold text-slate-900 line-clamp-2 text-sm md:text-lg group-hover:text-indigo-600 transition-colors leading-tight">{product.name}</h3>
                                          {product.rating > 0 && (
-                                             <div className="flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 shrink-0">
+                                             <div className="flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 shrink-0 self-start">
                                                  <Star className="w-3 h-3 fill-current" /> {product.rating.toFixed(1)}
                                              </div>
                                          )}
                                      </div>
-                                     <div className="flex items-center gap-1.5 mt-1 text-slate-500">
+                                     <div className="flex items-center gap-1.5 mt-1.5 md:mt-1 text-slate-500">
                                          <Store className="w-3 h-3" />
-                                         <span className="text-xs font-medium truncate">{shopName}</span>
+                                         <span className="text-[10px] md:text-xs font-medium truncate">{shopName}</span>
                                      </div>
                                  </div>
                                  
-                                 <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
+                                 <div className="mt-auto pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between">
                                      <div>
-                                         <p className="text-xs text-slate-400 font-medium line-through">₹{Math.round(product.price * 1.2)}</p>
-                                         <p className="text-xl font-black text-slate-900">₹{product.price}</p>
+                                         <p className="text-[10px] md:text-xs text-slate-400 font-medium line-through">₹{Math.round(product.price * 1.2)}</p>
+                                         <p className="text-base md:text-xl font-black text-slate-900">₹{product.price}</p>
                                      </div>
-                                     <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                         <ArrowRight className="w-4 h-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+                                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                         <ArrowRight className="w-3 h-3 md:w-4 md:h-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                                      </div>
                                  </div>
                                </div>
