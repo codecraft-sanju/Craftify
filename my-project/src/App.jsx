@@ -700,9 +700,6 @@ const BuyerOnlyRoute = ({ children }) => {
   return children;
 };
 
-// ==========================================
-// 4. MAIN APP COMPONENT
-// ==========================================
 
 const CraftifyContent = () => {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -986,7 +983,7 @@ const CraftifyContent = () => {
                 <Box className="text-white w-5 h-5" />
               </div>
               <span className="text-2xl font-bold tracking-tight text-slate-900">
-                Craftify<span className="text-indigo-600">.</span>
+                Giftomize<span className="text-indigo-600">.</span>
               </span>
             </Link>
 
@@ -1059,7 +1056,7 @@ const CraftifyContent = () => {
               <Box className="text-white w-4 h-4" />
             </div>
             <span className="text-lg font-bold text-slate-900">
-              Craftify<span className="text-indigo-600">.</span>
+              Giftomize<span className="text-indigo-600">.</span>
             </span>
           </Link>
           <button

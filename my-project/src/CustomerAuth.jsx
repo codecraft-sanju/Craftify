@@ -125,7 +125,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
          <div className="relative z-10">
             <div onClick={() => navigate('/')} className="flex items-center gap-3 mb-10 cursor-pointer group w-fit">
                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center font-bold shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">C</div>
-               <span className="font-bold text-xl tracking-tight">Craftify.</span>
+               <span className="font-bold text-xl tracking-tight">Giftomize</span>
             </div>
             
             <div className="space-y-6">

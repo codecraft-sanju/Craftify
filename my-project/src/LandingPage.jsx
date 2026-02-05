@@ -183,7 +183,7 @@ const LiveActivity = () => {
     { name: 'Sarah from Mumbai', action: 'sold a Custom Hoodie', time: '12s ago' },
     { name: 'Amit from Bangalore', action: 'earned ₹12,000', time: '1m ago' },
     { name: 'Priya from Pune', action: 'created a new design', time: '5s ago' },
-    { name: 'Vikram from Jaipur', action: 'joined Craftify', time: 'Just now' },
+    { name: 'Vikram from Jaipur', action: 'joined Giftomize', time: 'Just now' },
   ];
 
   useEffect(() => {
@@ -240,7 +240,7 @@ const Navbar = ({ onLoginClick }) => {
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
             <Box className="text-white w-6 h-6" />
           </div>
-          <span className="text-2xl font-bold text-white tracking-tight">Craftify<span className="text-indigo-500">.</span></span>
+          <span className="text-2xl font-bold text-white tracking-tight">Giftomize<span className="text-indigo-500">.</span></span>
         </div>
 
         <div className={`hidden md:flex items-center gap-1 p-1 rounded-full transition-all ${scrolled ? 'bg-white/5 border border-white/5' : 'bg-transparent border border-transparent'}`}>
@@ -315,7 +315,7 @@ const LandingPage = ({ onLoginClick }) => {
             </h1>
 
             <p className="max-w-2xl text-lg md:text-xl text-slate-400 mb-10 leading-relaxed reveal active delay-100">
-              Craftify is the enterprise-grade infrastructure for modern creators. 
+              Giftomize is the enterprise-grade infrastructure for modern creators. 
               Launch your custom brand in minutes, not months. Zero inventory, infinite scale.
             </p>
 
@@ -518,7 +518,7 @@ const LandingPage = ({ onLoginClick }) => {
 
          <div className="max-w-4xl mx-auto px-6 relative z-10 text-center reveal">
            <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight">Ready to revolutionize <br/>your business?</h2>
-           <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">Join 10,000+ creators who are earning over ₹1 Lakh/month on Craftify. No credit card required.</p>
+           <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">Join 10,000+ creators who are earning over ₹1 Lakh/month on Giftomize. No credit card required.</p>
            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button variant="primary" className="py-5 px-12 text-lg h-14" onClick={() => onLoginClick('seller')}>
                  Get Started Now <ArrowRight className="w-5 h-5 ml-2" />
@@ -540,7 +540,7 @@ const LandingPage = ({ onLoginClick }) => {
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <Box className="text-white w-5 h-5" />
                 </div>
-                <span className="text-xl font-bold text-white">Craftify.</span>
+                <span className="text-xl font-bold text-white">Giftomize</span>
               </div>
               <p className="text-slate-400 max-w-sm mb-6 leading-relaxed">
                 The world's most advanced marketplace for custom merchandise. Built for speed, security, and scale.
@@ -579,7 +579,7 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
           
           <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-slate-600 text-sm">© 2026 Craftify Inc. All rights reserved.</p>
+            <p className="text-slate-600 text-sm">© 2026 Giftomize Inc. All rights reserved.</p>
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800">
               <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
               <span className="text-slate-400 text-xs font-mono">Systems Operational</span>

@@ -95,7 +95,7 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
             <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-8">
                     <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold">C</div>
-                    <span className="font-bold text-lg tracking-tight">Craftify.</span>
+                    <span className="font-bold text-lg tracking-tight">Giftomize</span>
                 </div>
                 <h3 className="text-3xl font-black mb-2">Complete your<br/>Purchase</h3>
                 <p className="text-slate-400 text-sm">Scan the QR code to pay securely via any UPI app.</p>
