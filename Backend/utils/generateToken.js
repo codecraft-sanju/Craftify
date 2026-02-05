@@ -5,12 +5,16 @@ const generateToken = (res, userId) => {
     expiresIn: '30d',
   });
 
-  // Set HTTP-Only Cookie
+  // Render (Production) detect karne ke liye
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.cookie('jwt', token, {
-    httpOnly: true, // XSS protection
-    secure: process.env.NODE_ENV !== 'production', 
-    sameSite: 'lax', // CSRF protection
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true,
+    // Render par HTTPS hota hai, isliye secure TRUE hona chahiye
+    secure: isProduction ? true : false, 
+    // Agar production h to 'none' (cross-domain ke liye), nahi to 'lax' (localhost ke liye)
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, 
   });
 };
 
