@@ -239,7 +239,7 @@ const updateUser = async (req, res) => {
     }
 };
 
-// --- GLOBAL SETTINGS: QR CODE & CATEGORIES ---
+// --- GLOBAL SETTINGS: QR, CATEGORIES & OFFERS ---
 
 // 1. Get Global QR Code (Public)
 const getGlobalQR = async (req, res) => {
@@ -258,7 +258,6 @@ const updateGlobalQR = async (req, res) => {
         const { qrUrl } = req.body;
         if (!qrUrl) return res.status(400).json({ message: "QR URL is required" });
 
-        // Update if exists, create if not (upsert: true)
         const updatedSettings = await GlobalSettings.findOneAndUpdate(
             {}, 
             { paymentQrCode: qrUrl, updatedBy: req.user._id },
@@ -271,12 +270,11 @@ const updateGlobalQR = async (req, res) => {
     }
 };
 
-// 3. Get Category Images (Public) -> YEH NAYA HAI
+// 3. Get Category Images (Public)
 const getCategoryImages = async (req, res) => {
     try {
         let settings = await GlobalSettings.findOne();
         if (!settings) {
-            // Return defaults if no settings exist
             return res.json({ 
                 "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop" 
             });
@@ -288,7 +286,7 @@ const getCategoryImages = async (req, res) => {
     }
 };
 
-// 4. Update Category Image (Founder) -> YEH NAYA HAI
+// 4. Update Category Image (Founder)
 const updateCategoryImage = async (req, res) => {
     const { category, imageUrl } = req.body;
     
@@ -298,18 +296,9 @@ const updateCategoryImage = async (req, res) => {
 
     try {
         let settings = await GlobalSettings.findOne();
-        
-        // Agar settings document nahi hai toh banao
-        if (!settings) {
-            settings = new GlobalSettings();
-        }
+        if (!settings) settings = new GlobalSettings();
+        if (!settings.categoryImages) settings.categoryImages = new Map();
 
-        // Agar categoryImages map initialize nahi hai
-        if (!settings.categoryImages) {
-            settings.categoryImages = new Map();
-        }
-
-        // Map mein value set karo
         settings.categoryImages.set(category, imageUrl);
         settings.updatedBy = req.user._id;
         
@@ -319,6 +308,55 @@ const updateCategoryImage = async (req, res) => {
     } catch (error) {
         console.error("Cat Update Error:", error);
         res.status(500).json({ message: "Failed to update category image" });
+    }
+};
+
+// 5. Get Offer Banners (Public) -> UPDATED LOGIC
+const getOfferBanners = async (req, res) => {
+    try {
+        const settings = await GlobalSettings.findOne();
+        
+        // Scenario 1: No settings yet (Fresh App)
+        // Return null so frontend can show Default Fallback
+        if (!settings || !settings.offerCarousel) {
+            return res.json(null); 
+        }
+
+        // Scenario 2: Settings exist (Can be Visible or Hidden)
+        // Return object so frontend knows if it is explicitly hidden
+        res.json({
+            isVisible: settings.offerCarousel.isVisible,
+            slides: settings.offerCarousel.slides.filter(slide => slide.isActive)
+        });
+
+    } catch (error) {
+        console.error("Get Banners Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// 6. Update Offer Banners (Founder)
+const updateOfferBanners = async (req, res) => {
+    try {
+        // Body should contain { isVisible, slides }
+        const { isVisible, slides } = req.body;
+
+        const updatedSettings = await GlobalSettings.findOneAndUpdate(
+            {},
+            {
+                $set: {
+                    "offerCarousel.isVisible": isVisible,
+                    "offerCarousel.slides": slides
+                },
+                updatedBy: req.user._id
+            },
+            { new: true, upsert: true }
+        );
+
+        res.json(updatedSettings.offerCarousel);
+    } catch (error) {
+        console.error("Update Banners Error:", error);
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -378,7 +416,9 @@ module.exports = {
     getGlobalQR,
     updateGlobalQR,
     getCategoryImages,   
-    updateCategoryImage, 
+    updateCategoryImage,
+    getOfferBanners,     
+    updateOfferBanners,  
     getWishlist,
     addToWishlist,
     removeFromWishlist

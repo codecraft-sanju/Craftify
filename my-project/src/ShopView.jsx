@@ -39,9 +39,17 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- COMPONENT: OFFER CAROUSEL (Auto-Scroll, Swipe & Responsive) ---
-const OfferCarousel = () => {
-    const offers = [
+// --- COMPONENT: OFFER CAROUSEL (Smart Logic: Hide vs Default vs Custom) ---
+const OfferCarousel = ({ bannerData }) => {
+    
+    // 1. CRITICAL CHECK: Hidden by Founder?
+    // Agar data exist karta hai AUR isVisible false hai, toh return null (Hide Section)
+    if (bannerData && bannerData.isVisible === false) {
+        return null; 
+    }
+
+    // 2. Default Offers (Fallback)
+    const defaultOffers = [
       {
         id: 1,
         image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
@@ -67,43 +75,45 @@ const OfferCarousel = () => {
         subtitle: "Curated for the creative soul"
       }
     ];
-  
+
+    // 3. Determine Slides to Show
+    // Agar bannerData null hai (Fresh App) -> backendSlides = []
+    // Agar bannerData hai par slides empty hain -> backendSlides = []
+    const backendSlides = bannerData?.slides || [];
+
+    // Agar backend se slides aayi hain toh woh dikhao, nahi toh default dikhao
+    const displayOffers = backendSlides.length > 0 ? backendSlides : defaultOffers;
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
   
     useEffect(() => {
-      const interval = setInterval(() => {
-        nextSlide();
-      }, 3000); 
-      return () => clearInterval(interval);
-    }, [currentIndex]);
+      // Auto-scroll logic
+      if (displayOffers.length > 1) {
+          const interval = setInterval(() => {
+            nextSlide();
+          }, 5000); 
+          return () => clearInterval(interval);
+      }
+    }, [currentIndex, displayOffers.length]);
   
     const nextSlide = () => {
-      setCurrentIndex((prev) => (prev === offers.length - 1 ? 0 : prev + 1));
+      setCurrentIndex((prev) => (prev === displayOffers.length - 1 ? 0 : prev + 1));
     };
   
     const prevSlide = () => {
-      setCurrentIndex((prev) => (prev === 0 ? offers.length - 1 : prev - 1));
+      setCurrentIndex((prev) => (prev === 0 ? displayOffers.length - 1 : prev - 1));
     };
   
-    const handleTouchStart = (e) => {
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-  
-    const handleTouchMove = (e) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-  
+    const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+    const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+    
     const handleTouchEnd = () => {
         if (!touchStart || !touchEnd) return;
         const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > 50;
-        const isRightSwipe = distance < -50;
-  
-        if (isLeftSwipe) nextSlide();
-        else if (isRightSwipe) prevSlide();
-        
+        if (distance > 50) nextSlide();
+        else if (distance < -50) prevSlide();
         setTouchStart(0);
         setTouchEnd(0);
     };
@@ -115,9 +125,9 @@ const OfferCarousel = () => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {offers.map((offer, index) => (
+        {displayOffers.map((offer, index) => (
           <div
-            key={offer.id}
+            key={offer._id || offer.id || index}
             className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
               index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
             }`}
@@ -142,36 +152,41 @@ const OfferCarousel = () => {
             </div>
           </div>
         ))}
-        <button 
-           onClick={(e) => { e.preventDefault(); prevSlide(); }}
-           className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
-        >
-           <ChevronLeft className="w-6 h-6" />
-        </button>
-        <button 
-           onClick={(e) => { e.preventDefault(); nextSlide(); }}
-           className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
-        >
-           <ChevronRight className="w-6 h-6" />
-        </button>
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-           {offers.map((_, idx) => (
-               <button 
-                 key={idx}
-                 onClick={() => setCurrentIndex(idx)}
-                 className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/40 w-2 hover:bg-white/60'}`}
-               />
-           ))}
-        </div>
+
+        {/* Navigation Controls */}
+        {displayOffers.length > 1 && (
+            <>
+                <button 
+                   onClick={(e) => { e.preventDefault(); prevSlide(); }}
+                   className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
+                >
+                   <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button 
+                   onClick={(e) => { e.preventDefault(); nextSlide(); }}
+                   className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
+                >
+                   <ChevronRight className="w-6 h-6" />
+                </button>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                   {displayOffers.map((_, idx) => (
+                       <button 
+                         key={idx}
+                         onClick={() => setCurrentIndex(idx)}
+                         className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/40 w-2 hover:bg-white/60'}`}
+                       />
+                   ))}
+                </div>
+            </>
+        )}
       </div>
     );
 };
 
-// --- NEW COMPONENT: DYNAMIC CIRCULAR CATEGORY HIGHLIGHT ---
+// --- COMPONENT: DYNAMIC CIRCULAR CATEGORY HIGHLIGHT ---
 const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] }) => {
   
   // 1. Initial State (Default Images Fallback)
-  // We keep these here so if the DB is empty or loading, users still see nice images
   const [visualMap, setVisualMap] = useState({
     "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
     "Clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
@@ -192,7 +207,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
             const res = await fetch(`${API_URL}/api/users/categories`);
             if (res.ok) {
                 const data = await res.json();
-                // Merge fetched images with defaults
                 setVisualMap(prev => ({ ...prev, ...data }));
             }
         } catch (error) {
@@ -202,25 +216,17 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     fetchCategoryImages();
   }, []);
 
-  // Fallback image for any unknown category
   const fallbackImage = "https://images.unsplash.com/photo-1556742043-272d6b04d444?q=80&w=2070&auto=format&fit=crop";
-
-  // 3. Extract Unique Categories from actual products
   const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
-  
-  // 4. Combine "All" with the extracted unique categories
   const displayCategories = ["All", ...productCategories];
 
   return (
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        {/* Scrollable Container with Hidden Scrollbar */}
         <div className="flex gap-6 overflow-x-auto px-4 pb-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
-                
-                // Determine image: Use mapped image if available (from state), else use fallback
                 const image = visualMap[cat] || fallbackImage;
                 
                 return (
@@ -233,15 +239,14 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
                         w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md
                         ${isActive ? 'border-indigo-600 scale-105' : 'border-white group-hover:border-indigo-200'}
                       `}>
-                         <div className="w-full h-full rounded-full overflow-hidden relative">
-                            <img 
+                          <div className="w-full h-full rounded-full overflow-hidden relative">
+                             <img 
                                src={image} 
                                alt={cat} 
                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                            {/* Dark tint on hover */}
-                            <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
-                         </div>
+                             />
+                             <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
+                          </div>
                       </div>
                       <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>
                           {cat}
@@ -266,16 +271,35 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
+  // --- STATE: Banner Data (Starts as null) ---
+  const [bannerData, setBannerData] = useState(null);
+  const [isBannersLoading, setIsBannersLoading] = useState(true);
+
+  // --- FETCH BANNERS FROM BACKEND ---
+  useEffect(() => {
+    const fetchBanners = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/users/banners`);
+            if (res.ok) {
+                // Returns: { isVisible: boolean, slides: [...] } OR null
+                const data = await res.json();
+                setBannerData(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch banners", error);
+        } finally {
+            setIsBannersLoading(false);
+        }
+    };
+    fetchBanners();
+  }, []); // Runs once on mount
+
   // --- FILTER LOGIC ---
   const filteredProducts = products.filter(p => {
-      // 1. Search Filter
       const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
       const descMatch = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const searchPass = nameMatch || descMatch;
-
-      // 2. Category Filter
       const categoryPass = activeCategory === "All" || p.category === activeCategory;
-
       return searchPass && categoryPass;
   });
 
@@ -289,7 +313,7 @@ const ShopView = ({
                     {/* Left: Title */}
                     <div className="hidden md:block">
                        <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                          Marketplace
+                         Marketplace
                        </h2>
                        <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
                     </div>
@@ -322,16 +346,17 @@ const ShopView = ({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 
                 {/* --- OFFER CAROUSEL --- */}
-                <OfferCarousel />
+                {/* We pass the Full 'bannerData' object. Component handles hiding/defaults inside. */}
+                {!isBannersLoading && <OfferCarousel bannerData={bannerData} />}
 
-                {/* --- NEW: VISUAL CATEGORY STRIP (Dynamic) --- */}
+                {/* --- VISUAL CATEGORY STRIP --- */}
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
                     setActiveCategory={setActiveCategory} 
-                    products={products} // Passing full product list to extract categories
+                    products={products} 
                 />
 
-                {/* --- PRODUCT GRID (MODIFIED: grid-cols-2 on mobile) --- */}
+                {/* --- PRODUCT GRID --- */}
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                 
                     {/* CASE 1: LOADING (Skeletons) */}
@@ -376,8 +401,6 @@ const ShopView = ({
                         const displayImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image) || "https://via.placeholder.com/300";
                         const shopName = product.shop?.name || 'Verified Seller';
                         const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-                        
-                        // Check if product is in wishlist
                         const isInWishlist = wishlist && wishlist.some(item => item._id === product._id);
 
                         return (
@@ -394,16 +417,14 @@ const ShopView = ({
                                  
                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                                  
-                                 {/* Overlays */}
                                  <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 items-start max-w-[70%]">
                                      {product.customizationAvailable && <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px]">Custom</Badge>}
                                      {isOutOfStock && <Badge color="red" className="shadow-sm">Sold Out</Badge>}
                                  </div>
 
-                                 {/* --- WISHLIST BUTTON --- */}
                                  <button 
                                      onClick={(e) => {
-                                         e.preventDefault(); // Stop navigation to product detail
+                                         e.preventDefault(); 
                                          e.stopPropagation();
                                          toggleWishlist(product);
                                      }}
@@ -412,11 +433,10 @@ const ShopView = ({
                                      <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isInWishlist ? 'fill-current' : ''}`} />
                                  </button>
 
-                                 {/* Quick Add Button (Slide Up - Hidden on Mobile to save space/touch) */}
                                  <button 
                                    onClick={(e) => { 
                                      e.preventDefault(); 
-                                     e.stopPropagation(); // Stop navigation
+                                     e.stopPropagation(); 
                                      if(!isOutOfStock) addToCart(product); 
                                    }} 
                                    disabled={isOutOfStock}
@@ -426,7 +446,6 @@ const ShopView = ({
                                  </button>
                                </div>
 
-                               {/* Details */}
                                <div className="p-3 md:p-5 flex-1 flex flex-col">
                                  <div className="mb-2">
                                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-2">

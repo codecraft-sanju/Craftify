@@ -1,4 +1,3 @@
-// backend/routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -11,11 +10,13 @@ const {
     deleteUser,
     getUserById,
     updateUser,
-    // --- Global Settings Functions ---
     getGlobalQR,    
     updateGlobalQR,
-    getCategoryImages,   // <--- Added This
-    updateCategoryImage, // <--- Added This
+    getCategoryImages,   
+    updateCategoryImage, 
+    // --- Offer Banner Functions (New) ---
+    getOfferBanners,     // <--- Added This
+    updateOfferBanners,  // <--- Added This
     // --- Wishlist Functions ---
     getWishlist,
     addToWishlist,
@@ -27,15 +28,19 @@ const { protect, founder } = require('../middleware/authMiddleware');
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
 
-// --- GLOBAL SETTINGS ROUTES (QR & Categories) ---
+// --- GLOBAL SETTINGS ROUTES (QR, Categories & Banners) ---
 
 // 1. QR Code
 router.get('/qr', getGlobalQR); // Public
 router.post('/qr', protect, founder, updateGlobalQR); // Founder Only
 
-// 2. Category Images (Yeh Naya Hai)
-router.get('/categories', getCategoryImages); // Public: Customers needs to see images
-router.put('/categories', protect, founder, updateCategoryImage); // Founder Only: To update images
+// 2. Category Images 
+router.get('/categories', getCategoryImages); // Public
+router.put('/categories', protect, founder, updateCategoryImage); // Founder Only
+
+// 3. Offer Banners (Yeh Naya Hai)
+router.get('/banners', getOfferBanners); // Public: Homepage needs to fetch banners
+router.put('/banners', protect, founder, updateOfferBanners); // Founder Only: Update/Hide banners
 
 // Protected (Profile)
 router.route('/profile')
@@ -56,7 +61,7 @@ router.route('/')
     .get(protect, founder, getUsers); // List users (Founder only)
 
 // IMPORTANT: Keep this route at the bottom to avoid conflicts
-// Agar '/categories' iske neeche hota, toh code samajhta ki "categories" ek ID hai.
+// Agar '/banners' ya '/categories' iske neeche hota, toh code samajhta ki woh ek ID hai.
 router.route('/:id')
     .get(protect, founder, getUserById)
     .put(protect, founder, updateUser)
