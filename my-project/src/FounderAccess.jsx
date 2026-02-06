@@ -1,10 +1,9 @@
-// src/FounderAccess.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-  Activity, Users, Store, Wallet, DollarSign, Search, TrendingUp, 
-  AlertCircle, CheckCircle, ArrowUpRight, UploadCloud, QrCode, X, 
-  Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
-  Trash2, AlertTriangle, RefreshCcw 
+    Activity, Users, Store, Wallet, DollarSign, Search, TrendingUp, 
+    AlertCircle, CheckCircle, ArrowUpRight, UploadCloud, QrCode, X, 
+    Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
+    Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,6 +28,17 @@ const Badge = ({ children, color = "slate" }) => {
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${colors[color] || colors.slate}`}>{children}</span>;
 };
 
+// Default images mapping (Fallback)
+const DEFAULT_CATEGORY_IMAGES = {
+    "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
+    "Electronics": "https://images.unsplash.com/photo-1550009158-9ebf69173e03?q=80&w=2001&auto=format&fit=crop",
+    "Fashion": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
+    "Home": "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=1974&auto=format&fit=crop",
+    "Beauty": "https://images.unsplash.com/photo-1522335789203-abd1c1cd9d90?q=80&w=2070&auto=format&fit=crop",
+    "Toys": "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?q=80&w=2070&auto=format&fit=crop",
+    "Books": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=2070&auto=format&fit=crop"
+};
+
 export default function FounderAccess({ currentUser }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +48,7 @@ export default function FounderAccess({ currentUser }) {
     const [users, setUsers] = useState([]);
     const [shops, setShops] = useState([]);
     const [orders, setOrders] = useState([]);
-    const [products, setProducts] = useState([]); // --- NEW: Store Products for deletion ---
+    const [products, setProducts] = useState([]); 
     const [loading, setLoading] = useState(true);
     
     // QR & Payment States
@@ -47,7 +57,13 @@ export default function FounderAccess({ currentUser }) {
     const [qrPreview, setQrPreview] = useState("");
     const [uploadingQr, setUploadingQr] = useState(false);
     
-    // --- NEW: Batch Delete States ---
+    // --- CATEGORY Management States ---
+    const [categoryImages, setCategoryImages] = useState(DEFAULT_CATEGORY_IMAGES);
+    const [editingCategory, setEditingCategory] = useState(null); 
+    const [newCategoryFile, setNewCategoryFile] = useState(null);
+    const [uploadingCatImg, setUploadingCatImg] = useState(false);
+
+    // --- Batch Delete States ---
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteProgress, setDeleteProgress] = useState(0);
     const [deleteStatus, setDeleteStatus] = useState("");
@@ -64,22 +80,31 @@ export default function FounderAccess({ currentUser }) {
         const options = { credentials: 'include' };
 
         try {
-            // --- UPDATED: Included products fetch ---
-            const [usersRes, shopsRes, ordersRes, qrRes, productsRes] = await Promise.all([
+            // Added fetch for '/api/users/categories'
+            const [usersRes, shopsRes, ordersRes, qrRes, productsRes, categoriesRes] = await Promise.all([
                 fetch(`${API_URL}/api/users`, options),
                 fetch(`${API_URL}/api/shops`, options),
                 fetch(`${API_URL}/api/orders`, options),
                 fetch(`${API_URL}/api/users/qr`),
-                fetch(`${API_URL}/api/products`) 
+                fetch(`${API_URL}/api/products`),
+                fetch(`${API_URL}/api/users/categories`) 
             ]);
 
             if (usersRes.ok) setUsers(await usersRes.json());
             if (shopsRes.ok) setShops(await shopsRes.json());
             if (ordersRes.ok) setOrders(await ordersRes.json());
             if (productsRes.ok) setProducts(await productsRes.json());
+            
             if (qrRes.ok) {
                 const data = await qrRes.json();
                 setMyQr(data.qrCode);
+            }
+
+            // --- Load Saved Categories ---
+            if (categoriesRes.ok) {
+                const savedCategories = await categoriesRes.json();
+                // Merge saved categories with defaults to ensure we don't break UI if DB is empty
+                setCategoryImages(prev => ({ ...prev, ...savedCategories }));
             }
 
         } catch (error) {
@@ -92,6 +117,66 @@ export default function FounderAccess({ currentUser }) {
     useEffect(() => {
         fetchData();
     }, [currentUser]);
+
+    // --- DERIVED DATA: Unique Categories ---
+    const rawCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+    const allCategories = ["All", ...rawCategories].sort((a, b) => {
+        if (a === "All") return -1;
+        if (b === "All") return 1;
+        return a.localeCompare(b);
+    });
+
+    // --- Action: Upload Category Image (UPDATED TO SAVE TO BACKEND) ---
+    const handleCategoryUpload = async () => {
+        if (!newCategoryFile || !editingCategory) return;
+        
+        setUploadingCatImg(true);
+        try {
+            // 1. Upload to Cloudinary
+            const data = new FormData();
+            data.append("file", newCategoryFile);
+            data.append("upload_preset", UPLOAD_PRESET);
+            data.append("cloud_name", CLOUD_NAME);
+
+            const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                method: "POST", body: data
+            });
+            const cloudData = await cloudRes.json();
+            
+            if (cloudRes.ok) {
+                const imageUrl = cloudData.secure_url;
+
+                // 2. Save to Backend Database (This was missing before!)
+                const backendRes = await fetch(`${API_URL}/api/users/categories`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ category: editingCategory, imageUrl: imageUrl })
+                });
+
+                if(backendRes.ok) {
+                    // 3. Update Local UI
+                    setCategoryImages(prev => ({
+                        ...prev,
+                        [editingCategory]: imageUrl
+                    }));
+                    
+                    alert(`Image updated for ${editingCategory}! It is now live on the shop.`);
+                    setEditingCategory(null);
+                    setNewCategoryFile(null);
+                } else {
+                    alert("Image uploaded to cloud but failed to save to database.");
+                }
+            } else {
+                alert("Upload failed.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error uploading image");
+        } finally {
+            setUploadingCatImg(false);
+        }
+    };
 
     // --- Action: Update Shop Status ---
     const handleShopStatus = async (shopId, status) => {
@@ -115,7 +200,6 @@ export default function FounderAccess({ currentUser }) {
         if (!qrFile) return alert("Please select a file first");
         setUploadingQr(true);
         try {
-            // 1. Upload to Cloudinary
             const data = new FormData();
             data.append("file", qrFile);
             data.append("upload_preset", UPLOAD_PRESET);
@@ -127,7 +211,6 @@ export default function FounderAccess({ currentUser }) {
             const cloudData = await cloudRes.json();
             const qrUrl = cloudData.secure_url;
 
-            // 2. Save to Backend
             const res = await fetch(`${API_URL}/api/users/qr`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -168,7 +251,7 @@ export default function FounderAccess({ currentUser }) {
         }
     };
 
-    // --- NEW: SMART BATCH DELETE ALGORITHM ---
+    // --- BATCH DELETE ALGORITHM ---
     const handleBatchDelete = async () => {
         if (!products || products.length === 0) return alert("No products found to delete.");
 
@@ -182,20 +265,17 @@ export default function FounderAccess({ currentUser }) {
         setDeleteProgress(0);
         setDeleteStatus("Initializing cleanup...");
 
-        // 1. Prepare Batches
         const allIds = products.map(p => p._id);
-        const BATCH_SIZE = 20; // Safe chunk size
+        const BATCH_SIZE = 20; 
         const totalBatches = Math.ceil(allIds.length / BATCH_SIZE);
         
         try {
             for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
-                // Slice current batch
                 const batchIds = allIds.slice(i, i + BATCH_SIZE);
                 const currentBatchNum = Math.floor(i / BATCH_SIZE) + 1;
 
                 setDeleteStatus(`Deleting batch ${currentBatchNum} of ${totalBatches}...`);
 
-                // Call Backend API
                 const res = await fetch(`${API_URL}/api/products/batch`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -205,17 +285,15 @@ export default function FounderAccess({ currentUser }) {
 
                 if (!res.ok) throw new Error("Batch failed");
 
-                // Update Progress UI
                 const progress = Math.round(((i + batchIds.length) / allIds.length) * 100);
                 setDeleteProgress(progress);
 
-                // Small delay to prevent server choking
                 await new Promise(r => setTimeout(r, 500));
             }
 
             setDeleteStatus("Cleanup Complete!");
             alert("All products have been successfully deleted.");
-            fetchData(); // Refresh Data
+            fetchData(); 
 
         } catch (error) {
             console.error("Batch Delete Error", error);
@@ -236,7 +314,6 @@ export default function FounderAccess({ currentUser }) {
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-[#F8FAFC]"><Loader2 className="w-12 h-12 text-indigo-600 animate-spin"/></div>;
 
-    // --- Nav Item Component ---
     const NavItem = ({ id, label, icon: Icon, isDanger }) => (
         <button 
             onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
@@ -254,7 +331,6 @@ export default function FounderAccess({ currentUser }) {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-hidden relative">
-             
              {/* MOBILE SIDEBAR BACKDROP */}
              {isMobileMenuOpen && (
                  <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}></div>
@@ -278,8 +354,10 @@ export default function FounderAccess({ currentUser }) {
                     <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">Management</p>
                     <NavItem id="shops" label="Manage Shops" icon={Store} />
                     <NavItem id="users" label="User Base" icon={Users} />
+                    
+                    {/* --- CATEGORY TAB --- */}
+                    <NavItem id="categories" label="Category Mgmt" icon={LayoutGrid} />
 
-                    {/* --- NEW DANGER ZONE LINK --- */}
                     <div className="mt-8 pt-4 border-t border-white/10">
                         <NavItem id="danger" label="Danger Zone" icon={AlertTriangle} isDanger={true} />
                     </div>
@@ -315,11 +393,11 @@ export default function FounderAccess({ currentUser }) {
                          <div className="relative group">
                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                              <input 
-                                type="text" 
-                                placeholder="Search database..." 
-                                value={searchQuery} 
-                                onChange={(e) => setSearchQuery(e.target.value)} 
-                                className="pl-10 pr-4 py-2.5 bg-slate-100 border-transparent hover:bg-white hover:border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl text-sm font-bold outline-none w-40 md:w-64 transition-all text-slate-900"
+                                 type="text" 
+                                 placeholder="Search database..." 
+                                 value={searchQuery} 
+                                 onChange={(e) => setSearchQuery(e.target.value)} 
+                                 className="pl-10 pr-4 py-2.5 bg-slate-100 border-transparent hover:bg-white hover:border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl text-sm font-bold outline-none w-40 md:w-64 transition-all text-slate-900"
                              />
                          </div>
                      </div>
@@ -355,7 +433,6 @@ export default function FounderAccess({ currentUser }) {
                          {activeTab === 'payments' && (
                             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in slide-in-from-bottom-4 duration-500">
                                 
-                                {/* Left: Founder QR Management */}
                                 <Card className="p-8 h-fit border-0 shadow-lg shadow-slate-200/50">
                                     <h3 className="font-bold text-xl mb-2 flex items-center gap-2 text-slate-900"><QrCode className="w-6 h-6 text-indigo-600"/> Master Payment QR</h3>
                                     <p className="text-sm text-slate-500 mb-8 leading-relaxed">Upload your personal QR code here. This will be shown to customers during checkout for direct payments.</p>
@@ -398,7 +475,6 @@ export default function FounderAccess({ currentUser }) {
                                     )}
                                 </Card>
 
-                                {/* Right: Transactions Table */}
                                 <Card className="xl:col-span-2 p-0 overflow-hidden flex flex-col h-[600px] border-0 shadow-lg shadow-slate-200/50">
                                     <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-20">
                                         <div>
@@ -527,7 +603,92 @@ export default function FounderAccess({ currentUser }) {
                              </Card>
                          )}
 
-                         {/* TAB: DANGER ZONE (NEW) */}
+                         {/* --- TAB: CATEGORY MANAGEMENT (UPDATED) --- */}
+                         {activeTab === 'categories' && (
+                             <div className="animate-in slide-in-from-bottom-4 duration-500">
+                                 <div className="flex justify-between items-center mb-6">
+                                     <div>
+                                         <h2 className="text-2xl font-black text-slate-900">Category Management</h2>
+                                         <p className="text-slate-500 text-sm">Manage visuals for product categories across the platform.</p>
+                                     </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                                     {allCategories.map((cat, idx) => {
+                                         // For "All", we just show total product count
+                                         const count = cat === "All" ? products.length : products.filter(p => p.category === cat).length;
+                                         
+                                         // Use dynamic image from state (loaded from backend) or fallback
+                                         const currentImage = categoryImages[cat] || "https://images.unsplash.com/photo-1556742043-272d6b04d444?q=80&w=2070&auto=format&fit=crop";
+                                         
+                                         return (
+                                             <div key={idx} className="group relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100">
+                                                 <div className="aspect-square relative overflow-hidden bg-slate-100">
+                                                     <img src={currentImage} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={cat} />
+                                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
+                                                     
+                                                     {/* Edit Button */}
+                                                     <button 
+                                                         onClick={() => setEditingCategory(cat)}
+                                                         className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-md rounded-full text-slate-900 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+                                                     >
+                                                         <Edit className="w-4 h-4" />
+                                                     </button>
+                                                 </div>
+                                                 <div className="p-4 text-center">
+                                                     <h3 className="font-bold text-slate-900 capitalize text-lg">{cat}</h3>
+                                                     <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{count} Products</p>
+                                                 </div>
+                                             </div>
+                                         );
+                                     })}
+                                 </div>
+
+                                 {/* Edit Category Modal */}
+                                 {editingCategory && (
+                                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingCategory(null)}></div>
+                                         <div className="bg-white rounded-3xl p-8 w-full max-w-md relative z-10 animate-in zoom-in-95 shadow-2xl">
+                                             <div className="flex justify-between items-center mb-6">
+                                                 <h3 className="text-xl font-black text-slate-900">Update Visual</h3>
+                                                 <button onClick={() => setEditingCategory(null)} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-500"/></button>
+                                             </div>
+                                             
+                                             <div className="text-center mb-6">
+                                                 <p className="text-sm text-slate-500 mb-4">Upload a new cover image for <span className="font-bold text-slate-900">"{editingCategory}"</span></p>
+                                                 
+                                                 <label className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-indigo-400 transition-all group">
+                                                     {newCategoryFile ? (
+                                                         <div className="w-full h-full relative p-2">
+                                                             <img src={URL.createObjectURL(newCategoryFile)} className="w-full h-full object-cover rounded-xl" alt="Preview" />
+                                                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
+                                                                 <p className="text-white font-bold text-xs">Click to Change</p>
+                                                             </div>
+                                                         </div>
+                                                     ) : (
+                                                         <>
+                                                             <ImageIcon className="w-10 h-10 text-slate-300 group-hover:text-indigo-500 mb-2 transition-colors"/>
+                                                             <span className="text-sm font-bold text-slate-400 group-hover:text-indigo-600">Select Image</span>
+                                                         </>
+                                                     )}
+                                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => setNewCategoryFile(e.target.files[0])} />
+                                                 </label>
+                                             </div>
+
+                                             <button 
+                                                 onClick={handleCategoryUpload}
+                                                 disabled={!newCategoryFile || uploadingCatImg}
+                                                 className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                             >
+                                                 {uploadingCatImg ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Changes"}
+                                             </button>
+                                         </div>
+                                     </div>
+                                 )}
+                             </div>
+                         )}
+
+                         {/* TAB: DANGER ZONE */}
                          {activeTab === 'danger' && (
                              <div className="max-w-2xl mx-auto animate-in zoom-in-95 duration-300">
                                  <Card className="p-8 border-red-100 shadow-2xl shadow-red-100/50">
@@ -559,8 +720,8 @@ export default function FounderAccess({ currentUser }) {
                                              <div className="w-full space-y-3">
                                                  <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
                                                      <div 
-                                                        className="h-full bg-red-500 transition-all duration-500 ease-out"
-                                                        style={{ width: `${deleteProgress}%` }}
+                                                         className="h-full bg-red-500 transition-all duration-500 ease-out"
+                                                         style={{ width: `${deleteProgress}%` }}
                                                      ></div>
                                                  </div>
                                                  <div className="flex justify-between text-xs font-bold">
@@ -616,7 +777,7 @@ export default function FounderAccess({ currentUser }) {
                                                      <div className="text-center text-slate-400 py-4">
                                                          <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50"/>
                                                          <p className="text-xs font-medium">QR Unavailable</p>
-                                                         <p className="text-[10px]">Seller hasn't uploaded a payment QR yet.</p>
+                                                         <p className="text-xs">Seller hasn't uploaded a payment QR yet.</p>
                                                      </div>
                                                  )}
                                              </div>

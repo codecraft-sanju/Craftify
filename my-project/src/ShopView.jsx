@@ -1,7 +1,9 @@
-// src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight } from 'lucide-react'; 
+
+// --- CONFIGURATION ---
+const API_URL = import.meta.env.VITE_API_URL;
 
 // --- HELPER: BADGE ---
 const Badge = ({ children, color = "slate", className="" }) => {
@@ -165,20 +167,49 @@ const OfferCarousel = () => {
     );
 };
 
-// --- NEW COMPONENT: CIRCULAR CATEGORY HIGHLIGHT (Visual Strip) ---
-const CategoryHighlight = ({ activeCategory, setActiveCategory }) => {
-  // Mapping categories to nice Unsplash images
-  const visualCategories = [
-    { name: "All", image: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop" },
-    { name: "Clothing", image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop" },
-    { name: "Accessories", image: "https://images.unsplash.com/photo-1512163143273-bde0e3cc540f?q=80&w=2070&auto=format&fit=crop" },
-    { name: "Tech", image: "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2042&auto=format&fit=crop" },
-    { name: "Home", image: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=1974&auto=format&fit=crop" },
-    { name: "Art", image: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2071&auto=format&fit=crop" },
-    // Extra visual fillers to make it scrollable like the image
-    { name: "Pendants", image: "https://images.unsplash.com/photo-1599643478518-17488fbbcd75?q=80&w=1974&auto=format&fit=crop", isVisualOnly: true, mapTo: "Accessories" },
-    { name: "Wallets", image: "https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=1974&auto=format&fit=crop", isVisualOnly: true, mapTo: "Clothing" },
-  ];
+// --- NEW COMPONENT: DYNAMIC CIRCULAR CATEGORY HIGHLIGHT ---
+const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] }) => {
+  
+  // 1. Initial State (Default Images Fallback)
+  // We keep these here so if the DB is empty or loading, users still see nice images
+  const [visualMap, setVisualMap] = useState({
+    "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
+    "Clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
+    "Accessories": "https://images.unsplash.com/photo-1512163143273-bde0e3cc540f?q=80&w=2070&auto=format&fit=crop",
+    "Tech": "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2042&auto=format&fit=crop",
+    "Home": "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?q=80&w=1974&auto=format&fit=crop",
+    "Art": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2071&auto=format&fit=crop",
+    "Handmade Goods": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
+    "Beauty": "https://images.unsplash.com/photo-1522335789203-abd1c1cd9d90?q=80&w=2070&auto=format&fit=crop",
+    "Electronics": "https://images.unsplash.com/photo-1550009158-9ebf69173e03?q=80&w=2001&auto=format&fit=crop",
+    "Fashion": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop"
+  });
+
+  // 2. Fetch Updated Images from Backend
+  useEffect(() => {
+    const fetchCategoryImages = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/users/categories`);
+            if (res.ok) {
+                const data = await res.json();
+                // Merge fetched images with defaults
+                setVisualMap(prev => ({ ...prev, ...data }));
+            }
+        } catch (error) {
+            console.error("Failed to fetch category images", error);
+        }
+    };
+    fetchCategoryImages();
+  }, []);
+
+  // Fallback image for any unknown category
+  const fallbackImage = "https://images.unsplash.com/photo-1556742043-272d6b04d444?q=80&w=2070&auto=format&fit=crop";
+
+  // 3. Extract Unique Categories from actual products
+  const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+  
+  // 4. Combine "All" with the extracted unique categories
+  const displayCategories = ["All", ...productCategories];
 
   return (
     <div className="mb-12">
@@ -186,13 +217,16 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory }) => {
         
         {/* Scrollable Container with Hidden Scrollbar */}
         <div className="flex gap-6 overflow-x-auto px-4 pb-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
-            {visualCategories.map((cat, idx) => {
-                const isActive = activeCategory === cat.name || (cat.isVisualOnly && activeCategory === cat.mapTo);
+            {displayCategories.map((cat, idx) => {
+                const isActive = activeCategory === cat;
+                
+                // Determine image: Use mapped image if available (from state), else use fallback
+                const image = visualMap[cat] || fallbackImage;
                 
                 return (
                   <button 
                     key={idx}
-                    onClick={() => setActiveCategory(cat.isVisualOnly ? cat.mapTo : cat.name)}
+                    onClick={() => setActiveCategory(cat)}
                     className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1"
                   >
                       <div className={`
@@ -201,16 +235,16 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory }) => {
                       `}>
                          <div className="w-full h-full rounded-full overflow-hidden relative">
                             <img 
-                               src={cat.image} 
-                               alt={cat.name} 
+                               src={image} 
+                               alt={cat} 
                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                             />
                             {/* Dark tint on hover */}
                             <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
                          </div>
                       </div>
-                      <span className={`text-sm font-bold tracking-wide ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>
-                         {cat.name}
+                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                          {cat}
                       </span>
                   </button>
                 );
@@ -290,10 +324,11 @@ const ShopView = ({
                 {/* --- OFFER CAROUSEL --- */}
                 <OfferCarousel />
 
-                {/* --- NEW: VISUAL CATEGORY STRIP (Like the Image) --- */}
+                {/* --- NEW: VISUAL CATEGORY STRIP (Dynamic) --- */}
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
                     setActiveCategory={setActiveCategory} 
+                    products={products} // Passing full product list to extract categories
                 />
 
                 {/* --- PRODUCT GRID (MODIFIED: grid-cols-2 on mobile) --- */}
@@ -338,7 +373,7 @@ const ShopView = ({
                     {/* CASE 4: PRODUCT GRID */}
                     {!isLoading && filteredProducts.map((product) => {
                         const productId = product._id || product.id;
-                        const displayImage = product.image || product.coverImage || "https://via.placeholder.com/300";
+                        const displayImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image) || "https://via.placeholder.com/300";
                         const shopName = product.shop?.name || 'Verified Seller';
                         const isOutOfStock = product.stock !== undefined && product.stock <= 0;
                         
@@ -381,6 +416,7 @@ const ShopView = ({
                                  <button 
                                    onClick={(e) => { 
                                      e.preventDefault(); 
+                                     e.stopPropagation(); // Stop navigation
                                      if(!isOutOfStock) addToCart(product); 
                                    }} 
                                    disabled={isOutOfStock}

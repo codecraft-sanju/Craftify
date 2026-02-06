@@ -1,6 +1,5 @@
-// backend/controllers/userController.js
 const User = require('../models/User');
-// --- NEW IMPORT: GLOBAL SETTINGS ---
+// --- IMPORT: GLOBAL SETTINGS ---
 const GlobalSettings = require('../models/GlobalSettings'); 
 // -----------------------------------
 const generateToken = require('../utils/generateToken'); 
@@ -240,102 +239,126 @@ const updateUser = async (req, res) => {
     }
 };
 
-// --- NEW: FOUNDER QR CODE FUNCTIONS (Integrated here) ---
+// --- GLOBAL SETTINGS: QR CODE & CATEGORIES ---
 
-// @desc    Get Global QR Code (Public - for Customers)
-// @route   GET /api/users/qr
+// 1. Get Global QR Code (Public)
 const getGlobalQR = async (req, res) => {
     try {
-        // Fetch the latest QR code
-        const settings = await GlobalSettings.findOne().sort({ createdAt: -1 });
-        if (settings) {
-            res.json({ qrCode: settings.paymentQrCode });
-        } else {
-            res.json({ qrCode: null });
-        }
+        let settings = await GlobalSettings.findOne();
+        if (!settings) return res.json({ qrCode: null });
+        res.json({ qrCode: settings.paymentQrCode });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Update/Upload Founder QR (Private - Founder Only)
-// @route   POST /api/users/qr
+// 2. Update Global QR Code (Founder)
 const updateGlobalQR = async (req, res) => {
     try {
         const { qrUrl } = req.body;
-        
-        if (!qrUrl) {
-            return res.status(400).json({ message: "QR URL is required" });
-        }
+        if (!qrUrl) return res.status(400).json({ message: "QR URL is required" });
 
-        // Logic: Always keep only 1 document for simplicity (Singleton)
-        await GlobalSettings.deleteMany({}); 
-        
-        const newSettings = await GlobalSettings.create({
-            paymentQrCode: qrUrl,
-            updatedBy: req.user._id
-        });
-
-        res.status(201).json(newSettings);
+        // Update if exists, create if not (upsert: true)
+        const updatedSettings = await GlobalSettings.findOneAndUpdate(
+            {}, 
+            { paymentQrCode: qrUrl, updatedBy: req.user._id },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        res.status(201).json(updatedSettings);
     } catch (error) {
+        console.error("QR Update Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
 
-// --- NEW: WISHLIST FUNCTIONS ---
+// 3. Get Category Images (Public) -> YEH NAYA HAI
+const getCategoryImages = async (req, res) => {
+    try {
+        let settings = await GlobalSettings.findOne();
+        if (!settings) {
+            // Return defaults if no settings exist
+            return res.json({ 
+                "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop" 
+            });
+        }
+        res.json(settings.categoryImages);
+    } catch (error) {
+        console.error("Get Cat Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
 
-// @desc    Get user wishlist
-// @route   GET /api/users/wishlist
-// @access  Private
+// 4. Update Category Image (Founder) -> YEH NAYA HAI
+const updateCategoryImage = async (req, res) => {
+    const { category, imageUrl } = req.body;
+    
+    if (!category || !imageUrl) {
+        return res.status(400).json({ message: "Category and Image URL are required" });
+    }
+
+    try {
+        let settings = await GlobalSettings.findOne();
+        
+        // Agar settings document nahi hai toh banao
+        if (!settings) {
+            settings = new GlobalSettings();
+        }
+
+        // Agar categoryImages map initialize nahi hai
+        if (!settings.categoryImages) {
+            settings.categoryImages = new Map();
+        }
+
+        // Map mein value set karo
+        settings.categoryImages.set(category, imageUrl);
+        settings.updatedBy = req.user._id;
+        
+        await settings.save();
+
+        res.json(settings.categoryImages);
+    } catch (error) {
+        console.error("Cat Update Error:", error);
+        res.status(500).json({ message: "Failed to update category image" });
+    }
+};
+
+// --- WISHLIST FUNCTIONS ---
+
+// Get User Wishlist
 const getWishlist = async (req, res) => {
     try {
-        // Populate 'wishlist' to get full product details
         const user = await User.findById(req.user._id).populate('wishlist');
-        
-        if (user) {
-            res.json(user.wishlist);
-        } else {
-            res.status(404).json({ message: 'User not found' });
-        }
+        if (user) res.json(user.wishlist);
+        else res.status(404).json({ message: 'User not found' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Add product to wishlist
-// @route   POST /api/users/wishlist
-// @access  Private
+// Add to Wishlist
 const addToWishlist = async (req, res) => {
     try {
         const { productId } = req.body;
-        
-        // $addToSet ensures no duplicates
         const user = await User.findByIdAndUpdate(
             req.user._id,
             { $addToSet: { wishlist: productId } },
             { new: true }
         ).populate('wishlist');
-
         res.json(user.wishlist);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Remove product from wishlist
-// @route   DELETE /api/users/wishlist/:id
-// @access  Private
+// Remove from Wishlist
 const removeFromWishlist = async (req, res) => {
     try {
         const productId = req.params.id;
-
-        // $pull removes the item from the array
         const user = await User.findByIdAndUpdate(
             req.user._id,
             { $pull: { wishlist: productId } },
             { new: true }
         ).populate('wishlist');
-
         res.json(user.wishlist);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -354,6 +377,8 @@ module.exports = {
     updateUser,
     getGlobalQR,
     updateGlobalQR,
+    getCategoryImages,   
+    updateCategoryImage, 
     getWishlist,
     addToWishlist,
     removeFromWishlist

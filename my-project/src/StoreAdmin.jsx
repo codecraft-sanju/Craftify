@@ -1,11 +1,11 @@
-// src/StoreAdmin.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  LayoutDashboard, ShoppingBag, Package, Plus, X, 
-  DollarSign, Star, Settings, Menu, RefreshCcw, Store,
-  MessageSquare, Send, User, Edit, Trash2, LogOut,
-  ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
-  Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2
+    LayoutDashboard, ShoppingBag, Package, Plus, X, 
+    DollarSign, Star, Settings, Menu, RefreshCcw, Store,
+    MessageSquare, Send, User, Edit, Trash2, LogOut,
+    ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
+    Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2,
+    ChevronDown // Added ChevronDown for category dropdown
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -86,6 +86,10 @@ export default function StoreAdmin({ currentUser }) {
     // --- UPDATED: Multiple Images State ---
     const [images, setImages] = useState([]); 
     const [uploading, setUploading] = useState(false);
+
+    // --- NEW: Category States (For Creatable Select) ---
+    const [categoryInput, setCategoryInput] = useState("");
+    const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
     // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
@@ -327,11 +331,14 @@ export default function StoreAdmin({ currentUser }) {
         if (product && product.images && product.images.length > 0) {
             setImages(product.images);
         } else if (product && (product.image || product.coverImage)) {
-            // Backward compatibility for single image products
             setImages([{ url: product.image || product.coverImage }]);
         } else {
             setImages([]);
         }
+
+        // --- NEW: POPULATE CATEGORY ---
+        setCategoryInput(product ? product.category : "");
+        setShowCategoryDropdown(false);
 
         setIsAddModalOpen(true); 
     };
@@ -357,13 +364,13 @@ export default function StoreAdmin({ currentUser }) {
         const productData = {
             shop: shop?._id, 
             name: formData.get('name'), 
-            category: formData.get('category'),
+            category: categoryInput, // Use state instead of formData for custom logic
             price: Number(formData.get('price')), 
             stock: Number(formData.get('stock')),
             description: formData.get('description'), 
-            images: images, // Send the array
-            coverImage: images[0].url, // First image is cover
-            sizes: sizesArray // --- SEND SIZES ARRAY ---
+            images: images, 
+            coverImage: images[0].url, 
+            sizes: sizesArray 
         };
 
         try {
@@ -375,6 +382,9 @@ export default function StoreAdmin({ currentUser }) {
                 if (editingProduct) setProducts(prev => prev.map(p => p._id === data._id ? data : p));
                 else setProducts([data, ...products]);
                 setIsAddModalOpen(false);
+                
+                // Refresh shop data to get new categories if any were added
+                fetchStoreData();
             } else { alert(data.message || "Failed"); }
         } catch (error) { alert("Network error."); } finally { setIsSubmitting(false); }
     };
@@ -407,6 +417,16 @@ export default function StoreAdmin({ currentUser }) {
             localStorage.removeItem("userInfo");
             window.location.href = '/seller-login';
         }
+    };
+
+    // --- HELPER: Get Unique Categories for Dropdown ---
+    // Merges defaults + shop's saved categories + categories from current products
+    const getAvailableCategories = () => {
+        const defaults = ["Jewellery","Electronics", "Fashion", "Home", "Art & Decor", "Handmade Goods", "Beauty", "Toys", "Sports"];
+        const shopCategories = shop?.categories || [];
+        const productCategories = products.map(p => p.category);
+        
+        return [...new Set([...defaults, ...shopCategories, ...productCategories])].sort();
     };
 
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
@@ -730,7 +750,7 @@ export default function StoreAdmin({ currentUser }) {
                         </div>
                         <form onSubmit={handleSaveProduct} className="space-y-5">
                             
-                            {/* --- NEW: MULTIPLE IMAGE UPLOAD GRID --- */}
+                            {/* --- MULTIPLE IMAGE UPLOAD GRID --- */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                                     Product Images (Max 4)
@@ -785,7 +805,7 @@ export default function StoreAdmin({ currentUser }) {
                                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" placeholder="0"/></div>
                             </div>
 
-                            {/* --- NEW: SIZE INPUT FIELD --- */}
+                            {/* --- SIZE INPUT FIELD --- */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                                     Sizes (Optional - Comma Separated)
@@ -799,12 +819,50 @@ export default function StoreAdmin({ currentUser }) {
                                 <p className="text-[10px] text-slate-400 mt-1 ml-1">If adding clothing, specify sizes like: S, M, L. For accessories, leave blank.</p>
                             </div>
 
-                            <div>
+                            {/* --- NEW: CREATABLE CATEGORY SELECT --- */}
+                            <div className="relative">
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
-                                <select name="category" defaultValue={editingProduct?.category || "General"} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900">
-                                    <option value="Electronics">Electronics</option><option value="Fashion">Fashion</option><option value="Home">Home</option><option value="Art & Decor">Art & Decor</option><option value="Handmade Goods">Handmade</option><option value="General">General</option>
-                                </select>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={categoryInput}
+                                        onChange={(e) => {
+                                            setCategoryInput(e.target.value);
+                                            setShowCategoryDropdown(true);
+                                        }}
+                                        onFocus={() => setShowCategoryDropdown(true)}
+                                        onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)} // Delay close to allow click
+                                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 pr-10"
+                                        placeholder="Select or type a category..."
+                                        required
+                                    />
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                                
+                                {showCategoryDropdown && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
+                                        {getAvailableCategories()
+                                            .filter(c => c.toLowerCase().includes(categoryInput.toLowerCase()))
+                                            .map((c, idx) => (
+                                                <div 
+                                                    key={idx}
+                                                    onMouseDown={() => {
+                                                        setCategoryInput(c);
+                                                        setShowCategoryDropdown(false);
+                                                    }}
+                                                    className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm text-slate-700 font-medium flex items-center justify-between group"
+                                                >
+                                                    {c}
+                                                    {shop?.categories?.includes(c) && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">Existing</span>}
+                                                </div>
+                                            ))}
+                                            {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && (
+                                                <div className="px-4 py-3 text-sm text-slate-400 italic">Type to add "{categoryInput}"</div>
+                                            )}
+                                    </div>
+                                )}
                             </div>
+
                             <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label><textarea name="description" defaultValue={editingProduct?.description} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900" rows="3" placeholder="Product details..."/></div>
                             <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>Cancel</Button><Button type="submit" loading={isSubmitting} className="shadow-xl shadow-indigo-200">Save Product</Button></div>
                         </form>

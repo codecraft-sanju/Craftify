@@ -77,6 +77,13 @@ const createProduct = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to add products to this shop.' });
         }
 
+        // --- NEW LOGIC: Auto-Add Category to Shop if it's new ---
+        if (category && !shop.categories.includes(category)) {
+            shop.categories.push(category);
+            await shop.save();
+        }
+        // --------------------------------------------------------
+
         // --- NEW: Max 4 Images Validation ---
         if (images && images.length > 4) {
             return res.status(400).json({ message: 'You can upload a maximum of 4 images only.' });
@@ -163,6 +170,13 @@ const updateProduct = async (req, res) => {
             if (!shop || shop.owner.toString() !== req.user._id.toString()) {
                 return res.status(403).json({ message: 'Not authorized to update this product' });
             }
+
+            // --- NEW LOGIC: Auto-Add Category to Shop if it's new ---
+            if (category && !shop.categories.includes(category)) {
+                shop.categories.push(category);
+                await shop.save();
+            }
+            // --------------------------------------------------------
 
             // --- NEW: Max 4 Images Validation ---
             if (images && images.length > 4) {
