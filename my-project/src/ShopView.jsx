@@ -1,3 +1,4 @@
+// src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight } from 'lucide-react'; 
@@ -5,12 +6,12 @@ import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRi
 // --- CONFIGURATION ---
 const API_URL = import.meta.env.VITE_API_URL;
 
-// --- HELPER: BADGE ---
+// --- HELPER: BADGE (Updated to include 'amber' color) ---
 const Badge = ({ children, color = "slate", className="" }) => {
   const colors = {
     indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
     green: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    amber: "bg-amber-50 text-amber-700 border-amber-100",
+    amber: "bg-amber-50 text-amber-700 border-amber-100", // Added for Low Stock
     red: "bg-rose-50 text-rose-700 border-rose-100",
     slate: "bg-slate-100 text-slate-700 border-slate-200",
     purple: "bg-purple-50 text-purple-700 border-purple-100",
@@ -419,7 +420,16 @@ const ShopView = ({
                                  
                                  <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 items-start max-w-[70%]">
                                      {product.customizationAvailable && <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px]">Custom</Badge>}
-                                     {isOutOfStock && <Badge color="red" className="shadow-sm">Sold Out</Badge>}
+                                     
+                                     {/* --- LOW STOCK ALERT LOGIC --- */}
+                                     {isOutOfStock ? (
+                                         <Badge color="red" className="shadow-sm">Sold Out</Badge>
+                                     ) : product.stock <= (product.lowStockThreshold || 10) ? (
+                                         <Badge color="amber" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px] text-amber-700 animate-pulse">
+                                             🔥 Only {product.stock} Left
+                                         </Badge>
+                                     ) : null}
+                                     {/* ----------------------------- */}
                                  </div>
 
                                  <button 

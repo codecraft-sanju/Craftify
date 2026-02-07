@@ -164,17 +164,18 @@ const Button = ({
   );
 };
 
-const Badge = ({ children, color = 'slate' }) => {
+// --- UPDATED BADGE COMPONENT (Now supports amber/orange for alerts) ---
+const Badge = ({ children, color = 'slate', className = '' }) => {
   const colors = {
     indigo: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-700/10',
-    green:
-      'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
+    green: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
     red: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/10',
     slate: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/10',
+    amber: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20', // Added for Low Stock
   };
   return (
     <span
-      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]}`}
+      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}
     >
       {children}
     </span>
@@ -323,11 +324,11 @@ const CartDrawer = ({
 
                     {/* --- DISPLAY SELECTED SIZE --- */}
                     {item.selectedSize && (
-                       <div className="mt-1 flex items-center gap-2">
-                         <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                           Size: {item.selectedSize}
-                         </span>
-                       </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                            Size: {item.selectedSize}
+                          </span>
+                        </div>
                     )}
 
                     {item.customization && (
@@ -384,7 +385,7 @@ const CartDrawer = ({
   );
 };
 
-// --- UPDATED PRODUCT DETAIL (Now with Size Selection & Gallery) ---
+// --- UPDATED PRODUCT DETAIL (Now with Low Stock Alert) ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -516,11 +517,20 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
               <Badge color="indigo">{product.category}</Badge>
-              {product.stock > 0 ? (
-                <Badge color="green">In Stock</Badge>
-              ) : (
+              
+              {/* --- STOCK LOGIC START --- */}
+              {product.stock <= 0 ? (
                 <Badge color="red">Sold Out</Badge>
+              ) : product.stock <= (product.lowStockThreshold || 5) ? (
+                // Agar Stock 5 se kam hai toh ye dikhega
+                <Badge color="amber" className="animate-pulse border-amber-200 bg-amber-100 text-amber-700">
+                  🔥 Hurry! Only {product.stock} Left
+                </Badge>
+              ) : (
+                <Badge color="green">In Stock</Badge>
               )}
+              {/* --- STOCK LOGIC END --- */}
+
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-[1.1] tracking-tight">
               {product.name}

@@ -61,7 +61,8 @@ const addOrderItems = async (req, res) => {
         for (const item of orderItems) {
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-                { $inc: { stock: -item.qty } }, 
+               // Stock ghatao (-) aur Sold badhao (+)
+{ $inc: { stock: -item.qty, sold: item.qty } },
                 { new: true } 
             );
 
