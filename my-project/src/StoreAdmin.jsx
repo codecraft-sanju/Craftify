@@ -91,6 +91,10 @@ export default function StoreAdmin({ currentUser }) {
     const [categoryInput, setCategoryInput] = useState("");
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
+    // --- NEW: Cancellation States ---
+    const [cancelReason, setCancelReason] = useState(""); 
+    const [showCancelInput, setShowCancelInput] = useState(false);
+
     // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
@@ -397,17 +401,36 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); }
     };
 
-    const handleUpdateOrderStatus = async (orderId, status) => {
+    // --- UPDATED: Handle Order Status with Cancellation Reason ---
+    const handleUpdateOrderStatus = async (orderId, status, reason = "") => {
         try {
+            const bodyData = { status };
+            // If cancelling, attach the reason
+            if (status === 'Cancelled') {
+                bodyData.cancellationReason = reason;
+            }
+
             const res = await fetch(`${API_URL}/api/orders/${orderId}/deliver`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ status })
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(bodyData)
             });
+
             if(res.ok) {
-                setOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: status } : o));
+                const updatedFields = { orderStatus: status, cancellationReason: reason };
+
+                // Update the main list
+                setOrders(prev => prev.map(o => o._id === orderId ? { ...o, ...updatedFields } : o));
+                
+                // Update the open modal details
                 if(selectedOrder && selectedOrder._id === orderId) {
-                    setSelectedOrder(prev => ({ ...prev, orderStatus: status }));
+                    setSelectedOrder(prev => ({ ...prev, ...updatedFields }));
                 }
+
+                // Reset UI
+                setShowCancelInput(false);
+                setCancelReason("");
             }
         } catch (error) { console.error("Update Status Error", error); }
     };
@@ -856,9 +879,9 @@ export default function StoreAdmin({ currentUser }) {
                                                     {shop?.categories?.includes(c) && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400">Existing</span>}
                                                 </div>
                                             ))}
-                                            {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && (
-                                                <div className="px-4 py-3 text-sm text-slate-400 italic">Type to add "{categoryInput}"</div>
-                                            )}
+                                        {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && (
+                                            <div className="px-4 py-3 text-sm text-slate-400 italic">Type to add "{categoryInput}"</div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -879,16 +902,88 @@ export default function StoreAdmin({ currentUser }) {
                             <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500"/></button>
                         </div>
                         <div className="p-8 overflow-y-auto space-y-8 custom-scrollbar">
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-6 bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100">
+                            
+                            {/* --- UPDATED STATUS & ACTION SECTION WITH CANCELLATION LOGIC --- */}
+                            <div className={`flex flex-col sm:flex-row justify-between items-center gap-6 p-6 rounded-[2rem] border ${selectedOrder.orderStatus === 'Cancelled' ? 'bg-red-50 border-red-100' : 'bg-indigo-50 border-indigo-100'}`}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50"><Truck className="w-7 h-7"/></div>
-                                    <div><p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Current Status</p><p className="font-black text-indigo-900 text-xl">{selectedOrder.orderStatus}</p></div>
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border ${selectedOrder.orderStatus === 'Cancelled' ? 'bg-white text-red-500 border-red-50' : 'bg-white text-indigo-600 border-indigo-50'}`}>
+                                        {selectedOrder.orderStatus === 'Cancelled' ? <X className="w-7 h-7"/> : <Truck className="w-7 h-7"/>}
+                                    </div>
+                                    <div>
+                                        <p className={`text-xs font-bold uppercase tracking-wider ${selectedOrder.orderStatus === 'Cancelled' ? 'text-red-400' : 'text-indigo-400'}`}>Current Status</p>
+                                        <p className={`font-black text-xl ${selectedOrder.orderStatus === 'Cancelled' ? 'text-red-900' : 'text-indigo-900'}`}>{selectedOrder.orderStatus}</p>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    {selectedOrder.orderStatus !== 'Shipped' && selectedOrder.orderStatus !== 'Delivered' && (<Button size="sm" onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'Shipped')} className="shadow-none bg-indigo-600 hover:bg-indigo-700 border-transparent">Mark Shipped</Button>)}
-                                    {selectedOrder.orderStatus === 'Shipped' && (<Button size="sm" variant="success" className="shadow-none border-transparent" onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'Delivered')}>Mark Delivered</Button>)}
+
+                                <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+                                    {/* LOGIC: Show buttons only if NOT Cancelled and NOT Delivered */}
+                                    {selectedOrder.orderStatus !== 'Shipped' && selectedOrder.orderStatus !== 'Delivered' && selectedOrder.orderStatus !== 'Cancelled' && (
+                                        <>
+                                            {!showCancelInput ? (
+                                                <div className="flex gap-2 w-full sm:w-auto">
+                                                    <Button size="sm" onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'Shipped')} className="flex-1 shadow-none bg-indigo-600 hover:bg-indigo-700 border-transparent">
+                                                        Mark Shipped
+                                                    </Button>
+                                                    <button 
+                                                        onClick={() => setShowCancelInput(true)}
+                                                        className="px-4 py-2.5 rounded-xl font-bold text-sm bg-white text-red-600 border border-red-100 hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col gap-2 w-full sm:w-72 animate-in slide-in-from-right-5 fade-in duration-200">
+                                                    <textarea 
+                                                        className="w-full p-3 text-sm border border-red-200 bg-white rounded-xl focus:ring-2 focus:ring-red-500 outline-none resize-none placeholder:text-red-300 text-slate-700 font-medium"
+                                                        placeholder="Reason (e.g. Out of Stock, Defective)..."
+                                                        rows="2"
+                                                        autoFocus
+                                                        value={cancelReason}
+                                                        onChange={(e) => setCancelReason(e.target.value)}
+                                                    />
+                                                    <div className="flex gap-2 justify-end">
+                                                        <button 
+                                                            onClick={() => { setShowCancelInput(false); setCancelReason(""); }}
+                                                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 rounded-lg"
+                                                        >
+                                                            Back
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                if(!cancelReason.trim()) return alert("Please enter a reason for cancellation.");
+                                                                handleUpdateOrderStatus(selectedOrder._id, 'Cancelled', cancelReason);
+                                                            }}
+                                                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 shadow-lg shadow-red-500/30"
+                                                        >
+                                                            Confirm Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {selectedOrder.orderStatus === 'Shipped' && (
+                                        <Button size="sm" variant="success" className="shadow-none border-transparent w-full" onClick={() => handleUpdateOrderStatus(selectedOrder._id, 'Delivered')}>
+                                            Mark Delivered
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
+
+                            {/* --- SHOW REASON IF CANCELLED --- */}
+                            {selectedOrder.orderStatus === 'Cancelled' && (
+                                <div className="bg-red-50 border border-red-100 rounded-2xl p-5 mt-4 w-full animate-in fade-in">
+                                    <h4 className="text-red-800 font-bold text-sm mb-1 flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4"/> Cancellation Reason:
+                                    </h4>
+                                    <p className="text-slate-700 text-sm pl-6">{selectedOrder.cancellationReason || "No reason provided."}</p>
+                                    <div className="mt-3 pt-3 border-t border-red-100 text-[11px] text-red-500 font-medium pl-6">
+                                        * The customer has been notified to contact support if the refund is not received.
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
                                     <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide"><MapPin className="w-4 h-4 text-indigo-500"/> Shipping Details</h4>

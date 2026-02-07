@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon } from 'lucide-react';
+import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -271,7 +271,9 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                         ? 'green'
                         : o.orderStatus === 'Shipped'
                           ? 'indigo'
-                          : 'slate'
+                          : o.orderStatus === 'Cancelled'
+                            ? 'red'
+                            : 'slate'
                     }
                   >
                     {o.orderStatus || 'Processing'}
@@ -357,6 +359,34 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
               </div>
+
+              {/* --- CANCELLATION NOTICE FOR CUSTOMER (INSERTED HERE) --- */}
+              {o.orderStatus === 'Cancelled' && (
+                  <div className="mt-6 bg-red-50 border border-red-100 rounded-2xl p-5 animate-in fade-in">
+                      <div className="flex items-start gap-3">
+                          <div className="p-2 bg-red-100 rounded-full text-red-600 shrink-0">
+                              <AlertTriangle className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                              <h4 className="text-red-900 font-bold text-sm">Order Cancelled</h4>
+                              <p className="text-slate-600 text-xs mt-1 font-medium">
+                                  Reason: <span className="text-slate-800">{o.cancellationReason || "Seller cancelled this order."}</span>
+                              </p>
+                              
+                              <div className="mt-3 bg-white p-3 rounded-xl border border-red-100">
+                                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Refund Status</p>
+                                  <p className="text-xs text-slate-600 leading-relaxed">
+                                      Your payment will be refunded to the source account within 5-7 business days.
+                                  </p>
+                                  <p className="text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-slate-100">
+                                      If not received, please email your Order ID and Phone Number to:<br/>
+                                      <span className="font-bold text-indigo-600 select-all">sanjaychoudhury693@gmail.com</span>
+                                  </p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
 
               {/* Action Buttons */}
               <div className="mt-4 flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">

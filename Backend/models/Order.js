@@ -45,14 +45,13 @@ const orderSchema = new mongoose.Schema({
         phone: { type: String, required: true }
     },
     
-    // --- NEW: PAYMENT INFO SECTION ---
+    // --- PAYMENT INFO SECTION ---
     paymentInfo: {
         method: { 
             type: String, 
             enum: ['Online', 'COD'], 
             required: true 
         },
-        // Store the Transaction ID / UTR provided by the customer
         transactionId: { 
             type: String 
         }, 
@@ -62,7 +61,6 @@ const orderSchema = new mongoose.Schema({
             default: 'Pending'
         }
     },
-    // ---------------------------------
 
     itemsPrice: { type: Number, required: true, default: 0.0 },
     taxPrice: { type: Number, required: true, default: 0.0 },
@@ -81,6 +79,17 @@ const orderSchema = new mongoose.Schema({
         enum: ['Processing', 'Partially Shipped', 'Shipped', 'Delivered', 'Cancelled'],
         default: 'Processing'
     },
+    
+    // --- NEW: CANCELLATION FIELDS (ADDED HERE) ---
+    cancellationReason: { 
+        type: String,
+        default: null 
+    },
+    cancelledAt: { 
+        type: Date 
+    },
+    // ---------------------------------------------
+
     deliveredAt: { type: Date },
     shippedAt: { type: Date },
     isReturnRequested: {

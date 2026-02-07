@@ -11,9 +11,7 @@ const addOrderItems = async (req, res) => {
         const {
             orderItems,
             shippingAddress,
-            // --- CHANGE: Destructure paymentInfo object ---
             paymentInfo, 
-            // ----------------------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
@@ -29,7 +27,7 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'Please provide complete shipping address and phone number.' });
         }
 
-        // --- CHANGE: VALIDATION Payment Info ---
+        // --- VALIDATION Payment Info ---
         if (!paymentInfo || !paymentInfo.method) {
             return res.status(400).json({ message: 'Payment method is required' });
         }
@@ -44,13 +42,11 @@ const addOrderItems = async (req, res) => {
             customer: req.user._id,
             items: orderItems, 
             shippingAddress,   
-            // --- CHANGE: Save structured payment info ---
             paymentInfo: {
                 method: paymentInfo.method,
                 transactionId: paymentInfo.transactionId || null,
                 status: paymentInfo.method === 'Online' ? 'Pending' : 'Pending' 
             },
-            // --------------------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
@@ -126,7 +122,6 @@ const updateOrderToPaid = async (req, res) => {
         if (order) {
             order.isPaid = true;
             order.paidAt = Date.now();
-            // Update internal status
             order.paymentInfo.status = 'Verified';
 
             const updatedOrder = await order.save();
@@ -151,7 +146,7 @@ const updateOrderToPaid = async (req, res) => {
     }
 };
 
-// @desc    Update order status (Processing -> Shipped -> Delivered)
+// @desc    Update order status (Processing -> Shipped -> Delivered -> Cancelled)
 // @route   PUT /api/orders/:id/deliver
 // @access  Private (Seller/Admin)
 const updateOrderStatus = async (req, res) => {
@@ -165,16 +160,26 @@ const updateOrderStatus = async (req, res) => {
                 order.deliveredAt = Date.now();
             } else if (req.body.status === 'Shipped') {
                 order.shippedAt = Date.now();
+            } 
+            // --- NEW: CANCELLATION LOGIC ---
+            else if (req.body.status === 'Cancelled') {
+                order.cancellationReason = req.body.cancellationReason || "Cancelled by seller.";
+                order.cancelledAt = Date.now();
+                
+                // Optional: Stock revert logic here if needed later
+                // for (const item of order.items) { ...increase stock... }
             }
+            // -------------------------------
 
             const updatedOrder = await order.save();
 
-            // Notify Customer
+            // Notify Customer via Socket
             if (req.io) {
                 req.io.emit('order_status_updated', {
                     orderId: updatedOrder._id,
                     customerId: updatedOrder.customer, 
-                    status: updatedOrder.orderStatus
+                    status: updatedOrder.orderStatus,
+                    reason: updatedOrder.cancellationReason // Send reason if cancelled
                 });
             }
 
@@ -229,13 +234,12 @@ const getShopOrders = async (req, res) => {
 // @access  Private (Admin/Founder)
 const getOrders = async (req, res) => {
     try {
-        // --- CHANGE: Deep populate Shop to get paymentQrCode ---
         const orders = await Order.find({})
             .populate('customer', 'id name email')
             .populate({
                 path: 'items.shop',
                 model: 'Shop',
-                select: 'name owner paymentQrCode' // Fetch Seller Name & QR Code for Payout
+                select: 'name owner paymentQrCode' 
             })
             .sort({ createdAt: -1 });
             
