@@ -2,6 +2,7 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
+const sendOrderConfirmation = require('../utils/sendWhatsApp'); // <--- 1. IMPORT WHATSAPP UTILITY
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -61,8 +62,8 @@ const addOrderItems = async (req, res) => {
         for (const item of orderItems) {
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-               // Stock ghatao (-) aur Sold badhao (+)
-{ $inc: { stock: -item.qty, sold: item.qty } },
+                // Stock ghatao (-) aur Sold badhao (+)
+                { $inc: { stock: -item.qty, sold: item.qty } },
                 { new: true } 
             );
 
@@ -76,6 +77,14 @@ const addOrderItems = async (req, res) => {
                 }
             }
         }
+
+        // 3. --- WHATSAPP NOTIFICATION TRIGGER ---
+        // Send confirmation message using UltraMsg (Background Process)
+        if (req.user) {
+            sendOrderConfirmation(createdOrder, req.user)
+                .catch(err => console.error("WhatsApp Notification Failed:", err.message));
+        }
+        // ----------------------------------------
 
         // --- SOCKET IO: Notify Sellers ---
         if (req.io) {
@@ -257,5 +266,5 @@ module.exports = {
     updateOrderStatus,
     getMyOrders,
     getShopOrders,
-    getOrders,     
+    getOrders,    
 };

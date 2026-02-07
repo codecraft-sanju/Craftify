@@ -4,7 +4,8 @@ import {
     AlertCircle, CheckCircle, ArrowUpRight, UploadCloud, QrCode, X, 
     Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
     Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon, 
-    Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3
+    Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3,
+    Server // Added Server icon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -112,6 +113,10 @@ export default function FounderAccess({ currentUser }) {
     // Payout Modal
     const [selectedOrderForPayout, setSelectedOrderForPayout] = useState(null);
 
+    // --- NEW: SERVER HEALTH STATE ---
+    const [serverStatus, setServerStatus] = useState('Checking...');
+    const [latency, setLatency] = useState(0);
+
     const navigate = useNavigate();
 
     // --- FETCH DATA ---
@@ -163,8 +168,34 @@ export default function FounderAccess({ currentUser }) {
         }
     };
 
+    // --- NEW: HEALTH CHECK FUNCTION ---
+    const checkHealth = async () => {
+        const start = Date.now();
+        try {
+            setServerStatus('Checking...');
+            const res = await fetch(`${API_URL}/api/health`);
+            const end = Date.now();
+            
+            if (res.ok) {
+                setServerStatus('Online');
+                setLatency(end - start);
+            } else {
+                setServerStatus('Issues');
+            }
+        } catch (error) {
+            console.error("Server Health Error:", error);
+            setServerStatus('Offline');
+            setLatency(0);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        checkHealth(); // Check on load
+        
+        // Auto check every 30s
+        const interval = setInterval(checkHealth, 30000);
+        return () => clearInterval(interval);
     }, [currentUser]);
 
     // --- COMPUTED DATA ---
@@ -468,6 +499,45 @@ export default function FounderAccess({ currentUser }) {
                          {/* === TAB: OVERVIEW === */}
                          {activeTab === 'overview' && (
                              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                 
+                                 {/* --- NEW: SERVER HEALTH CARD (Render Monitor) --- */}
+                                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 rounded-full ${serverStatus === 'Online' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                            <Server className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Backend Health (Render)</h3>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-xl font-black ${serverStatus === 'Online' ? 'text-slate-900' : 'text-rose-600'}`}>
+                                                    {serverStatus}
+                                                </span>
+                                                {serverStatus === 'Online' && (
+                                                    <span className="relative flex h-3 w-3">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                         <div className="text-right hidden md:block">
+                                            <p className="text-xs text-slate-400 font-bold uppercase">Latency</p>
+                                            <p className={`text-lg font-bold font-mono ${latency > 1000 ? 'text-amber-500' : 'text-emerald-600'}`}>
+                                                {latency}ms
+                                            </p>
+                                        </div>
+                                        <button 
+                                            onClick={checkHealth} 
+                                            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+                                            title="Ping Server"
+                                        >
+                                            <Activity className={`w-5 h-5 ${serverStatus === 'Checking...' ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                 </div>
+
                                  {/* Stats Grid */}
                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                      {[
@@ -676,8 +746,8 @@ export default function FounderAccess({ currentUser }) {
                                                      </td>
                                                      <td className="px-8 py-5 text-right">
                                                          <div className="flex justify-end gap-2">
-                                                            {!shop.isActive && <ActionButton onClick={() => handleShopStatus(shop._id, 'verified')} variant="primary" className="py-1.5 h-8">Approve</ActionButton>}
-                                                            {shop.isActive && <ActionButton onClick={() => handleShopStatus(shop._id, 'rejected')} variant="danger" className="py-1.5 h-8">Suspend</ActionButton>}
+                                                             {!shop.isActive && <ActionButton onClick={() => handleShopStatus(shop._id, 'verified')} variant="primary" className="py-1.5 h-8">Approve</ActionButton>}
+                                                             {shop.isActive && <ActionButton onClick={() => handleShopStatus(shop._id, 'rejected')} variant="danger" className="py-1.5 h-8">Suspend</ActionButton>}
                                                          </div>
                                                      </td>
                                                  </tr>
