@@ -38,7 +38,8 @@ const Badge = ({ children, color = "slate", icon: Icon }) => {
   );
 };
 
-const ActionButton = ({ onClick, disabled, variant = "primary", icon: Icon, children, className="" }) => {
+// --- MODIFIED: Added 'loading' prop to separate loading state from disabled state ---
+const ActionButton = ({ onClick, disabled, loading, variant = "primary", icon: Icon, children, className="" }) => {
     const variants = {
         primary: "bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20",
         danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-lg shadow-rose-500/20",
@@ -49,10 +50,11 @@ const ActionButton = ({ onClick, disabled, variant = "primary", icon: Icon, chil
     return (
         <button 
             onClick={onClick} 
-            disabled={disabled}
+            disabled={disabled || loading} // Disable if explicitly disabled OR if loading
             className={`${variants[variant]} ${className} px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
         >
-            {disabled ? <Loader2 className="w-4 h-4 animate-spin"/> : Icon && <Icon className="w-4 h-4"/>}
+            {/* Display Loader only if 'loading' is true, otherwise show Icon */}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : Icon && <Icon className="w-4 h-4"/>}
             {children}
         </button>
     );
@@ -179,7 +181,7 @@ export default function FounderAccess({ currentUser }) {
     const totalPlatformRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
     const platformProfit = Math.round(totalPlatformRevenue * 0.10); 
 
-    // --- HANDLERS (Same Logic as Original) ---
+    // --- HANDLERS ---
     const uploadToCloudinary = async (file) => {
         const data = new FormData();
         data.append("file", file);
@@ -257,19 +259,39 @@ export default function FounderAccess({ currentUser }) {
         } catch (err) { console.error("Failed to update shop status", err); }
     };
 
+    // --- MODIFIED: More robust handleQrUpload ---
     const handleQrUpload = async () => {
         if (!qrFile) return alert("Please select a file first");
-        setUploadingQr(true);
+        
+        setUploadingQr(true); // Loader starts
+        
         try {
+            // 1. Upload image to Cloudinary
             const qrUrl = await uploadToCloudinary(qrFile);
+            
+            // 2. Save URL to Backend
             const res = await fetch(`${API_URL}/api/users/qr`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', body: JSON.stringify({ qrUrl })
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', 
+                body: JSON.stringify({ qrUrl })
             });
+            
             if (res.ok) {
-                setMyQr(qrUrl); setQrFile(null); setQrPreview("");
+                // Success updates
+                setMyQr(qrUrl); 
+                setQrFile(null); // This clears the file, which disables the button
+                setQrPreview("");
+                alert("QR Code updated successfully!"); // Feedback
+            } else {
+                alert("Failed to save QR in database.");
             }
-        } catch (error) { console.error(error); } finally { setUploadingQr(false); }
+        } catch (error) { 
+            console.error(error); 
+            alert("Error uploading QR code.");
+        } finally { 
+            setUploadingQr(false); // Loader stops
+        }
     };
 
     const handleVerifyPayment = async (orderId) => {
@@ -552,9 +574,11 @@ export default function FounderAccess({ currentUser }) {
                                          }} />
                                      </div>
 
+                                     {/* --- MODIFIED: Passed loading prop explicitly --- */}
                                      <ActionButton 
                                         onClick={handleQrUpload} 
-                                        disabled={!qrFile || uploadingQr} 
+                                        disabled={!qrFile}  // Only disable if no file
+                                        loading={uploadingQr} // Use loading prop for the spinner
                                         className="w-full py-4 text-sm"
                                         icon={Save}
                                      >
@@ -754,7 +778,8 @@ export default function FounderAccess({ currentUser }) {
                                              </label>
                                              <input type="text" placeholder="Headline (e.g. Summer Sale)" value={newBannerTitle} onChange={(e) => setNewBannerTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
                                              <input type="text" placeholder="Subtext (e.g. 50% Off)" value={newBannerSubtitle} onChange={(e) => setNewBannerSubtitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                                             <ActionButton onClick={handleAddBanner} disabled={isBannerUploading} className="w-full py-4 text-sm" icon={Plus}>{isBannerUploading ? "Publishing..." : "Publish Campaign"}</ActionButton>
+                                             {/* --- MODIFIED: Added loading prop --- */}
+                                             <ActionButton onClick={handleAddBanner} disabled={!newBannerFile || !newBannerTitle} loading={isBannerUploading} className="w-full py-4 text-sm" icon={Plus}>{isBannerUploading ? "Publishing..." : "Publish Campaign"}</ActionButton>
                                          </div>
                                      </GlassCard>
 
@@ -823,7 +848,8 @@ export default function FounderAccess({ currentUser }) {
                                     <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setNewCategoryFile(e.target.files[0])} accept="image/*" />
                                     <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-xs font-bold py-2 translate-y-full group-hover:translate-y-0 transition-transform">Change Image</div>
                                 </div>
-                                <ActionButton onClick={handleCategoryUpload} disabled={!newCategoryFile || uploadingCatImg} className="w-full py-4 text-sm" icon={Save}>{uploadingCatImg ? "Saving..." : "Update Category"}</ActionButton>
+                                {/* --- MODIFIED: Added loading prop --- */}
+                                <ActionButton onClick={handleCategoryUpload} disabled={!newCategoryFile} loading={uploadingCatImg} className="w-full py-4 text-sm" icon={Save}>{uploadingCatImg ? "Saving..." : "Update Category"}</ActionButton>
                             </div>
                         </div>
                     </div>
@@ -869,7 +895,7 @@ export default function FounderAccess({ currentUser }) {
                                  ))}
                              </div>
                              <div className="p-4 bg-white border-t border-slate-100">
-                                <ActionButton onClick={() => setSelectedOrderForPayout(null)} className="w-full py-4 text-sm" variant="primary">Close Window</ActionButton>
+                                 <ActionButton onClick={() => setSelectedOrderForPayout(null)} className="w-full py-4 text-sm" variant="primary">Close Window</ActionButton>
                              </div>
                          </div>
                      </div>
