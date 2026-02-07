@@ -1,9 +1,7 @@
-// backend/utils/sendWhatsApp.js
 const axios = require('axios');
 
 const sendOrderConfirmation = async (order, user) => {
     try {
-        // .env file se keys uthao
         const instanceId = process.env.WHATSAPP_INSTANCE_ID;
         const token = process.env.WHATSAPP_TOKEN;
 
@@ -12,16 +10,16 @@ const sendOrderConfirmation = async (order, user) => {
             return;
         }
 
-        // 1. Items ki list banao (Format: Name (Size) x Qty)
+        // 1. Items List (Same as before)
         const itemsList = order.items
             .map(item => `📦 ${item.name} ${item.selectedSize ? `(Size: ${item.selectedSize})` : ''} x ${item.qty}`)
             .join('\n');
 
-        // 2. Message Format (Decorated with Emojis & Bold text)
+        // 2. Message Body (Decorated)
         const message = `
 🎉 *Order Confirmed!*
 
-Hi *${user.name}*,
+Hi *${order.shippingAddress.fullName || user.name}*,
 Thank you for shopping with *Giftomize*! We have received your order.
 
 🆔 *Order ID:* ${order._id}
@@ -39,28 +37,53 @@ Regards,
 📞 +91 7568045830
         `.trim();
 
-        // 3. Customer ka phone number formatting
-        // WhatsApp API ko number bina '+' aur bina space ke chahiye (e.g., 919876543210)
-        let phone = user.phone || order.shippingAddress.phone;
+        // 3. Phone Number Logic (Priority: Shipping Address -> User Profile)
+        let phone = order.shippingAddress.phone || user.phone;
+
+        if (!phone) {
+            console.log("❌ No phone number found for WhatsApp");
+            return false;
+        }
         
-        // Non-numeric characters hatao
-        phone = phone.replace(/\D/g, ''); 
+        // Formatting: Only numbers, remove spaces/dashes
+        phone = phone.toString().replace(/\D/g, ''); 
         
-        // Agar number 10 digit ka hai (e.g. 9876543210), toh aage 91 lagao
+        // India code check
         if (phone.length === 10) {
             phone = "91" + phone;
         }
 
-        // 4. API Call to UltraMsg
-        const options = {
-            method: 'POST',
-            url: `https://api.ultramsg.com/${instanceId}/messages/chat`,
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            data: new URLSearchParams({
+        // --- 🔴 IMAGE LOGIC START (Yahan Change Hai) 🔴 ---
+        
+        // Check karo pehle item ki image hai ya nahi
+        const productImage = order.items[0]?.image || order.items[0]?.coverImage;
+
+        let apiUrl = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+        let payload = {
+            token: token,
+            to: phone,
+            body: message // Text message ke liye 'body' use hota hai
+        };
+
+        // Agar Image mil gayi, toh API endpoint aur payload badal do
+        if (productImage) {
+            console.log("📸 Sending WhatsApp with Image...");
+            apiUrl = `https://api.ultramsg.com/${instanceId}/messages/image`;
+            payload = {
                 token: token,
                 to: phone,
-                body: message
-            })
+                image: productImage, // Image URL
+                caption: message     // Image ke sath text 'caption' ban jata hai
+            };
+        }
+        // --- 🔴 IMAGE LOGIC END 🔴 ---
+
+        // 4. Send API Request
+        const options = {
+            method: 'POST',
+            url: apiUrl,
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            data: new URLSearchParams(payload)
         };
 
         await axios.request(options);
@@ -68,7 +91,6 @@ Regards,
         return true;
 
     } catch (error) {
-        // Agar message fail ho jaye, toh server crash nahi hona chahiye
         console.error("❌ WhatsApp Send Error:", error.message);
         return false;
     }
