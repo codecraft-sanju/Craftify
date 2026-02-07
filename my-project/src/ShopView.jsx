@@ -1,7 +1,7 @@
 // src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight } from 'lucide-react'; 
+import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift } from 'lucide-react'; 
 
 // --- CONFIGURATION ---
 const API_URL = import.meta.env.VITE_API_URL;
@@ -39,6 +39,55 @@ const ProductSkeleton = () => (
         </div>
     </div>
 );
+
+// --- COMPONENT: MARQUEE STRIP (New Addition) ---
+const MarqueeStrip = () => {
+    const items = [
+        { text: "Welcome to Giftomize", icon: <Gift className="w-4 h-4" /> },
+        { text: "100% Customized Products", icon: <Sparkles className="w-4 h-4" /> },
+        { text: "Premium Quality Guaranteed", icon: <ShieldCheck className="w-4 h-4" /> },
+        { text: "Fast & Secure Delivery", icon: <PackageOpen className="w-4 h-4" /> },
+        { text: "Best Price Assured", icon: <Tag className="w-4 h-4" /> },
+        { text: "Verified Sellers Only", icon: <Store className="w-4 h-4" /> },
+    ];
+
+    return (
+        <div className="relative bg-slate-900 border-b border-slate-800 text-slate-300 py-3 overflow-hidden select-none z-10">
+            {/* Inline style for the animation keyframes to avoid external CSS dependency */}
+            <style>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .animate-marquee-infinite {
+                    display: flex;
+                    width: max-content;
+                    animation: marquee 30s linear infinite;
+                }
+                .animate-marquee-infinite:hover {
+                    animation-play-state: paused;
+                }
+            `}</style>
+            
+            <div className="animate-marquee-infinite">
+                {/* We map 4 times to ensure it fills wide screens seamlessly */}
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex shrink-0">
+                        {items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3 px-8">
+                                <span className="text-indigo-400">{item.icon}</span>
+                                <span className="text-xs md:text-sm font-bold uppercase tracking-widest">
+                                    {item.text}
+                                </span>
+                                <div className="ml-8 w-1 h-1 rounded-full bg-slate-700" />
+                            </div>
+                        ))}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // --- COMPONENT: OFFER CAROUSEL (Smart Logic: Hide vs Default vs Custom) ---
 const OfferCarousel = ({ bannerData }) => {
@@ -314,7 +363,7 @@ const ShopView = ({
                     {/* Left: Title */}
                     <div className="hidden md:block">
                        <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                         Marketplace
+                          Marketplace
                        </h2>
                        <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
                     </div>
@@ -342,6 +391,9 @@ const ShopView = ({
                     </div>
                 </div>
             </div>
+
+            {/* --- NEW MARQUEE STRIP (Placed here to be distinct but visible) --- */}
+            <MarqueeStrip />
 
             {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -426,7 +478,7 @@ const ShopView = ({
                                          <Badge color="red" className="shadow-sm">Sold Out</Badge>
                                      ) : product.stock <= (product.lowStockThreshold || 10) ? (
                                          <Badge color="amber" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px] text-amber-700 animate-pulse">
-                                             🔥 Only {product.stock} Left
+                                              🔥 Only {product.stock} Left
                                          </Badge>
                                      ) : null}
                                      {/* ----------------------------- */}
