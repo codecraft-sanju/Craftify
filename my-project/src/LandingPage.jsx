@@ -32,7 +32,7 @@ const styleInjection = `
   .tech-grid {
     position: fixed;
     top: 0; left: 0; 
-    width: 100%; /* Changed from 100vw to 100% to prevent scrollbar overlap */
+    width: 100%; 
     height: 100%;
     background-image: 
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
@@ -64,7 +64,6 @@ const styleInjection = `
 
   /* --- TYPOGRAPHY SCALING --- */
   .massive-text {
-    /* Advanced clamping for perfect mobile scaling */
     font-size: clamp(2.5rem, 11vw, 9rem); 
     line-height: 0.95;
     letter-spacing: -0.04em;
@@ -101,6 +100,23 @@ const styleInjection = `
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 `;
+
+/* -------------------------------------------------------------------------- */
+/* NEW LOGO COMPONENT (Premium Aesthetic)                                     */
+/* -------------------------------------------------------------------------- */
+const ModernLogo = ({ className = "w-10 h-10" }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    {/* Abstract G / Box Symbol */}
+    <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* The Frame - Represents a physical box */}
+      <path d="M8 8H32V12H12V28H24V20H20V16H28V32H8V8Z" fill="white" />
+      {/* The Core - Represents the tech/digital soul inside */}
+      <rect x="20" y="20" width="4" height="4" fill="#22c55e" className="animate-pulse" /> 
+      {/* Decorative accent */}
+      <rect x="30" y="8" width="2" height="2" fill="#22c55e" opacity="0.5" />
+    </svg>
+  </div>
+);
 
 /* -------------------------------------------------------------------------- */
 /* COMPONENTS                                                                 */
@@ -147,7 +163,11 @@ const LandingPage = ({ onLoginClick }) => {
 
       {/* --- SIDEBAR (Desktop) --- */}
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r border-white/10 bg-black/50 backdrop-blur-md z-50 py-8 items-center">
-        <div className="w-10 h-10 bg-white text-black flex items-center justify-center font-bold text-xl rounded-sm">G</div>
+        {/* NEW LOGO IMPLEMENTATION */}
+        <div className="hover:scale-110 transition-transform duration-300 cursor-pointer">
+           <ModernLogo className="w-10 h-10" />
+        </div>
+
         <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
           <a href="#work" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Work</a>
           <a href="#about" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Agency</a>
@@ -157,9 +177,10 @@ const LandingPage = ({ onLoginClick }) => {
 
       {/* --- MOBILE HEADER (Fixed & Pinned) --- */}
       <div className="md:hidden fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center p-5 bg-black/85 backdrop-blur-xl border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white text-black flex items-center justify-center font-bold text-lg rounded-sm">G</div>
-          <span className="font-bold tracking-tight">GIFTOMIZE</span>
+        <div className="flex items-center gap-3">
+          {/* NEW LOGO IMPLEMENTATION */}
+          <ModernLogo className="w-8 h-8" />
+          <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -178,8 +199,8 @@ const LandingPage = ({ onLoginClick }) => {
             <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Pricing</a>
           </div>
           <div className="mt-auto mb-10 flex flex-col gap-4">
-             <button onClick={() => onLoginClick('customer')} className="w-full py-4 border border-white/20 rounded-lg text-lg font-medium">Log In</button>
-             <button onClick={() => onLoginClick('seller')} className="w-full py-4 bg-white text-black rounded-lg text-lg font-bold">Start Selling</button>
+              <button onClick={() => onLoginClick('customer')} className="w-full py-4 border border-white/20 rounded-lg text-lg font-medium">Log In</button>
+              <button onClick={() => onLoginClick('seller')} className="w-full py-4 bg-white text-black rounded-lg text-lg font-bold">Start Selling</button>
           </div>
         </div>
       )}
@@ -264,8 +285,10 @@ const LandingPage = ({ onLoginClick }) => {
               </div>
             </BentoBox>
 
-            <BentoBox className="md:col-span-2 min-h-[200px]" title="Analytics">
-              <div className="flex items-end justify-between h-full relative z-10">
+            {/* --- FIXED SECTION: Analytics --- */}
+            {/* Added 'flex flex-col' to parent, changed inner div to 'flex-1' instead of 'h-full' */}
+            <BentoBox className="md:col-span-2 min-h-[200px] flex flex-col" title="Analytics">
+              <div className="flex items-end justify-between flex-1 relative z-10">
                 <div>
                   <h3 className="text-2xl font-bold">Real-time Insights</h3>
                   <p className="text-zinc-500 text-sm">Track every penny.</p>
@@ -305,7 +328,7 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* FEATURES SECTION - FIX APPLIED HERE */}
+        {/* FEATURES SECTION */}
         <section className="px-6 md:px-12 py-16 md:py-20 max-w-7xl mx-auto">
           {/* Section Header */}
           <div className="mb-16 max-w-2xl">
@@ -319,29 +342,22 @@ const LandingPage = ({ onLoginClick }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
             
-            {/* --- IMAGE FIX FOR MOBILE --- */}
-            {/* Logic: 'md:' prefix means "only on desktop". 
-                So 'bg-transparent' is for mobile (no dark filter), 
-                and 'md:bg-black/40' adds the filter only on desktop. */}
+            {/* --- IMAGE --- */}
             <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 aspect-[4/3] md:aspect-auto md:h-[500px]">
                {/* Tech Overlay lines */}
                <div className="absolute inset-0 z-20 border-2 border-white/5 rounded-2xl pointer-events-none"></div>
                
-               {/* Dark Dimmer: Hidden on mobile (bg-transparent), Visible on Desktop (bg-black/40) */}
+               {/* Dark Dimmer */}
                <div className="absolute inset-0 bg-transparent md:bg-black/40 mix-blend-multiply z-10 md:group-hover:bg-transparent transition-all duration-700 ease-out" />
                
-               {/* The Image: Clear on mobile (opacity-100), Dim on Desktop (md:opacity-80) */}
+               {/* The Image */}
                <img 
                  src="/giftomize.png" 
                  alt="Giftomize Personalized Products" 
                  className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 ease-out opacity-100 md:opacity-80 md:group-hover:opacity-100 grayscale-0 md:grayscale-[30%] md:group-hover:grayscale-0"
                />
                
-               {/* Floating Tag */}
-               <div className="absolute bottom-6 left-6 z-20 bg-black/70 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full flex items-center gap-2">
-                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                 <span className="text-xs font-mono text-white tracking-widest uppercase">Live Production</span>
-               </div>
+             
             </div>
             
             <div className="space-y-4">
