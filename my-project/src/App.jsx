@@ -976,7 +976,7 @@ const CraftifyContent = () => {
   };
 
   return (
-    <div className="bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 pb-24 md:pb-0">
+    <div className={`bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 ${showNavbar ? 'pb-24 md:pb-0' : ''}`}>
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
