@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { 
   ArrowRight, Menu, X, 
   TrendingUp, Zap, Globe,
   ArrowUpRight, Cpu, 
-  Layers, ShieldCheck
+  Layers, ShieldCheck, Box
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -21,37 +22,52 @@ const styleInjection = `
     background-color: #050505 !important;
     font-family: 'Space Grotesk', sans-serif;
     color: #e5e5e5;
-    /* Prevent horizontal scroll on the body level */
     overflow-x: hidden; 
     width: 100%;
-    position: relative;
-    -webkit-font-smoothing: antialiased;
+    cursor: none; /* Hide default cursor for custom one */
+  }
+
+  /* --- CUSTOM CURSOR --- */
+  .custom-cursor {
+    position: fixed;
+    top: 0; left: 0;
+    width: 20px; height: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s, background-color 0.3s;
+    mix-blend-mode: difference;
+  }
+  .custom-cursor.hovered {
+    width: 50px; height: 50px;
+    background-color: white;
+    border-color: transparent;
+    opacity: 0.1;
+  }
+
+  /* --- GRAIN OVERLAY --- */
+  .grain-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 99;
+    opacity: 0.4;
   }
 
   /* --- DYNAMIC BACKGROUND GRID --- */
   .tech-grid {
     position: fixed;
     top: 0; left: 0; 
-    width: 100%; 
-    height: 100%;
+    width: 100%; height: 100%;
     background-image: 
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
     background-size: 40px 40px; 
     z-index: -1;
     mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
-    pointer-events: none;
-  }
-
-  /* --- GLOW EFFECTS --- */
-  .glow-point {
-    position: absolute;
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(60px);
   }
 
   /* --- GLASS PANELS --- */
@@ -75,52 +91,66 @@ const styleInjection = `
     color: transparent;
     transition: all 0.5s ease;
   }
-  
-  .stroked-text:hover, .stroked-text:active {
+  .stroked-text:hover {
     color: white;
     -webkit-text-stroke: 0px;
   }
 
-  /* --- ANIMATIONS --- */
-  @keyframes marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  .animate-marquee { animation: marquee 20s linear infinite; }
-
-  /* Mobile Menu Animation */
-  .mobile-menu-enter {
-    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
+  /* --- UTILS --- */
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 `;
 
 /* -------------------------------------------------------------------------- */
-/* NEW LOGO COMPONENT (Premium Aesthetic)                                     */
+/* CUSTOM CURSOR COMPONENT                                                    */
 /* -------------------------------------------------------------------------- */
-const ModernLogo = ({ className = "w-10 h-10" }) => (
-  <div className={`relative flex items-center justify-center ${className}`}>
-    {/* Abstract G / Box Symbol */}
-    <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* The Frame - Represents a physical box */}
-      <path d="M8 8H32V12H12V28H24V20H20V16H28V32H8V8Z" fill="white" />
-      {/* The Core - Represents the tech/digital soul inside */}
-      <rect x="20" y="20" width="4" height="4" fill="#22c55e" className="animate-pulse" /> 
-      {/* Decorative accent */}
-      <rect x="30" y="8" width="2" height="2" fill="#22c55e" opacity="0.5" />
-    </svg>
-  </div>
-);
+const CustomCursor = () => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    const updateMousePosition = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleMouseOver = (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.closest('.interactive')) {
+        setIsHovered(true);
+      } else {
+        setIsHovered(false);
+      }
+    };
+
+    window.addEventListener('mousemove', updateMousePosition);
+    window.addEventListener('mouseover', handleMouseOver);
+
+    return () => {
+      window.removeEventListener('mousemove', updateMousePosition);
+      window.removeEventListener('mouseover', handleMouseOver);
+    };
+  }, []);
+
+  return (
+    <div 
+      className={`custom-cursor hidden md:block ${isHovered ? 'hovered' : ''}`}
+      style={{ left: mousePosition.x, top: mousePosition.y }}
+    />
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* COMPONENTS                                                                 */
 /* -------------------------------------------------------------------------- */
+
+const ModernLogo = ({ className = "w-10 h-10" }) => (
+  <div className={`relative flex items-center justify-center ${className}`}>
+    <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none">
+      <path d="M8 8H32V12H12V28H24V20H20V16H28V32H8V8Z" fill="white" />
+      <rect x="20" y="20" width="4" height="4" fill="#22c55e" className="animate-pulse" /> 
+      <rect x="30" y="8" width="2" height="2" fill="#22c55e" opacity="0.5" />
+    </svg>
+  </div>
+);
 
 const StatBadge = ({ label, value }) => (
   <div className="flex flex-col border-l border-white/10 pl-4 py-1 min-w-[120px] shrink-0">
@@ -129,15 +159,50 @@ const StatBadge = ({ label, value }) => (
   </div>
 );
 
-const BentoBox = ({ children, className = "", title }) => (
-  <div className={`glass-panel p-6 relative group overflow-hidden transition-all duration-500 active:scale-[0.98] ${className}`}>
-    <div className="absolute top-0 right-0 p-4 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
-      <ArrowUpRight size={16} />
-    </div>
-    {title && <h4 className="text-xs font-mono text-zinc-500 mb-4 uppercase tracking-wider">[{title}]</h4>}
-    {children}
-  </div>
-);
+// Advanced BentoBox with Mouse Tracking Glow
+const BentoBox = ({ children, className = "", title }) => {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  function handleMouseMove({ currentTarget, clientX, clientY }) {
+    let { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      onMouseMove={handleMouseMove}
+      className={`glass-panel p-6 relative group overflow-hidden transition-all duration-500 hover:border-white/20 ${className} interactive`}
+    >
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: useMotionTemplate`
+            radial-gradient(
+              650px circle at ${mouseX}px ${mouseY}px,
+              rgba(255, 255, 255, 0.1),
+              transparent 80%
+            )
+          `,
+        }}
+      />
+      
+      <div className="absolute top-0 right-0 p-4 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
+        <ArrowUpRight size={16} />
+      </div>
+      {title && <h4 className="text-xs font-mono text-zinc-500 mb-4 uppercase tracking-wider relative z-10">[{title}]</h4>}
+      <div className="relative z-10 h-full">{children}</div>
+    </motion.div>
+  );
+};
+
+// Helper for motion value (needed since we used it inside BentoBox)
+import { useMotionValue, useMotionTemplate } from "framer-motion";
 
 /* -------------------------------------------------------------------------- */
 /* MAIN LANDING PAGE                                                          */
@@ -146,96 +211,156 @@ const BentoBox = ({ children, className = "", title }) => (
 const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // --- LIVE TERMINAL LOGIC ---
+  const [logs, setLogs] = useState([
+    "> system_init: OK",
+    "> connecting to neural_net...",
+    "> node_tokyo: connected"
+  ]);
 
   useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset';
-  }, [isMobileMenuOpen]);
+    const commands = [
+      "routing order #8821 -> Berlin",
+      "optimizing mesh_network...",
+      "new_seller_joined: ID_992",
+      "printing: batch_221 [100%]",
+      "shipping_label_gen: success",
+      "syncing global_inventory..."
+    ];
+    
+    const interval = setInterval(() => {
+      setLogs(prev => {
+        const newLogs = [...prev, `> ${commands[Math.floor(Math.random() * commands.length)]}`];
+        if (newLogs.length > 5) newLogs.shift();
+        return newLogs;
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    // MAIN WRAPPER
     <div className="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden w-full relative">
       <style>{styleInjection}</style>
+      <CustomCursor />
+      <div className="grain-overlay" />
       
       {/* Background Elements */}
       <div className="tech-grid" />
-      <div className="glow-point top-0 left-[-100px]" />
-      <div className="glow-point bottom-0 right-[-100px]" />
+      <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-purple-900/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-green-900/10 blur-[120px] rounded-full pointer-events-none" />
 
       {/* --- SIDEBAR (Desktop) --- */}
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r border-white/10 bg-black/50 backdrop-blur-md z-50 py-8 items-center">
-        {/* NEW LOGO IMPLEMENTATION */}
-        <div className="hover:scale-110 transition-transform duration-300 cursor-pointer">
+        <div className="hover:scale-110 transition-transform duration-300 cursor-pointer interactive">
            <ModernLogo className="w-10 h-10" />
         </div>
-
         <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
-          <a href="#work" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Work</a>
-          <a href="#about" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Agency</a>
+          <a href="#work" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase interactive">Work</a>
+          <a href="#about" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase interactive">Agency</a>
         </div>
-        <Menu className="text-zinc-500 hover:text-white cursor-pointer" size={20} />
+        <Menu className="text-zinc-500 hover:text-white cursor-pointer interactive" size={20} />
       </nav>
 
-      {/* --- MOBILE HEADER (Fixed & Pinned) --- */}
+      {/* --- MOBILE HEADER --- */}
       <div className="md:hidden fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center p-5 bg-black/85 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3">
-          {/* NEW LOGO IMPLEMENTATION */}
           <ModernLogo className="w-8 h-8" />
           <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
         </div>
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 active:bg-white/10 rounded-full transition-colors"
-        >
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2">
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* --- MOBILE MENU OVERLAY --- */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black pt-24 px-6 mobile-menu-enter md:hidden flex flex-col h-screen w-screen">
-          <div className="flex flex-col gap-6 text-3xl font-bold">
-            <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Platform</a>
-            <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Solutions</a>
-            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Pricing</a>
-          </div>
-          <div className="mt-auto mb-10 flex flex-col gap-4">
-              <button onClick={() => onLoginClick('customer')} className="w-full py-4 border border-white/20 rounded-lg text-lg font-medium">Log In</button>
-              <button onClick={() => onLoginClick('seller')} className="w-full py-4 bg-white text-black rounded-lg text-lg font-bold">Start Selling</button>
-          </div>
-        </div>
-      )}
+      {/* --- MOBILE MENU --- */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 z-40 bg-black pt-24 px-6 md:hidden flex flex-col h-screen w-screen"
+          >
+            <div className="flex flex-col gap-6 text-3xl font-bold">
+              <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Platform</a>
+              <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Solutions</a>
+            </div>
+            <div className="mt-auto mb-10 flex flex-col gap-4">
+                <button onClick={() => onLoginClick('customer')} className="w-full py-4 border border-white/20 rounded-lg text-lg font-medium">Log In</button>
+                <button onClick={() => onLoginClick('seller')} className="w-full py-4 bg-white text-black rounded-lg text-lg font-bold">Start Selling</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- MAIN CONTENT --- */}
       <main className="md:pl-20 relative z-10 pt-20 md:pt-0 w-full max-w-[100vw]">
         
         {/* HERO */}
-        <section className="min-h-[85vh] flex flex-col justify-between px-6 md:px-12 py-8 md:py-12 relative overflow-hidden">
+        <section className="min-h-[90vh] flex flex-col justify-between px-6 md:px-12 py-8 md:py-12 relative overflow-hidden">
           
-          <div className="hidden md:flex justify-between items-start">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="hidden md:flex justify-between items-start"
+          >
             <div>
               <p className="text-xs text-zinc-500 font-mono">EST. 2025</p>
               <p className="text-xs text-zinc-500 font-mono">INFRASTRUCTURE V2.1</p>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => onLoginClick('customer')} className="text-sm font-medium hover:underline">Log In</button>
-              <button onClick={() => onLoginClick('seller')} className="px-6 py-2 bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors">START SELLING</button>
+              <button onClick={() => onLoginClick('customer')} className="text-sm font-medium hover:underline interactive">Log In</button>
+              <button onClick={() => onLoginClick('seller')} className="px-6 py-2 bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors interactive">START SELLING</button>
             </div>
-          </div>
+          </motion.div>
 
           <div className="relative my-8 md:my-12">
             <h1 className="massive-text leading-[0.9] tracking-tighter break-words">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                <span className="block">DIGITAL</span>
-                <span className="w-fit text-xs md:text-xl font-mono border border-white/20 px-3 py-1 rounded-full text-zinc-400 mb-2 md:mb-0 md:mt-4 tracking-wide bg-black/50 backdrop-blur-sm">
+                <motion.span 
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="block"
+                >
+                  DIGITAL
+                </motion.span>
+                <motion.span 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 100, delay: 0.5 }}
+                  className="w-fit text-xs md:text-xl font-mono border border-white/20 px-3 py-1 rounded-full text-zinc-400 mb-2 md:mb-0 md:mt-4 tracking-wide bg-black/50 backdrop-blur-sm"
+                >
                   (FUTURE_COMMERCE)
-                </span>
+                </motion.span>
               </div>
-              <span className="stroked-text block break-words">MERCHANDISE</span>
-              <span className="block text-zinc-600">REDEFINED.</span>
+              <motion.span 
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="stroked-text block break-words"
+              >
+                MERCHANDISE
+              </motion.span>
+              <motion.span 
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="block text-zinc-600"
+              >
+                REDEFINED.
+              </motion.span>
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-8">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 1 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-8"
+          >
             <div className="col-span-1">
               <p className="text-base md:text-lg text-zinc-300 leading-relaxed max-w-sm">
                 We built the backbone for the next 10,000 brands. Zero inventory. Global scale. Pure aesthetics.
@@ -251,7 +376,7 @@ const LandingPage = ({ onLoginClick }) => {
               
               <button 
                 onClick={() => navigate('/shop')}
-                className="group w-full md:w-auto flex items-center justify-between md:justify-start gap-4 pl-6 pr-2 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-white hover:text-black transition-all duration-300 active:scale-95"
+                className="interactive group w-full md:w-auto flex items-center justify-between md:justify-start gap-4 pl-6 pr-2 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-white hover:text-black transition-all duration-300 active:scale-95"
               >
                 <span className="text-sm font-bold uppercase tracking-wider">Explore Platform</span>
                 <div className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center group-hover:bg-black group-hover:text-white">
@@ -259,7 +384,7 @@ const LandingPage = ({ onLoginClick }) => {
                 </div>
               </button>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* BENTO GRID */}
@@ -276,17 +401,16 @@ const LandingPage = ({ onLoginClick }) => {
                   Lowest shipping costs. Fastest delivery.
                 </p>
               </div>
-              <div className="w-full h-32 bg-gradient-to-t from-black/80 to-transparent border-t border-white/10 mt-8 rounded-lg relative overflow-hidden flex items-end">
-                 <div className="p-4 font-mono text-[10px] md:text-xs text-green-500/80">
-                   {`> initiating_sequence(ORDER_ID)`}<br/>
-                   {`> routing... node_tokyo [OK]`}<br/>
-                   {`> production_status: ACTIVE`}
-                 </div>
+              <div className="w-full h-40 bg-black/80 border border-white/10 mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs text-green-500/80 shadow-inner">
+                  {logs.map((log, i) => (
+                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+                      {log}
+                    </motion.div>
+                  ))}
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </BentoBox>
 
-            {/* --- FIXED SECTION: Analytics --- */}
-            {/* Added 'flex flex-col' to parent, changed inner div to 'flex-1' instead of 'h-full' */}
             <BentoBox className="md:col-span-2 min-h-[200px] flex flex-col" title="Analytics">
               <div className="flex items-end justify-between flex-1 relative z-10">
                 <div>
@@ -294,6 +418,12 @@ const LandingPage = ({ onLoginClick }) => {
                   <p className="text-zinc-500 text-sm">Track every penny.</p>
                 </div>
                 <TrendingUp size={40} className="text-zinc-600" />
+              </div>
+              {/* Fake Graph Line */}
+              <div className="absolute bottom-0 left-0 right-0 h-16 opacity-20">
+                 <svg viewBox="0 0 100 20" className="w-full h-full fill-none stroke-white" preserveAspectRatio="none">
+                    <path d="M0 20 Q 20 5 40 10 T 80 5 T 100 15" strokeWidth="0.5" />
+                 </svg>
               </div>
             </BentoBox>
 
@@ -303,7 +433,7 @@ const LandingPage = ({ onLoginClick }) => {
               <p className="text-xs text-zinc-500 mt-2">Shipping to 195 nations instantly.</p>
             </BentoBox>
 
-            <BentoBox className="md:col-span-1 bg-white text-black min-h-[200px]" title="Start">
+            <BentoBox className="md:col-span-1 bg-white text-black min-h-[200px] interactive cursor-pointer" title="Start">
               <div className="flex flex-col h-full justify-between">
                 <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
                   <Zap size={20} />
@@ -319,22 +449,30 @@ const LandingPage = ({ onLoginClick }) => {
 
         {/* TICKER */}
         <div className="py-12 md:py-20 overflow-hidden bg-white text-black rotate-[-2deg] scale-105 border-y-4 border-black my-16 md:my-20">
-          <div className="flex animate-marquee whitespace-nowrap gap-8 md:gap-12">
+          <motion.div 
+            animate={{ x: ["0%", "-50%"] }} 
+            transition={{ ease: "linear", duration: 15, repeat: Infinity }}
+            className="flex whitespace-nowrap gap-8 md:gap-12"
+          >
              {[...Array(10)].map((_, i) => (
                <span key={i} className="text-4xl md:text-6xl font-black italic tracking-tighter">
                  CREATE • SELL • SCALE • 
                </span>
              ))}
-          </div>
+          </motion.div>
         </div>
 
         {/* FEATURES SECTION */}
         <section className="px-6 md:px-12 py-16 md:py-20 max-w-7xl mx-auto">
-          {/* Section Header */}
           <div className="mb-16 max-w-2xl">
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+              <motion.h2 
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
+              >
                 Not just a platform.<br/><span className="text-zinc-500">A power plant.</span>
-              </h2>
+              </motion.h2>
               <p className="text-lg md:text-xl text-zinc-400">
                 We stripped away the complexity of e-commerce. You design the product, we handle the physics.
               </p>
@@ -342,23 +480,21 @@ const LandingPage = ({ onLoginClick }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
             
-            {/* --- IMAGE --- */}
-            <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 aspect-[4/3] md:aspect-auto md:h-[500px]">
-               {/* Tech Overlay lines */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative group rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 aspect-[4/3] md:aspect-auto md:h-[500px]"
+            >
                <div className="absolute inset-0 z-20 border-2 border-white/5 rounded-2xl pointer-events-none"></div>
-               
-               {/* Dark Dimmer */}
                <div className="absolute inset-0 bg-transparent md:bg-black/40 mix-blend-multiply z-10 md:group-hover:bg-transparent transition-all duration-700 ease-out" />
-               
-               {/* The Image */}
                <img 
                  src="/giftomize.png" 
                  alt="Giftomize Personalized Products" 
                  className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 ease-out opacity-100 md:opacity-80 md:group-hover:opacity-100 grayscale-0 md:grayscale-[30%] md:group-hover:grayscale-0"
                />
-               
-             
-            </div>
+            </motion.div>
             
             <div className="space-y-4">
               {[
@@ -366,19 +502,26 @@ const LandingPage = ({ onLoginClick }) => {
                 { title: 'White Label', desc: 'Your brand on the box. Your brand on the neck label.' },
                 { title: 'Automated Taxes', desc: 'We handle VAT and sales tax globally.' }
               ].map((item, i) => (
-                <div key={i} className="group border-b border-white/10 py-8 active:bg-white/5 transition-all cursor-default">
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, x: 50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="group border-b border-white/10 py-8 active:bg-white/5 transition-all cursor-default interactive"
+                >
                   <h3 className="text-2xl md:text-3xl font-bold mb-3 flex items-center gap-4">
                     <span className="text-xs font-mono text-zinc-600 border border-zinc-800 px-2 py-1 rounded">0{i+1}</span> 
                     {item.title}
                   </h3>
                   <p className="text-base md:text-lg text-zinc-500 group-hover:text-zinc-300 transition-colors pl-12">{item.desc}</p>
-                </div>
+                </motion.div>
               ))}
               
               <div className="pt-8 pl-12">
                 <button 
                    onClick={() => onLoginClick('seller')}
-                   className="text-white border-b border-white pb-1 hover:pb-2 transition-all font-mono text-sm flex items-center gap-2"
+                   className="text-white border-b border-white pb-1 hover:pb-2 transition-all font-mono text-sm flex items-center gap-2 interactive"
                 >
                   READ_DOCUMENTATION <ArrowRight size={12}/>
                 </button>
@@ -398,15 +541,15 @@ const LandingPage = ({ onLoginClick }) => {
             
             <div className="flex flex-col gap-4">
               <h4 className="font-mono text-xs uppercase text-zinc-500">Sitemap</h4>
-              <a href="#" className="hover:text-white text-zinc-400">Home</a>
-              <a href="#" className="hover:text-white text-zinc-400">Marketplace</a>
-              <a href="#" className="hover:text-white text-zinc-400">Sellers</a>
+              <a href="#" className="hover:text-white text-zinc-400 interactive">Home</a>
+              <a href="#" className="hover:text-white text-zinc-400 interactive">Marketplace</a>
+              <a href="#" className="hover:text-white text-zinc-400 interactive">Sellers</a>
             </div>
 
             <div className="flex flex-col gap-4">
               <h4 className="font-mono text-xs uppercase text-zinc-500">Legal</h4>
-              <a href="#" className="hover:text-white text-zinc-400">Privacy</a>
-              <a href="#" className="hover:text-white text-zinc-400">Terms</a>
+              <a href="#" className="hover:text-white text-zinc-400 interactive">Privacy</a>
+              <a href="#" className="hover:text-white text-zinc-400 interactive">Terms</a>
             </div>
           </div>
           
