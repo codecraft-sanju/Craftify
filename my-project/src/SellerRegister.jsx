@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Store, ArrowRight, CheckCircle, Mail, Lock, User, 
-  ShoppingBag, Sparkles, Loader2, ChevronRight, Phone, AlertCircle, ArrowLeft
+  ShoppingBag, Sparkles, Loader2, ChevronRight, Phone, AlertCircle, ArrowLeft, KeyRound
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -69,6 +69,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const navigate = useNavigate();
   const isLoginView = initialMode === 'login'; 
   
+  // Steps: 1=Account, 2=Shop, 3=OTP Verification
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -78,10 +79,11 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     name: '',
     email: '',
     password: '',
+    phone: '', // Moved to Step 1
     shopName: '',
     category: 'Clothing',
-    phone: '', 
-    description: 'Welcome to my new shop on Giftomize!' 
+    description: 'Welcome to my new shop on Giftomize!',
+    otp: '' // OTP Field
   });
 
   const handleChange = (e) => {
@@ -119,42 +121,68 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             onLoginSuccess(data);
 
         } else {
-            // === REGISTER LOGIC (2 Steps) ===
+            // === REGISTER LOGIC (Step by Step) ===
             
-            // 1. Create User
-            const userRes = await fetch(`${API_URL}/api/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                })
-            });
+            // Phase 1: Create User & Send OTP (Called when Step 2 "Launch Store" is clicked)
+            if (step === 2) {
+                const userRes = await fetch(`${API_URL}/api/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: formData.name,
+                        email: formData.email,
+                        password: formData.password,
+                        phone: formData.phone,
+                        role: 'seller' // Important
+                    })
+                });
 
-            const userData = await userRes.json();
-            if (!userRes.ok) throw new Error(userData.message || "User registration failed");
+                const userData = await userRes.json();
+                if (!userRes.ok) throw new Error(userData.message || "User registration failed");
 
-            // 2. Create Shop
-            const shopRes = await fetch(`${API_URL}/api/shops`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', 
-                body: JSON.stringify({
-                    name: formData.shopName,
-                    description: formData.description,
-                    phone: formData.phone,
-                    categories: [formData.category]
-                })
-            });
+                // If User created, go to Step 3 (OTP)
+                setLoading(false);
+                setStep(3); // Move to OTP
+                return;
+            }
 
-            const shopData = await shopRes.json();
-            if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
+            // Phase 2: Verify OTP & Create Shop (Called when Step 3 "Verify" is clicked)
+            if (step === 3) {
+                // 1. Verify OTP
+                const verifyRes = await fetch(`${API_URL}/api/users/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: formData.phone,
+                        otp: formData.otp
+                    })
+                });
 
-            // 3. Success
-            const finalUser = { ...userData, role: 'seller', shop: shopData._id };
-            onLoginSuccess(finalUser);
+                const verifyData = await verifyRes.json();
+                if (!verifyRes.ok) throw new Error(verifyData.message || "Invalid OTP");
+
+                // 2. Create Shop (Now that we are verified and logged in via cookie)
+                const shopRes = await fetch(`${API_URL}/api/shops`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', 
+                    body: JSON.stringify({
+                        name: formData.shopName,
+                        description: formData.description,
+                        phone: formData.phone, // Use same phone or ask for different one
+                        categories: [formData.category]
+                    })
+                });
+
+                const shopData = await shopRes.json();
+                if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
+
+                // 3. Success - Combine Data
+                const finalUser = { ...verifyData, shop: shopData._id };
+                onLoginSuccess(finalUser);
+            }
         }
 
     } catch (err) {
@@ -178,9 +206,8 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     <div className="min-h-screen bg-slate-50 flex font-sans overflow-hidden">
       <style>{styleInjection}</style>
       
-      {/* --- LEFT SIDE: VALUE PROP (Animated Background) --- */}
+      {/* --- LEFT SIDE: VALUE PROP --- */}
       <div className="hidden lg:flex w-1/2 bg-[#020617] relative flex-col justify-between p-16 text-white overflow-hidden">
-         {/* Animated Blobs */}
          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/30 rounded-full blur-[100px] animate-blob"></div>
          <div className="absolute top-[40%] right-[-10%] w-[400px] h-[400px] bg-purple-600/30 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
          <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[100px] animate-blob animation-delay-4000"></div>
@@ -196,6 +223,8 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                    {isLoginView ? (
                        <>Welcome back,<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Partner.</span></>
                    ) : (
+                       step === 3 ? 
+                       <>Verify your<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Identity.</span></> :
                        <>Build your<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Empire</span> here.</>
                    )}
                 </h1>
@@ -209,7 +238,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             </div>
          </div>
 
-         {/* Testimonial Card */}
          <div className="relative z-10 glass-panel p-6 rounded-2xl max-w-md mt-auto">
             <div className="flex gap-1 text-amber-400 mb-3">
                {[1,2,3,4,5].map(i => <Sparkles key={i} className="w-4 h-4 fill-current"/>)}
@@ -227,7 +255,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
       {/* --- RIGHT SIDE: FORM --- */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white/50 relative">
-         {/* Mobile Background Decoration */}
          <div className="lg:hidden absolute top-0 right-0 w-64 h-64 bg-indigo-100 rounded-full blur-3xl -z-10 opacity-50"></div>
          
          <div className="w-full max-w-lg bg-white p-8 md:p-10 rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 transition-all duration-300">
@@ -239,11 +266,11 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                </h2>
                <div className="flex items-center justify-between">
                    <p className="text-slate-500 text-sm">
-                       {isLoginView ? 'Access your seller dashboard' : 'Create your business account'}
+                       {isLoginView ? 'Access your seller dashboard' : (step === 3 ? 'We sent a code to your WhatsApp' : 'Create your business account')}
                    </p>
                    {!isLoginView && (
                        <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100">
-                           Step {step} of 2
+                           Step {step} of 3
                        </span>
                    )}
                </div>
@@ -251,7 +278,10 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                {/* Progress Bar */}
                {!isLoginView && (
                    <div className="w-full h-1.5 bg-slate-100 mt-5 rounded-full overflow-hidden">
-                      <div className={`h-full bg-indigo-600 transition-all duration-500 ease-out ${step === 1 ? 'w-1/2' : 'w-full'}`}></div>
+                      <div 
+                        className="h-full bg-indigo-600 transition-all duration-500 ease-out"
+                        style={{ width: `${(step / 3) * 100}%` }}
+                      ></div>
                    </div>
                )}
             </div>
@@ -296,6 +326,10 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 <InputGroup icon={Mail} type="email" name="email" value={formData.email} onChange={handleChange} placeholder="business@example.com" required />
                              </div>
                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">WhatsApp Number</label>
+                                <InputGroup icon={Phone} type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="9876543210" required />
+                             </div>
+                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Password</label>
                                 <InputGroup icon={Lock} type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" required />
                              </div>
@@ -305,7 +339,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                    type="button" 
                                    className="w-full" 
                                    onClick={() => {
-                                      if(formData.name && formData.email && formData.password) setStep(2);
+                                      if(formData.name && formData.email && formData.password && formData.phone) setStep(2);
                                       else setError("Please fill all fields to continue.");
                                    }}
                                 >
@@ -321,11 +355,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                              <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Shop Name</label>
                                 <InputGroup icon={Store} type="text" name="shopName" value={formData.shopName} onChange={handleChange} placeholder="e.g. Urban Threads" required autoFocus />
-                             </div>
-
-                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">Contact Phone</label>
-                                <InputGroup icon={Phone} type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="9876543210" required />
                              </div>
                              
                              <div>
@@ -354,13 +383,32 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                              <div className="bg-indigo-50 p-4 rounded-xl flex gap-3 items-start border border-indigo-100">
                                 <CheckCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                                 <p className="text-xs text-indigo-800 leading-relaxed font-medium">
-                                   By clicking "Launch Store", you agree to our Seller Terms. You'll get instant access to your dashboard.
+                                   We will verify your number via WhatsApp in the next step.
                                 </p>
                              </div>
 
                              <div className="flex gap-3 pt-2">
                                 <Button type="button" variant="ghost" onClick={() => setStep(1)} className="px-2"><ArrowLeft className="w-5 h-5"/></Button>
-                                <Button type="submit" loading={loading} className="flex-1">Launch Store</Button>
+                                <Button type="submit" loading={loading} className="flex-1">Verify & Launch</Button>
+                             </div>
+                          </div>
+                       )}
+
+                       {/* STEP 3: OTP VERIFICATION */}
+                       {step === 3 && (
+                          <div className="space-y-5 animate-in fade-in slide-in-from-right-8 duration-300">
+                             <div className="p-4 bg-green-50 border border-green-100 rounded-xl mb-4">
+                                <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+                                    <Phone className="w-4 h-4" /> OTP sent to {formData.phone}
+                                </p>
+                             </div>
+                             <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">WhatsApp OTP</label>
+                                <InputGroup icon={KeyRound} type="text" name="otp" value={formData.otp} onChange={handleChange} placeholder="123456" required autoFocus maxLength={6} />
+                             </div>
+
+                             <div className="flex gap-3 pt-2">
+                                <Button type="submit" loading={loading} className="w-full">Confirm & Login</Button>
                              </div>
                           </div>
                        )}

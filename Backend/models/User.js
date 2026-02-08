@@ -1,37 +1,58 @@
+// models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
+    
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    
+    phone: { 
+        type: String, 
+        required: [true, 'Phone number is required'], 
+        unique: true,
+        trim: true 
+    },
+
     password: { type: String, required: true, select: false },
+
     role: { 
         type: String, 
         enum: ['customer', 'seller', 'founder', 'admin'], 
         default: 'customer' 
     },
+    
     avatar: { type: String, default: 'U' },
-    
-    // --- CHANGE: Removed 'shop' field ---
-    // Reason: We will query Shop collection directly to support Multi-Store future proofing.
-    
+
+    // OTP fields for WhatsApp verification
+    otp: { type: String, select: false },
+    otpExpire: Date,
+    isPhoneVerified: { type: Boolean, default: false },
+
     address: [{
         street: String, city: String, state: String, zipCode: String, country: String,
         isDefault: { type: Boolean, default: false }
     }],
-    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationToken: String,
+    
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    
     lastLogin: Date,
     isActive: { type: Boolean, default: true }
+
 }, { timestamps: true });
 
+// --- FIX: Removed 'next' parameter ---
+// Async functions me 'next' ki zaroorat nahi hoti
 userSchema.pre('save', async function() {
     if (!this.isModified('password')) return;
+    
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });

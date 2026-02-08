@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     registerUser,
+    verifyUserOtp, // <--- NEW: Isko import kiya
     authUser,
     logoutUser, 
     getUserProfile,
@@ -14,17 +15,16 @@ const {
     updateGlobalQR,
     getCategoryImages,   
     updateCategoryImage, 
-    // --- Offer Banner Functions (New) ---
-    getOfferBanners,     // <--- Added This
-    updateOfferBanners,  // <--- Added This
-    // --- Wishlist Functions ---
+    getOfferBanners,    
+    updateOfferBanners,  
     getWishlist,
     addToWishlist,
     removeFromWishlist
 } = require('../controllers/userController');
 const { protect, founder } = require('../middleware/authMiddleware');
 
-// Public Routes
+// --- AUTH ROUTES ---
+router.post('/verify-otp', verifyUserOtp); // <--- NEW: Verification Route yahan add kiya
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
 
@@ -38,11 +38,11 @@ router.post('/qr', protect, founder, updateGlobalQR); // Founder Only
 router.get('/categories', getCategoryImages); // Public
 router.put('/categories', protect, founder, updateCategoryImage); // Founder Only
 
-// 3. Offer Banners (Yeh Naya Hai)
-router.get('/banners', getOfferBanners); // Public: Homepage needs to fetch banners
-router.put('/banners', protect, founder, updateOfferBanners); // Founder Only: Update/Hide banners
+// 3. Offer Banners
+router.get('/banners', getOfferBanners); // Public
+router.put('/banners', protect, founder, updateOfferBanners); // Founder Only
 
-// Protected (Profile)
+// --- USER PROFILE ---
 router.route('/profile')
     .get(protect, getUserProfile)
     .put(protect, updateUserProfile);
@@ -55,13 +55,12 @@ router.route('/wishlist')
 router.route('/wishlist/:id')
     .delete(protect, removeFromWishlist); // Remove item
 
-// Founder/Admin Routes + Register
+// --- ADMIN / FOUNDER ROUTES + REGISTER ---
 router.route('/')
-    .post(registerUser) // Register is public
+    .post(registerUser) // Register is public (Sends OTP)
     .get(protect, founder, getUsers); // List users (Founder only)
 
 // IMPORTANT: Keep this route at the bottom to avoid conflicts
-// Agar '/banners' ya '/categories' iske neeche hota, toh code samajhta ki woh ek ID hai.
 router.route('/:id')
     .get(protect, founder, getUserById)
     .put(protect, founder, updateUser)

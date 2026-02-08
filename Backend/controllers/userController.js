@@ -1,66 +1,151 @@
 const User = require('../models/User');
-// --- IMPORT: GLOBAL SETTINGS ---
 const GlobalSettings = require('../models/GlobalSettings'); 
-// -----------------------------------
 const generateToken = require('../utils/generateToken'); 
+const axios = require('axios'); // WhatsApp API ke liye zaroori hai
 
-// @desc    Register a new user
+// --- HELPER: Send WhatsApp OTP ---
+const sendWhatsAppOtp = async (phone, otp) => {
+    try {
+        const instanceId = process.env.WHATSAPP_INSTANCE_ID || 'instance161263';
+        const token = process.env.WHATSAPP_TOKEN || 'llnm6k6wusbr8z5q';
+        
+      const message = `Welcome to *Giftomize* – Where Gifting Meets Personalization! 🎁\n\nThank you for choosing us. To complete your registration and secure your account, please use the following One-Time Password (OTP):\n\n👉 *${otp}*\n\n⏳ This code is valid for the next 10 minutes.\n\n⚠️ *Security Alert:* For your safety, please do not share this code with anyone, including Giftomize support staff.\n\nWe are excited to have you on board!\n\nBest Regards,\n*Team Giftomize*`;
+        // UltraMsg API Call
+        await axios.post(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+            token: token,
+            to: phone, 
+            body: message
+        });
+        return true;
+    } catch (error) {
+        console.error("WhatsApp Send Error:", error.message);
+        return false;
+    }
+};
+
+// @desc    Register a new user & Send WhatsApp OTP
 // @route   POST /api/users
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, phone, role } = req.body;
 
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Please add all fields' });
+        // 1. Basic Validation
+        if (!name || !email || !password || !phone) {
+            return res.status(400).json({ message: 'Please add all fields including Phone Number' });
         }
 
-        const userExists = await User.findOne({ email });
+        // 2. Check if User Exists (Email or Phone)
+        const userExists = await User.findOne({ 
+            $or: [{ email: email }, { phone: phone }] 
+        });
+
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'User with this Email or Phone already exists' });
         }
 
-        // --- AUTOMATIC FOUNDER ASSIGNMENT ---
-        let role = 'customer';
+        // 3. Generate 6 Digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpire = Date.now() + 10 * 60 * 1000; // 10 Minutes expiry
+
+        // 4. Role Assignment
+        let userRole = 'customer';
         if (email.toLowerCase() === 'admin@gmail.com') {
-            role = 'founder';
-        } else if (req.body.role === 'seller') {
-            role = 'seller';
+            userRole = 'founder';
+        } else if (role === 'seller') {
+            userRole = 'seller';
         }
 
+        // 5. Create User (Not Verified Yet)
         const user = await User.create({
             name,
             email,
+            phone,
             password,
-            role,
-            avatar: name.charAt(0).toUpperCase()
+            role: userRole,
+            avatar: name.charAt(0).toUpperCase(),
+            otp: otp,
+            otpExpire: otpExpire,
+            isPhoneVerified: false 
         });
 
         if (user) {
-            generateToken(res, user._id);
+            // 6. Send OTP via WhatsApp
+            const isSent = await sendWhatsAppOtp(phone, otp);
 
-            if (req.io) {
-                req.io.emit('new_user_registered', {
-                    _id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    createdAt: user.createdAt
+            if (isSent) {
+                res.status(201).json({
+                    message: `OTP sent successfully to ${phone}. Please verify to login.`,
+                    phone: phone, // Frontend ko phone bhejo taki wo verify screen pe dikha sake
+                    userId: user._id
                 });
+            } else {
+                // Agar WhatsApp fail ho jaye, toh hume user ko delete karna chahiye ya error dikhana chahiye
+                // Filhal error dikhate hain
+                res.status(500).json({ message: "User created but failed to send WhatsApp OTP. Please try logging in." });
             }
-
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                avatar: user.avatar,
-            });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
         }
     } catch (error) {
         console.error("Register Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Verify OTP & Login User
+// @route   POST /api/users/verify-otp
+// @access  Public
+const verifyUserOtp = async (req, res) => {
+    try {
+        const { phone, otp } = req.body;
+
+        // Find user by phone and include 'otp' field (kyunki model me select: false hai)
+        const user = await User.findOne({ phone }).select('+otp');
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check Logic
+        if (user.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        if (user.otpExpire < Date.now()) {
+            return res.status(400).json({ message: "OTP Expired. Please try to login again to resend." });
+        }
+
+        // Success: Verify User & Clear OTP
+        user.isPhoneVerified = true;
+        user.otp = undefined;
+        user.otpExpire = undefined;
+        await user.save();
+
+        // Generate Token (Login karwa do)
+        generateToken(res, user._id);
+
+        // Socket Notification (Optional)
+        if (req.io) {
+            req.io.emit('new_user_registered', {
+                _id: user._id,
+                name: user.name,
+                role: user.role
+            });
+        }
+
+        res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            avatar: user.avatar,
+            message: "Verification Successful!"
+        });
+
+    } catch (error) {
+        console.error("Verify Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -76,6 +161,14 @@ const authUser = async (req, res) => {
 
         if (user && (await user.matchPassword(password))) {
             
+            // --- CHECK: Is Verified? ---
+            // Agar aap chahte hain bina verification ke login na ho, toh ye uncomment karein:
+            /*
+            if (!user.isPhoneVerified) {
+                return res.status(401).json({ message: 'Please verify your phone number first.' });
+            }
+            */
+
             // --- GOD MODE FIX ---
             if (user.email === 'admin@gmail.com' && user.role !== 'founder') {
                 user.role = 'founder';
@@ -98,7 +191,8 @@ const authUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
-                address: user.address
+                address: user.address,
+                phone: user.phone // Added phone to response
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
@@ -131,6 +225,7 @@ const getUserProfile = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                phone: user.phone,
                 role: user.role,
                 avatar: user.avatar,
                 address: user.address
@@ -153,6 +248,7 @@ const updateUserProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
+            user.phone = req.body.phone || user.phone; // Allow phone update
             
             if (req.body.password) {
                 user.password = req.body.password;
@@ -167,6 +263,7 @@ const updateUserProfile = async (req, res) => {
                 _id: updatedUser._id,
                 name: updatedUser.name,
                 email: updatedUser.email,
+                phone: updatedUser.phone,
                 role: updatedUser.role,
                 avatar: updatedUser.avatar,
             });
@@ -311,19 +408,15 @@ const updateCategoryImage = async (req, res) => {
     }
 };
 
-// 5. Get Offer Banners (Public) -> UPDATED LOGIC
+// 5. Get Offer Banners (Public)
 const getOfferBanners = async (req, res) => {
     try {
         const settings = await GlobalSettings.findOne();
         
-        // Scenario 1: No settings yet (Fresh App)
-        // Return null so frontend can show Default Fallback
         if (!settings || !settings.offerCarousel) {
             return res.json(null); 
         }
 
-        // Scenario 2: Settings exist (Can be Visible or Hidden)
-        // Return object so frontend knows if it is explicitly hidden
         res.json({
             isVisible: settings.offerCarousel.isVisible,
             slides: settings.offerCarousel.slides.filter(slide => slide.isActive)
@@ -338,7 +431,6 @@ const getOfferBanners = async (req, res) => {
 // 6. Update Offer Banners (Founder)
 const updateOfferBanners = async (req, res) => {
     try {
-        // Body should contain { isVisible, slides }
         const { isVisible, slides } = req.body;
 
         const updatedSettings = await GlobalSettings.findOneAndUpdate(
@@ -405,6 +497,7 @@ const removeFromWishlist = async (req, res) => {
 
 module.exports = {
     registerUser,
+    verifyUserOtp, // Add this to exports
     authUser,
     logoutUser,
     getUserProfile,
