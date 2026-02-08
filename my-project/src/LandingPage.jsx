@@ -1,592 +1,394 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowRight, ShoppingBag, Store, ShieldCheck, Zap, Globe, 
-  Menu, X, ChevronRight, Lock, TrendingUp, Activity, Heart, Gift, Timer, Box, Check
+  ArrowRight, Menu, X, 
+  TrendingUp, Zap, Globe,
+  ArrowUpRight, Cpu, 
+  Layers, ShieldCheck
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
-/* STYLES & ANIMATIONS (CSS-IN-JS)                                            */
+/* ULTRA-MODERN CSS (Mobile & Desktop Optimized)                              */
 /* -------------------------------------------------------------------------- */
 const styleInjection = `
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --grid-color: rgba(255, 255, 255, 0.05);
+  }
+
   html, body {
-    background-color: #020617 !important;
-    margin: 0; padding: 0; overflow-x: hidden; width: 100%;
-    scroll-behavior: smooth;
-  }
-  
-  /* Animations */
-  @keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
-  }
-  @keyframes grid-move {
-    0% { background-position: 0 0; }
-    100% { background-position: 40px 40px; }
-  }
-  @keyframes scroll-left {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  @keyframes float-hearts {
-    0% { transform: translateY(100vh) scale(0); opacity: 0; }
-    50% { opacity: 0.8; }
-    100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
-  }
-  @keyframes pulse-red {
-    0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
-    70% { box-shadow: 0 0 0 20px rgba(225, 29, 72, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+    background-color: #050505 !important;
+    font-family: 'Space Grotesk', sans-serif;
+    color: #e5e5e5;
+    overflow-x: hidden; /* Critical for mobile to prevent side-scroll */
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Utilities */
-  .animate-blob { animation: blob 10s infinite; }
-  .animate-grid { animation: grid-move 3s linear infinite; }
-  .animate-scroll-left { animation: scroll-left 30s linear infinite; }
-  .animate-float { animation: float 6s ease-in-out infinite; }
-  .animate-heart { animation: float-hearts 4s linear infinite; }
-  .animate-pulse-red { animation: pulse-red 2s infinite; }
-  
-  .animation-delay-2000 { animation-delay: 2s; }
-  .animation-delay-4000 { animation-delay: 4s; }
-  
-  /* Glass Effects */
-  .glass-card {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
+  /* --- DYNAMIC BACKGROUND GRID --- */
+  .tech-grid {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: 
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px; /* Slightly smaller grid for mobile density */
+    z-index: -1;
+    mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  }
+
+  /* --- GLOW EFFECTS --- */
+  .glow-point {
+    position: absolute;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(60px);
+  }
+
+  /* --- GLASS PANELS --- */
+  .glass-panel {
+    background: rgba(10, 10, 10, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari Mobile Support */
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Text Gradients */
-  .text-gradient {
-    background: linear-gradient(135deg, #FFF 0%, #94a3b8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .text-gradient-primary {
-    background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .text-gradient-love {
-    background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  
-  /* Backgrounds */
-  .cyber-grid {
-    background-size: 40px 40px;
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 
-  /* Reveal on Scroll */
-  .reveal {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+  /* --- TYPOGRAPHY SCALING --- */
+  /* This clamp ensures text is massive on desktop but fits on mobile */
+  .massive-text {
+    font-size: clamp(2.5rem, 10vw, 9rem); 
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    font-weight: 700;
   }
-  .reveal.active {
-    opacity: 1;
-    transform: translateY(0);
+
+  .stroked-text {
+    -webkit-text-stroke: 1px rgba(255,255,255,0.3);
+    color: transparent;
+    transition: all 0.5s ease;
+  }
+  
+  /* Mobile touch interaction: Fill text on touch/hover */
+  .stroked-text:hover, .stroked-text:active {
+    color: white;
+    -webkit-text-stroke: 0px;
+  }
+
+  /* --- ANIMATIONS --- */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee { animation: marquee 20s linear infinite; }
+
+  /* Mobile Menu Animation */
+  .mobile-menu-enter {
+    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Hide scrollbar for horizontal scrolling stats */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 `;
 
-const useScrollReveal = () => {
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-};
-
 /* -------------------------------------------------------------------------- */
-/* HELPER COMPONENTS                                                          */
+/* REUSABLE COMPONENTS                                                        */
 /* -------------------------------------------------------------------------- */
 
-const TiltCard = ({ children, className }) => {
-  const [rotate, setRotate] = useState({ x: 0, y: 0 });
+const StatBadge = ({ label, value }) => (
+  <div className="flex flex-col border-l border-white/10 pl-4 py-1 min-w-[120px] shrink-0">
+    <span className="text-[10px] text-zinc-500 uppercase tracking-widest">{label}</span>
+    <span className="text-lg font-mono font-medium text-white">{value}</span>
+  </div>
+);
 
-  const onMouseMove = (e) => {
-    const card = e.currentTarget;
-    const box = card.getBoundingClientRect();
-    const x = e.clientX - box.left;
-    const y = e.clientY - box.top;
-    const centerX = box.width / 2;
-    const centerY = box.height / 2;
-    const rotateX = (y - centerY) / 25;
-    const rotateY = (centerX - x) / 25;
-    setRotate({ x: rotateX, y: rotateY });
-  };
-
-  const onMouseLeave = () => {
-    setRotate({ x: 0, y: 0 });
-  };
-
-  return (
-    <div
-      className={`transition-transform duration-300 ease-out will-change-transform ${className}`}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      style={{ transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) scale3d(1, 1, 1)` }}
-    >
-      {children}
+const BentoBox = ({ children, className = "", title }) => (
+  <div className={`glass-panel p-6 relative group overflow-hidden transition-all duration-500 active:scale-[0.98] ${className}`}>
+    <div className="absolute top-0 right-0 p-4 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
+      <ArrowUpRight size={16} />
     </div>
-  );
-};
-
-const Button = ({ children, variant = 'primary', className = '', icon: Icon, onClick }) => {
-  const baseStyle = "group relative inline-flex items-center justify-center gap-2 px-8 py-4 font-semibold text-sm transition-all duration-300 rounded-full active:scale-95 overflow-hidden";
-  
-  const variants = {
-    primary: "bg-white text-slate-950 hover:bg-indigo-50 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.4)]",
-    glow: "bg-indigo-600 text-white shadow-[0_0_30px_-5px_rgba(79,70,229,0.4)] hover:bg-indigo-500 hover:shadow-[0_0_50px_-10px_rgba(79,70,229,0.6)]",
-    love: "bg-rose-600 text-white shadow-[0_0_30px_-5px_rgba(225,29,72,0.6)] hover:bg-rose-500 hover:shadow-[0_0_50px_-10px_rgba(225,29,72,0.8)]",
-    outline: "bg-transparent text-white border border-slate-700 hover:border-indigo-500/50 hover:bg-indigo-500/10",
-    ghost: "text-slate-400 hover:text-white hover:bg-white/5"
-  };
-
-  return (
-    <button onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
-      {(variant === 'glow' || variant === 'love') && (
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-      )}
-      {Icon && <Icon className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
-      <span className="relative z-10">{children}</span>
-    </button>
-  );
-};
-
-// --- MOCK LIVE ACTIVITY ONLY (No Sockets) ---
-const LiveActivity = () => {
-  const [visible, setVisible] = useState(false);
-  const [data, setData] = useState({ name: '', action: '', time: '' });
-
-  const mockActivities = [
-    { name: 'Rahul from Delhi', action: 'started a new store', time: '2s ago' },
-    { name: 'Sarah from Mumbai', action: 'sold a Custom Hoodie', time: '12s ago' },
-    { name: 'Amit from Bangalore', action: 'earned ₹12,000', time: '1m ago' },
-    { name: 'Priya from Pune', action: 'created a new design', time: '5s ago' },
-    { name: 'Vikram from Jaipur', action: 'joined Giftomize', time: 'Just now' },
-  ];
-
-  useEffect(() => {
-    const loop = setInterval(() => {
-      // 30% chance to show mock data every 10 seconds for a "live" feel
-      if (Math.random() > 0.7) {
-        const randomActivity = mockActivities[Math.floor(Math.random() * mockActivities.length)];
-        setData(randomActivity);
-        setVisible(true);
-        setTimeout(() => setVisible(false), 4000);
-      }
-    }, 10000);
-
-    return () => clearInterval(loop);
-  }, []);
-
-  return (
-    <div className={`fixed bottom-8 right-8 z-40 transition-all duration-500 transform ${visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-      <div className="glass-card p-4 rounded-xl flex items-center gap-4 max-w-sm border-l-4 border-l-green-500 shadow-2xl">
-        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-          <Activity className="w-5 h-5 text-green-400" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white">{data.name}</p>
-          <p className="text-xs text-slate-400">{data.action} • {data.time}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Navbar = ({ onLoginClick }) => {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <nav 
-        className={`fixed top-0 w-full z-[999] transition-all duration-300 ${scrolled ? 'py-3 shadow-2xl border-b border-slate-800' : 'py-6 border-b border-transparent'}`}
-        style={{ 
-            backgroundColor: scrolled ? 'rgba(2, 6, 23, 0.85)' : 'transparent',
-            backdropFilter: scrolled ? 'blur(12px)' : 'none',
-            WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none'
-        }}
-    >
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}>
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
-            <Box className="text-white w-6 h-6" />
-          </div>
-          <span className="text-2xl font-bold text-white tracking-tight">Giftomize<span className="text-indigo-500">.</span></span>
-        </div>
-
-        <div className={`hidden md:flex items-center gap-1 p-1 rounded-full transition-all ${scrolled ? 'bg-white/5 border border-white/5' : 'bg-transparent border border-transparent'}`}>
-          {['Marketplace', 'Features', 'Offers'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`} className="px-5 py-2 rounded-full text-sm font-medium text-slate-400 hover:text-white hover:bg-white/10 transition-all">
-              {item}
-            </a>
-          ))}
-        </div>
-
-        <div className="hidden md:flex items-center gap-4">
-          <button onClick={() => onLoginClick('customer')} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-            Sign In
-          </button>
-          <Button variant="primary" size="sm" className="px-6 py-2.5 text-xs h-10" onClick={() => onLoginClick('seller')}>
-            Start Free
-          </Button>
-        </div>
-
-        <button className="md:hidden text-white p-2 rounded-lg hover:bg-white/10" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      {mobileMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 p-6 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-5 shadow-2xl">
-           <Button variant="outline" className="w-full justify-center" onClick={() => { onLoginClick('customer'); setMobileMenuOpen(false); }}>Customer Login</Button>
-           <Button variant="glow" className="w-full justify-center" onClick={() => { onLoginClick('seller'); setMobileMenuOpen(false); }}>Become a Seller</Button>
-        </div>
-      )}
-    </nav>
-  );
-};
+    {title && <h4 className="text-xs font-mono text-zinc-500 mb-4 uppercase tracking-wider">[{title}]</h4>}
+    {children}
+  </div>
+);
 
 /* -------------------------------------------------------------------------- */
-/* MAIN LANDING PAGE COMPONENT                                                */
+/* MAIN LANDING PAGE                                                          */
 /* -------------------------------------------------------------------------- */
 
 const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
-  useScrollReveal();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileMenuOpen]);
 
   return (
-    <div className="bg-slate-950 min-h-screen text-slate-200 selection:bg-indigo-500/30 font-sans overflow-x-hidden" style={{ backgroundColor: '#020617' }}>
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black">
       <style>{styleInjection}</style>
-      <Navbar onLoginClick={onLoginClick} />
-      <LiveActivity />
+      
+      {/* Background Elements */}
+      <div className="tech-grid" />
+      <div className="glow-point top-0 left-[-100px]" />
+      <div className="glow-point bottom-0 right-[-100px]" />
 
-      {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="absolute inset-0 cyber-grid animate-grid opacity-30"></div>
-          <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] animate-blob mix-blend-screen"></div>
-          <div className="absolute top-[20%] right-[20%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-blob animation-delay-2000 mix-blend-screen"></div>
-          <div className="absolute bottom-[-10%] left-[30%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] animate-blob animation-delay-4000 mix-blend-screen"></div>
+      {/* --- SIDEBAR NAVIGATION (Desktop Only) --- */}
+      <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r border-white/10 bg-black/50 backdrop-blur-md z-50 py-8 items-center">
+        <div className="w-10 h-10 bg-white text-black flex items-center justify-center font-bold text-xl rounded-sm">G</div>
+        <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
+          <a href="#work" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Work</a>
+          <a href="#about" className="text-xs font-mono text-zinc-500 hover:text-white transition-colors tracking-widest uppercase">Agency</a>
         </div>
+        <Menu className="text-zinc-500 hover:text-white cursor-pointer" size={20} />
+      </nav>
 
-        <div className="container max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col items-center text-center">
-            <div className="animate-float inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-10 cursor-pointer hover:bg-indigo-500/20 transition-colors">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
-              V2.0 is live: Now with AI Design Studio
-              <ChevronRight className="w-3 h-3" />
-            </div>
-
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.1] reveal active">
-              <span className="text-gradient block pb-3">Design. Sell.</span>
-              <span className="text-gradient-primary block">Dominate.</span>
-            </h1>
-
-            <p className="max-w-2xl text-lg md:text-xl text-slate-400 mb-10 leading-relaxed reveal active delay-100">
-              Giftomize is the enterprise-grade infrastructure for modern creators. 
-              Launch your custom brand in minutes, not months. Zero inventory, infinite scale.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto reveal active delay-200">
-              <Button variant="glow" icon={ShoppingBag} onClick={() => navigate('/shop')}>
-                Explore Marketplace
-              </Button>
-              <Button variant="outline" icon={Store} onClick={() => onLoginClick('seller')}>
-                Launch Your Brand
-              </Button>
-            </div>
-
-            <div className="mt-24 relative w-full max-w-5xl mx-auto px-6 reveal">
-               <TiltCard className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-indigo-500/10 bg-slate-900/80 backdrop-blur-xl relative group">
-                  <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
-                  <div className="h-10 border-b border-white/5 flex items-center px-4 gap-2 bg-slate-900/90 z-20 relative">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
-                    </div>
-                  </div>
-                  <div className="aspect-[16/9] bg-slate-950 relative overflow-hidden group">
-                      <img 
-                        src="/dashboard.png" 
-                        alt="Dashboard Preview" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none"></div>
-                      <div className="hidden md:block absolute bottom-8 left-8 z-10 p-4 glass-card rounded-xl animate-float border-l-4 border-l-green-500 shadow-2xl">
-                          <p className="text-xs text-slate-400 mb-1 font-medium tracking-wide">Total Revenue</p>
-                          <p className="text-2xl font-bold text-white tracking-tight">₹14,20,590</p>
-                          <div className="flex items-center gap-1 text-green-400 text-xs mt-1 font-bold">
-                            <TrendingUp className="w-3 h-3" /> +24% this week
-                          </div>
-                      </div>
-                  </div>
-               </TiltCard>
-               <div className="absolute -inset-4 bg-indigo-500/20 blur-3xl -z-10 rounded-[3rem]"></div>
-            </div>
-          </div>
+      {/* --- MOBILE HEADER (Sticky Top) --- */}
+      <div className="md:hidden fixed top-0 w-full z-50 flex justify-between items-center p-5 bg-black/80 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white text-black flex items-center justify-center font-bold text-lg rounded-sm">G</div>
+          <span className="font-bold tracking-tight">GIFTOMIZE</span>
         </div>
-      </section>
-
-      {/* --- MARQUEE SECTION --- */}
-      <div className="py-12 border-y border-white/5 bg-slate-950/50 overflow-hidden">
-        <div className="flex animate-scroll-left w-[200%] gap-16 items-center">
-             {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex gap-16 shrink-0">
-                  {['Google', 'Spotify', 'Amazon', 'Stripe', 'Nike', 'Adobe', 'Shopify', 'Webflow'].map((brand) => (
-                    <span key={brand} className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-slate-400 to-slate-700 uppercase tracking-widest hover:to-white transition-all cursor-default">
-                      {brand}
-                    </span>
-                  ))}
-                </div>
-             ))}
-        </div>
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 active:bg-white/10 rounded-full transition-colors"
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
-      {/* --- VALENTINE'S DAY SECTION --- */}
-      <section className="py-24 relative overflow-hidden" id="offers">
-         <div className="absolute inset-0 bg-gradient-to-b from-rose-950/20 to-slate-950"></div>
-         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-            {[...Array(12)].map((_, i) => (
-               <Heart 
-                 key={i} 
-                 className="absolute text-rose-500/20 w-8 h-8 animate-heart" 
-                 style={{ 
-                   left: `${Math.random() * 100}%`, 
-                   animationDelay: `${Math.random() * 5}s`,
-                   fontSize: `${Math.random() * 20 + 20}px`
-                 }} 
-               />
-            ))}
-         </div>
-
-         <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="glass-card rounded-[3rem] border-rose-500/30 overflow-hidden relative shadow-[0_0_100px_-20px_rgba(225,29,72,0.3)]">
-               <div className="grid grid-cols-1 lg:grid-cols-2">
-                 <div className="p-10 md:p-16 flex flex-col justify-center">
-                     <div className="inline-flex items-center gap-2 text-rose-400 font-bold tracking-widest uppercase text-xs mb-4">
-                        <Gift className="w-4 h-4" /> Valentine's Exclusive
-                     </div>
-                     <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
-                        Share the <br/>
-                        <span className="text-gradient-love">Love & Merch.</span>
-                     </h2>
-                     <p className="text-lg text-rose-200/70 mb-8 max-w-md">
-                        Get the limited edition <strong>Couple's Creator Pack</strong>. 
-                        Design matching hoodies, tees, and mugs for you and your partner.
-                     </p>
-                     
-                     <div className="flex items-center gap-4 mb-10 bg-rose-900/20 p-4 rounded-2xl w-fit border border-rose-500/20">
-                        <div className="text-center px-4 border-r border-rose-500/20">
-                           <span className="block text-3xl font-bold text-white">50%</span>
-                           <span className="text-xs text-rose-300">OFF</span>
-                        </div>
-                        <div className="flex flex-col">
-                           <span className="text-sm font-bold text-white">Using Code: LOVE2026</span>
-                           <span className="text-xs text-rose-400 flex items-center gap-1 mt-1">
-                              <Timer className="w-3 h-3" /> Valid 1st - 14th Feb
-                           </span>
-                        </div>
-                     </div>
-
-                     <div className="flex gap-4">
-                        <Button variant="love" icon={Heart} className="animate-pulse-red" onClick={() => navigate('/shop')}>
-                           Claim Offer
-                        </Button>
-                        <Button variant="ghost" onClick={() => navigate('/shop')}>
-                           View Collection
-                        </Button>
-                     </div>
-                 </div>
-
-                 <div className="relative h-[400px] lg:h-auto bg-gradient-to-br from-rose-600/20 to-purple-900/20 flex items-center justify-center p-10 overflow-hidden">
-                     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay"></div>
-                     <div className="relative w-full max-w-md aspect-square">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-rose-500 rounded-full blur-[80px] opacity-40 animate-pulse"></div>
-                        <div className="absolute top-10 left-0 w-48 glass-card p-3 rounded-2xl rotate-[-12deg] animate-float">
-                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden border border-slate-700">
-                              <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">His Hoodie</div>
-                           </div>
-                           <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
-                        </div>
-                        <div className="absolute bottom-10 right-0 w-48 glass-card p-3 rounded-2xl rotate-[12deg] animate-float animation-delay-2000">
-                           <div className="w-full aspect-[4/5] bg-slate-800 rounded-xl mb-3 overflow-hidden border border-slate-700">
-                              <div className="w-full h-full bg-slate-700 flex items-center justify-center text-slate-500 text-xs">Her Hoodie</div>
-                           </div>
-                           <div className="h-2 w-2/3 bg-slate-700 rounded-full"></div>
-                        </div>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-xl animate-bounce">
-                           <Heart className="w-8 h-8 text-rose-500 fill-current" />
-                        </div>
-                     </div>
-                 </div>
-               </div>
-            </div>
-         </div>
-      </section>
-
-      {/* --- FEATURES SECTION --- */}
-      <section className="py-32 bg-slate-950 relative" id="features">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-20 reveal">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Everything you need to <br/><span className="text-indigo-500">scale globally.</span></h2>
-            <p className="text-slate-400 max-w-xl text-lg">We've built the infrastructure so you can focus on creativity. From payments to logistics, we handle the complex bits.</p>
+      {/* --- FULL SCREEN MOBILE MENU OVERLAY --- */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-black pt-24 px-6 mobile-menu-enter md:hidden flex flex-col">
+          <div className="flex flex-col gap-6 text-3xl font-bold">
+            <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Platform</a>
+            <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Solutions</a>
+            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Pricing</a>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-6 h-auto md:h-[650px]">
-              <div className="col-span-1 md:col-span-2 row-span-2 glass-card rounded-3xl p-10 relative overflow-hidden group reveal">
-                <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-30 transition-opacity duration-500">
-                   <Globe className="w-64 h-64 text-indigo-500" />
-                </div>
-                <div className="relative z-10 h-full flex flex-col justify-between">
-                   <div>
-                     <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mb-6">
-                        <Globe className="w-7 h-7 text-indigo-400" />
-                     </div>
-                     <h3 className="text-3xl font-bold text-white mb-3">Global Logistics Network</h3>
-                     <p className="text-slate-400 max-w-md leading-relaxed">Our automated shipping partners deliver to 25,000+ pincodes. Real-time tracking, automated labels, and COD support built-in.</p>
-                   </div>
-                   
-                   <div className="mt-8 p-5 rounded-2xl bg-slate-900/80 border border-white/10 backdrop-blur-md max-w-sm hover:border-indigo-500/50 transition-colors cursor-crosshair">
-                      <div className="flex items-center gap-3 mb-4">
-                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                         <span className="text-xs text-slate-300 font-mono tracking-wide">LIVE SHIPMENTS</span>
-                      </div>
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((_, k) => (
-                          <div key={k} className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500">Order #882{k}</span>
-                            <span className="text-indigo-400">In Transit</span>
-                          </div>
-                        ))}
-                      </div>
-                   </div>
-                </div>
-              </div>
-
-              <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-100">
-                <ShieldCheck className="w-12 h-12 text-emerald-400 mb-6 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-white mb-2">Escrow Payments</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">Funds are released only after customer satisfaction. 100% fraud protection.</p>
-              </div>
-
-              <div className="glass-card rounded-3xl p-8 group hover:bg-white/5 transition-all duration-300 reveal delay-200">
-                <Zap className="w-12 h-12 text-amber-400 mb-6 group-hover:scale-110 transition-transform" />
-                <h3 className="text-xl font-bold text-white mb-2">Instant Setup</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">Go from sign-up to first sale in less than 5 minutes. No coding required.</p>
-              </div>
+          <div className="mt-auto mb-10 flex flex-col gap-4">
+             <button onClick={() => onLoginClick('customer')} className="w-full py-4 border border-white/20 rounded-lg text-lg font-medium">Log In</button>
+             <button onClick={() => onLoginClick('seller')} className="w-full py-4 bg-white text-black rounded-lg text-lg font-bold">Start Selling</button>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* --- CTA SECTION --- */}
-      <section className="py-32 relative overflow-hidden">
-         <div className="absolute inset-0 bg-indigo-600/10"></div>
-         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none"></div>
+      {/* --- MAIN CONTENT WRAPPER --- */}
+      <main className="md:pl-20 relative z-10 pt-20 md:pt-0">
+        
+        {/* --- HERO SECTION --- */}
+        <section className="min-h-[85vh] flex flex-col justify-between px-6 md:px-12 py-6 md:py-12 relative overflow-hidden">
+          
+          {/* Top Bar (Desktop) */}
+          <div className="hidden md:flex justify-between items-start">
+            <div>
+              <p className="text-xs text-zinc-500 font-mono">EST. 2025</p>
+              <p className="text-xs text-zinc-500 font-mono">INFRASTRUCTURE V2.1</p>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => onLoginClick('customer')} className="text-sm font-medium hover:underline">Log In</button>
+              <button onClick={() => onLoginClick('seller')} className="px-6 py-2 bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors">START SELLING</button>
+            </div>
+          </div>
 
-         <div className="max-w-4xl mx-auto px-6 relative z-10 text-center reveal">
-           <h2 className="text-4xl md:text-7xl font-bold text-white mb-8 tracking-tight">Ready to revolutionize <br/>your business?</h2>
-           <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">Join 10,000+ creators who are earning over ₹1 Lakh/month on Giftomize. No credit card required.</p>
-           <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button variant="primary" className="py-5 px-12 text-lg h-14" onClick={() => onLoginClick('seller')}>
-                 Get Started Now <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-           </div>
-           <div className="mt-12 flex justify-center gap-8 text-slate-500 text-sm font-medium">
-              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Free 14-day trial</span>
-              <span className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Cancel anytime</span>
-           </div>
-         </div>
-      </section>
-
-      {/* --- FOOTER --- */}
-      <footer className="bg-slate-950 border-t border-slate-900 pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Box className="text-white w-5 h-5" />
-                </div>
-                <span className="text-xl font-bold text-white">Giftomize</span>
+          {/* Massive Text (Optimized for Mobile Wrapping) */}
+          <div className="relative my-8 md:my-12">
+            <h1 className="massive-text leading-[0.9] tracking-tighter break-words">
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                <span className="block">DIGITAL</span>
+                {/* Badge wraps correctly on mobile */}
+                <span className="w-fit text-xs md:text-xl font-mono border border-white/20 px-3 py-1 rounded-full text-zinc-400 mb-2 md:mb-0 md:mt-4 tracking-wide bg-black/50 backdrop-blur-sm">
+                  (FUTURE_COMMERCE)
+                </span>
               </div>
-              <p className="text-slate-400 max-w-sm mb-6 leading-relaxed">
-                The world's most advanced marketplace for custom merchandise. Built for speed, security, and scale.
+              {/* Responsive break to prevent overflow */}
+              <span className="stroked-text block">MERCHANDISE</span>
+              <span className="block text-zinc-600">REDEFINED.</span>
+            </h1>
+          </div>
+
+          {/* Hero Footer Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-8">
+            <div className="col-span-1">
+              <p className="text-base md:text-lg text-zinc-300 leading-relaxed max-w-sm">
+                We built the backbone for the next 10,000 brands. Zero inventory. Global scale. Pure aesthetics.
               </p>
-              <div className="flex gap-4">
-                {[1,2,3].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all cursor-pointer">
-                    <Globe className="w-4 h-4" />
-                  </div>
-                ))}
+            </div>
+            
+            {/* Scrollable Stats for Mobile */}
+            <div className="col-span-2 flex flex-col md:flex-row md:items-center gap-6 md:justify-end">
+               <div className="flex gap-4 overflow-x-auto pb-2 md:pb-0 hide-scrollbar w-full md:w-auto">
+                  <StatBadge label="Sellers" value="8.2K+" />
+                  <StatBadge label="Shipped" value="1.4M" />
+                  <StatBadge label="Countries" value="190+" />
+               </div>
+              
+              <button 
+                onClick={() => navigate('/shop')}
+                className="group w-full md:w-auto flex items-center justify-between md:justify-start gap-4 pl-6 pr-2 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-white hover:text-black transition-all duration-300 active:scale-95"
+              >
+                <span className="text-sm font-bold uppercase tracking-wider">Explore Platform</span>
+                <div className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center group-hover:bg-black group-hover:text-white">
+                  <ArrowRight size={14} />
+                </div>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* --- BENTO GRID (Mobile Stacked) --- */}
+        <section className="px-4 md:px-12 py-12 border-t border-white/10">
+          <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-auto md:grid-rows-2 gap-4 h-auto md:h-[800px]">
+            
+            {/* Core Engine (Tall on Mobile) */}
+            <BentoBox className="md:col-span-2 md:row-span-2 flex flex-col justify-between bg-zinc-900 min-h-[400px]" title="Core Engine">
+              <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.05]"></div>
+              <div className="z-10 mt-6 md:mt-10">
+                <Cpu size={40} className="mb-6 text-white" />
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">Neural Production.</h3>
+                <p className="text-zinc-400 text-base md:text-lg max-w-md leading-relaxed">
+                  Our API automatically routes your order to the print facility closest to the customer. 
+                  Lowest shipping costs. Fastest delivery.
+                </p>
               </div>
+              <div className="w-full h-32 bg-gradient-to-t from-black/80 to-transparent border-t border-white/10 mt-8 rounded-lg relative overflow-hidden flex items-end">
+                 <div className="p-4 font-mono text-[10px] md:text-xs text-green-500/80">
+                   {`> initiating_sequence(ORDER_ID)`}<br/>
+                   {`> routing... node_tokyo [OK]`}<br/>
+                   {`> production_status: ACTIVE`}
+                 </div>
+              </div>
+            </BentoBox>
+
+            {/* Analytics */}
+            <BentoBox className="md:col-span-2 min-h-[200px]" title="Analytics">
+              <div className="flex items-end justify-between h-full relative z-10">
+                <div>
+                  <h3 className="text-2xl font-bold">Real-time Insights</h3>
+                  <p className="text-zinc-500 text-sm">Track every penny.</p>
+                </div>
+                <TrendingUp size={40} className="text-zinc-600" />
+              </div>
+            </BentoBox>
+
+            {/* Global Reach */}
+            <BentoBox className="md:col-span-1 min-h-[200px]" title="Global">
+              <Globe size={32} className="mb-4 text-zinc-400" />
+              <h3 className="text-xl font-bold">Worldwide</h3>
+              <p className="text-xs text-zinc-500 mt-2">Shipping to 195 nations instantly.</p>
+            </BentoBox>
+
+            {/* Quick Start (White Card) */}
+            <BentoBox className="md:col-span-1 bg-white text-black min-h-[200px]" title="Start">
+              <div className="flex flex-col h-full justify-between">
+                <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
+                  <Zap size={20} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold leading-tight tracking-tight">Launch in<br/>Seconds</h3>
+                </div>
+              </div>
+            </BentoBox>
+
+          </div>
+        </section>
+
+        {/* --- TICKER (Overflow Protected) --- */}
+        <div className="py-12 md:py-20 overflow-hidden bg-white text-black rotate-[-2deg] scale-105 border-y-4 border-black my-16 md:my-20">
+          <div className="flex animate-marquee whitespace-nowrap gap-8 md:gap-12">
+             {[...Array(10)].map((_, i) => (
+               <span key={i} className="text-4xl md:text-6xl font-black italic tracking-tighter">
+                 CREATE • SELL • SCALE • 
+               </span>
+             ))}
+          </div>
+        </div>
+
+        {/* --- FEATURES --- */}
+        <section className="px-6 md:px-12 py-16 md:py-20 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+            <div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 md:mb-8 leading-tight">
+                Not just a platform.<br/><span className="text-zinc-500">A power plant.</span>
+              </h2>
+              <p className="text-lg md:text-xl text-zinc-400 mb-8">
+                We stripped away the complexity of e-commerce. You design the product, we handle the physics.
+              </p>
+              <button 
+                 onClick={() => onLoginClick('seller')}
+                 className="text-white border-b border-white pb-1 hover:pb-2 transition-all font-mono text-sm"
+              >
+                READ_DOCUMENTATION -{'>'}
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {[
+                { title: 'Zero Inventory Risk', desc: 'Never pay for stock. We print on demand.' },
+                { title: 'White Label', desc: 'Your brand on the box. Your brand on the neck label.' },
+                { title: 'Automated Taxes', desc: 'We handle VAT and sales tax globally.' }
+              ].map((item, i) => (
+                <div key={i} className="group border-b border-white/10 py-6 active:bg-white/5 transition-all cursor-default">
+                  <h3 className="text-xl md:text-2xl font-bold mb-2 flex items-center gap-2">
+                    <span className="text-xs font-mono text-zinc-600">0{i+1}</span> {item.title}
+                  </h3>
+                  <p className="text-sm md:text-base text-zinc-500 group-hover:text-zinc-300 transition-colors">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* --- FOOTER --- */}
+        <footer className="border-t border-white/10 bg-black pt-16 md:pt-20 pb-10 px-6 md:px-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16 md:mb-20">
+            <div className="col-span-1 md:col-span-2">
+              {/* Responsive Text Size for Footer Logo */}
+              <h2 className="text-[15vw] md:text-[8vw] font-bold leading-none tracking-tighter text-zinc-800 select-none">
+                GIFTOMIZE
+              </h2>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <h4 className="font-mono text-xs uppercase text-zinc-500">Sitemap</h4>
+              <a href="#" className="hover:text-white text-zinc-400">Home</a>
+              <a href="#" className="hover:text-white text-zinc-400">Marketplace</a>
+              <a href="#" className="hover:text-white text-zinc-400">Sellers</a>
             </div>
 
-            <div>
-              <h4 className="text-white font-bold mb-6">Platform</h4>
-              <ul className="space-y-4 text-sm text-slate-400">
-                {['Marketplace', 'Features', 'Sellers', 'Login'].map(item => (
-                  <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-white font-bold mb-6">Legal</h4>
-              <ul className="space-y-4 text-sm text-slate-400">
-                {['Privacy Policy', 'Terms of Service', 'Refund Policy'].map(item => (
-                  <li key={item} className="hover:text-indigo-400 cursor-pointer transition-colors">{item}</li>
-                ))}
-                <li>
-                  <button onClick={() => navigate('/admin-login')} className="flex items-center gap-2 text-slate-600 hover:text-red-400 transition-colors mt-4 text-xs font-bold uppercase tracking-widest">
-                      <Lock className="w-3 h-3" /> Founder Access
-                  </button>
-                </li>
-              </ul>
+            <div className="flex flex-col gap-4">
+              <h4 className="font-mono text-xs uppercase text-zinc-500">Legal</h4>
+              <a href="#" className="hover:text-white text-zinc-400">Privacy</a>
+              <a href="#" className="hover:text-white text-zinc-400">Terms</a>
             </div>
           </div>
           
-          <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-slate-600 text-sm">© 2026 Giftomize Inc. All rights reserved.</p>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-              <span className="text-slate-400 text-xs font-mono">Systems Operational</span>
-            </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-t border-white/10 pt-8 gap-4">
+             <div className="text-xs font-mono text-zinc-600 flex items-center gap-2">
+               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+               SYSTEM STATUS: OPERATIONAL
+             </div>
+             <p className="text-xs text-zinc-600">© 2026 GIFTOMIZE INC.</p>
           </div>
-        </div>
-      </footer>
+        </footer>
+
+      </main>
     </div>
   );
 };
