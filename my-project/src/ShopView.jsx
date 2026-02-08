@@ -170,7 +170,13 @@ const OfferCarousel = ({ bannerData }) => {
   
     return (
       <div 
-        className="relative w-full h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] rounded-3xl overflow-hidden mb-8 shadow-lg group bg-slate-900"
+        // --- UPDATED CLASS NAMES FOR FULL WIDTH ON MOBILE ---
+        // -mx-4: Mobile par margin -16px (parent padding cancel karne ke liye)
+        // w-[calc(100%+2rem)]: Mobile par width 100% + 32px
+        // sm:-mx-6 sm:w-[calc(100%+3rem)]: Tablet par margin -24px aur width adjust
+        // md:mx-0 md:w-full: Desktop par normal width aur 0 margin
+        // rounded-none md:rounded-3xl: Mobile par square edges, Desktop par rounded
+        className="relative h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -396,11 +402,15 @@ const ShopView = ({
             <MarqueeStrip />
 
             {/* 2. MAIN CONTENT AREA */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0">
                 
                 {/* --- OFFER CAROUSEL --- */}
                 {/* We pass the Full 'bannerData' object. Component handles hiding/defaults inside. */}
-                {!isBannersLoading && <OfferCarousel bannerData={bannerData} />}
+                {!isBannersLoading && (
+                    <div className="mt-0"> 
+                        <OfferCarousel bannerData={bannerData} />
+                    </div>
+                )}
 
                 {/* --- VISUAL CATEGORY STRIP --- */}
                 <CategoryHighlight 
