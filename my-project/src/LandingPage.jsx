@@ -21,20 +21,26 @@ const styleInjection = `
     background-color: #050505 !important;
     font-family: 'Space Grotesk', sans-serif;
     color: #e5e5e5;
-    overflow-x: hidden; /* Critical for mobile to prevent side-scroll */
+    /* Prevent horizontal scroll on the body level */
+    overflow-x: hidden; 
+    width: 100%;
+    position: relative;
     -webkit-font-smoothing: antialiased;
   }
 
   /* --- DYNAMIC BACKGROUND GRID --- */
   .tech-grid {
     position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
+    top: 0; left: 0; 
+    width: 100%; /* Changed from 100vw to 100% to prevent scrollbar overlap */
+    height: 100%;
     background-image: 
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-    background-size: 40px 40px; /* Slightly smaller grid for mobile density */
+    background-size: 40px 40px; 
     z-index: -1;
     mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+    pointer-events: none;
   }
 
   /* --- GLOW EFFECTS --- */
@@ -52,14 +58,14 @@ const styleInjection = `
   .glass-panel {
     background: rgba(10, 10, 10, 0.6);
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px); /* Safari Mobile Support */
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   /* --- TYPOGRAPHY SCALING --- */
-  /* This clamp ensures text is massive on desktop but fits on mobile */
   .massive-text {
-    font-size: clamp(2.5rem, 10vw, 9rem); 
+    /* Advanced clamping for perfect mobile scaling */
+    font-size: clamp(2.5rem, 11vw, 9rem); 
     line-height: 0.95;
     letter-spacing: -0.04em;
     font-weight: 700;
@@ -71,7 +77,6 @@ const styleInjection = `
     transition: all 0.5s ease;
   }
   
-  /* Mobile touch interaction: Fill text on touch/hover */
   .stroked-text:hover, .stroked-text:active {
     color: white;
     -webkit-text-stroke: 0px;
@@ -93,18 +98,12 @@ const styleInjection = `
     to { opacity: 1; transform: translateY(0); }
   }
   
-  /* Hide scrollbar for horizontal scrolling stats */
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 `;
 
 /* -------------------------------------------------------------------------- */
-/* REUSABLE COMPONENTS                                                        */
+/* COMPONENTS                                                                 */
 /* -------------------------------------------------------------------------- */
 
 const StatBadge = ({ label, value }) => (
@@ -132,17 +131,13 @@ const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset';
   }, [isMobileMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black">
+    // MAIN WRAPPER
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden w-full relative">
       <style>{styleInjection}</style>
       
       {/* Background Elements */}
@@ -150,7 +145,7 @@ const LandingPage = ({ onLoginClick }) => {
       <div className="glow-point top-0 left-[-100px]" />
       <div className="glow-point bottom-0 right-[-100px]" />
 
-      {/* --- SIDEBAR NAVIGATION (Desktop Only) --- */}
+      {/* --- SIDEBAR (Desktop) --- */}
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r border-white/10 bg-black/50 backdrop-blur-md z-50 py-8 items-center">
         <div className="w-10 h-10 bg-white text-black flex items-center justify-center font-bold text-xl rounded-sm">G</div>
         <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
@@ -160,8 +155,8 @@ const LandingPage = ({ onLoginClick }) => {
         <Menu className="text-zinc-500 hover:text-white cursor-pointer" size={20} />
       </nav>
 
-      {/* --- MOBILE HEADER (Sticky Top) --- */}
-      <div className="md:hidden fixed top-0 w-full z-50 flex justify-between items-center p-5 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      {/* --- MOBILE HEADER (Fixed & Pinned) --- */}
+      <div className="md:hidden fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center p-5 bg-black/85 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-white text-black flex items-center justify-center font-bold text-lg rounded-sm">G</div>
           <span className="font-bold tracking-tight">GIFTOMIZE</span>
@@ -174,9 +169,9 @@ const LandingPage = ({ onLoginClick }) => {
         </button>
       </div>
 
-      {/* --- FULL SCREEN MOBILE MENU OVERLAY --- */}
+      {/* --- MOBILE MENU OVERLAY --- */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black pt-24 px-6 mobile-menu-enter md:hidden flex flex-col">
+        <div className="fixed inset-0 z-40 bg-black pt-24 px-6 mobile-menu-enter md:hidden flex flex-col h-screen w-screen">
           <div className="flex flex-col gap-6 text-3xl font-bold">
             <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Platform</a>
             <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 pb-4">Solutions</a>
@@ -189,13 +184,12 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       )}
 
-      {/* --- MAIN CONTENT WRAPPER --- */}
-      <main className="md:pl-20 relative z-10 pt-20 md:pt-0">
+      {/* --- MAIN CONTENT --- */}
+      <main className="md:pl-20 relative z-10 pt-20 md:pt-0 w-full max-w-[100vw]">
         
-        {/* --- HERO SECTION --- */}
-        <section className="min-h-[85vh] flex flex-col justify-between px-6 md:px-12 py-6 md:py-12 relative overflow-hidden">
+        {/* HERO */}
+        <section className="min-h-[85vh] flex flex-col justify-between px-6 md:px-12 py-8 md:py-12 relative overflow-hidden">
           
-          {/* Top Bar (Desktop) */}
           <div className="hidden md:flex justify-between items-start">
             <div>
               <p className="text-xs text-zinc-500 font-mono">EST. 2025</p>
@@ -207,23 +201,19 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
           </div>
 
-          {/* Massive Text (Optimized for Mobile Wrapping) */}
           <div className="relative my-8 md:my-12">
             <h1 className="massive-text leading-[0.9] tracking-tighter break-words">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <span className="block">DIGITAL</span>
-                {/* Badge wraps correctly on mobile */}
                 <span className="w-fit text-xs md:text-xl font-mono border border-white/20 px-3 py-1 rounded-full text-zinc-400 mb-2 md:mb-0 md:mt-4 tracking-wide bg-black/50 backdrop-blur-sm">
                   (FUTURE_COMMERCE)
                 </span>
               </div>
-              {/* Responsive break to prevent overflow */}
-              <span className="stroked-text block">MERCHANDISE</span>
+              <span className="stroked-text block break-words">MERCHANDISE</span>
               <span className="block text-zinc-600">REDEFINED.</span>
             </h1>
           </div>
 
-          {/* Hero Footer Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-8">
             <div className="col-span-1">
               <p className="text-base md:text-lg text-zinc-300 leading-relaxed max-w-sm">
@@ -231,7 +221,6 @@ const LandingPage = ({ onLoginClick }) => {
               </p>
             </div>
             
-            {/* Scrollable Stats for Mobile */}
             <div className="col-span-2 flex flex-col md:flex-row md:items-center gap-6 md:justify-end">
                <div className="flex gap-4 overflow-x-auto pb-2 md:pb-0 hide-scrollbar w-full md:w-auto">
                   <StatBadge label="Sellers" value="8.2K+" />
@@ -252,11 +241,10 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </section>
 
-        {/* --- BENTO GRID (Mobile Stacked) --- */}
+        {/* BENTO GRID */}
         <section className="px-4 md:px-12 py-12 border-t border-white/10">
           <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-auto md:grid-rows-2 gap-4 h-auto md:h-[800px]">
             
-            {/* Core Engine (Tall on Mobile) */}
             <BentoBox className="md:col-span-2 md:row-span-2 flex flex-col justify-between bg-zinc-900 min-h-[400px]" title="Core Engine">
               <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.05]"></div>
               <div className="z-10 mt-6 md:mt-10">
@@ -276,7 +264,6 @@ const LandingPage = ({ onLoginClick }) => {
               </div>
             </BentoBox>
 
-            {/* Analytics */}
             <BentoBox className="md:col-span-2 min-h-[200px]" title="Analytics">
               <div className="flex items-end justify-between h-full relative z-10">
                 <div>
@@ -287,14 +274,12 @@ const LandingPage = ({ onLoginClick }) => {
               </div>
             </BentoBox>
 
-            {/* Global Reach */}
             <BentoBox className="md:col-span-1 min-h-[200px]" title="Global">
               <Globe size={32} className="mb-4 text-zinc-400" />
               <h3 className="text-xl font-bold">Worldwide</h3>
               <p className="text-xs text-zinc-500 mt-2">Shipping to 195 nations instantly.</p>
             </BentoBox>
 
-            {/* Quick Start (White Card) */}
             <BentoBox className="md:col-span-1 bg-white text-black min-h-[200px]" title="Start">
               <div className="flex flex-col h-full justify-between">
                 <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
@@ -309,7 +294,7 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </section>
 
-        {/* --- TICKER (Overflow Protected) --- */}
+        {/* TICKER */}
         <div className="py-12 md:py-20 overflow-hidden bg-white text-black rotate-[-2deg] scale-105 border-y-4 border-black my-16 md:my-20">
           <div className="flex animate-marquee whitespace-nowrap gap-8 md:gap-12">
              {[...Array(10)].map((_, i) => (
@@ -320,46 +305,76 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* --- FEATURES --- */}
-        <section className="px-6 md:px-12 py-16 md:py-20 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
-            <div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 md:mb-8 leading-tight">
+        {/* FEATURES SECTION - FIX APPLIED HERE */}
+        <section className="px-6 md:px-12 py-16 md:py-20 max-w-7xl mx-auto">
+          {/* Section Header */}
+          <div className="mb-16 max-w-2xl">
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
                 Not just a platform.<br/><span className="text-zinc-500">A power plant.</span>
               </h2>
-              <p className="text-lg md:text-xl text-zinc-400 mb-8">
+              <p className="text-lg md:text-xl text-zinc-400">
                 We stripped away the complexity of e-commerce. You design the product, we handle the physics.
               </p>
-              <button 
-                 onClick={() => onLoginClick('seller')}
-                 className="text-white border-b border-white pb-1 hover:pb-2 transition-all font-mono text-sm"
-              >
-                READ_DOCUMENTATION -{'>'}
-              </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center">
+            
+            {/* --- IMAGE FIX FOR MOBILE --- */}
+            {/* Logic: 'md:' prefix means "only on desktop". 
+                So 'bg-transparent' is for mobile (no dark filter), 
+                and 'md:bg-black/40' adds the filter only on desktop. */}
+            <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-zinc-900 aspect-[4/3] md:aspect-auto md:h-[500px]">
+               {/* Tech Overlay lines */}
+               <div className="absolute inset-0 z-20 border-2 border-white/5 rounded-2xl pointer-events-none"></div>
+               
+               {/* Dark Dimmer: Hidden on mobile (bg-transparent), Visible on Desktop (bg-black/40) */}
+               <div className="absolute inset-0 bg-transparent md:bg-black/40 mix-blend-multiply z-10 md:group-hover:bg-transparent transition-all duration-700 ease-out" />
+               
+               {/* The Image: Clear on mobile (opacity-100), Dim on Desktop (md:opacity-80) */}
+               <img 
+                 src="/giftomize.png" 
+                 alt="Giftomize Personalized Products" 
+                 className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 ease-out opacity-100 md:opacity-80 md:group-hover:opacity-100 grayscale-0 md:grayscale-[30%] md:group-hover:grayscale-0"
+               />
+               
+               {/* Floating Tag */}
+               <div className="absolute bottom-6 left-6 z-20 bg-black/70 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full flex items-center gap-2">
+                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                 <span className="text-xs font-mono text-white tracking-widest uppercase">Live Production</span>
+               </div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-4">
               {[
                 { title: 'Zero Inventory Risk', desc: 'Never pay for stock. We print on demand.' },
                 { title: 'White Label', desc: 'Your brand on the box. Your brand on the neck label.' },
                 { title: 'Automated Taxes', desc: 'We handle VAT and sales tax globally.' }
               ].map((item, i) => (
-                <div key={i} className="group border-b border-white/10 py-6 active:bg-white/5 transition-all cursor-default">
-                  <h3 className="text-xl md:text-2xl font-bold mb-2 flex items-center gap-2">
-                    <span className="text-xs font-mono text-zinc-600">0{i+1}</span> {item.title}
+                <div key={i} className="group border-b border-white/10 py-8 active:bg-white/5 transition-all cursor-default">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-3 flex items-center gap-4">
+                    <span className="text-xs font-mono text-zinc-600 border border-zinc-800 px-2 py-1 rounded">0{i+1}</span> 
+                    {item.title}
                   </h3>
-                  <p className="text-sm md:text-base text-zinc-500 group-hover:text-zinc-300 transition-colors">{item.desc}</p>
+                  <p className="text-base md:text-lg text-zinc-500 group-hover:text-zinc-300 transition-colors pl-12">{item.desc}</p>
                 </div>
               ))}
+              
+              <div className="pt-8 pl-12">
+                <button 
+                   onClick={() => onLoginClick('seller')}
+                   className="text-white border-b border-white pb-1 hover:pb-2 transition-all font-mono text-sm flex items-center gap-2"
+                >
+                  READ_DOCUMENTATION <ArrowRight size={12}/>
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* --- FOOTER --- */}
+        {/* FOOTER */}
         <footer className="border-t border-white/10 bg-black pt-16 md:pt-20 pb-10 px-6 md:px-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16 md:mb-20">
             <div className="col-span-1 md:col-span-2">
-              {/* Responsive Text Size for Footer Logo */}
               <h2 className="text-[15vw] md:text-[8vw] font-bold leading-none tracking-tighter text-zinc-800 select-none">
                 GIFTOMIZE
               </h2>
