@@ -2,7 +2,7 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
-const sendOrderConfirmation = require('../utils/sendWhatsApp'); // <--- 1. IMPORT WHATSAPP UTILITY
+const sendOrderConfirmation = require('../utils/sendWhatsApp'); 
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -46,8 +46,13 @@ const addOrderItems = async (req, res) => {
             paymentInfo: {
                 method: paymentInfo.method,
                 transactionId: paymentInfo.transactionId || null,
-                status: paymentInfo.method === 'Online' ? 'Pending' : 'Pending' 
+                status: 'Pending' 
             },
+            // --- GATEKEEPER LOGIC START ---
+            // Initially FALSE. Seller cannot see this.
+            isVerifiedByFounder: false,
+            orderStatus: 'Verifying Payment',
+            // ------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
@@ -62,7 +67,7 @@ const addOrderItems = async (req, res) => {
         for (const item of orderItems) {
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-                // Stock ghatao (-) aur Sold badhao (+)
+                // Decrease Stock, Increase Sold count
                 { $inc: { stock: -item.qty, sold: item.qty } },
                 { new: true } 
             );
@@ -79,20 +84,20 @@ const addOrderItems = async (req, res) => {
         }
 
         // 3. --- WHATSAPP NOTIFICATION TRIGGER ---
-        // Send confirmation message using UltraMsg (Background Process)
         if (req.user) {
             sendOrderConfirmation(createdOrder, req.user)
                 .catch(err => console.error("WhatsApp Notification Failed:", err.message));
         }
-        // ----------------------------------------
 
-        // --- SOCKET IO: Notify Sellers ---
+        // --- SOCKET IO: Notify FOUNDER Only (Not Sellers yet) ---
         if (req.io) {
+            // Broadcasting to 'admin' room or generic 'new_order_placed'
+            // NOTE: Sellers won't see it in their list yet due to getShopOrders filter
             req.io.emit('new_order_placed', {
                 orderId: createdOrder._id,
-                shopIds: involvedShops, 
                 totalAmount: createdOrder.totalAmount,
-                customerName: req.user.name
+                customerName: req.user.name,
+                requiresApproval: true
             });
         }
 
@@ -122,10 +127,10 @@ const getOrderById = async (req, res) => {
     }
 };
 
-// @desc    Update order to paid (Manually by Admin/Founder)
+// @desc    Founder Approves Payment (Unlocks Order for Seller)
 // @route   PUT /api/orders/:id/pay
-// @access  Private
-const updateOrderToPaid = async (req, res) => {
+// @access  Private (Founder/Admin)
+const verifyOrderPayment = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
 
@@ -134,19 +139,50 @@ const updateOrderToPaid = async (req, res) => {
             order.paidAt = Date.now();
             order.paymentInfo.status = 'Verified';
 
+            // --- THE UNLOCK KEY ---
+            order.isVerifiedByFounder = true; 
+            order.orderStatus = 'Processing'; // Now Seller knows to process it
+            // ----------------------
+
             const updatedOrder = await order.save();
 
-            // Notify involved sellers
+            // NOW Notify involved sellers because order is valid
             const involvedShops = [...new Set(order.items.map(item => item.shop.toString()))];
             
             if (req.io) {
-                req.io.emit('order_paid', {
+                req.io.emit('order_verified', {
                     orderId: updatedOrder._id,
                     shopIds: involvedShops,
-                    status: 'Paid'
+                    status: 'Processing'
                 });
             }
 
+            res.json(updatedOrder);
+        } else {
+            res.status(404).json({ message: 'Order not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Founder Settles Payout to Seller (Upload Proof)
+// @route   PUT /api/orders/:id/payout
+// @access  Private (Founder/Admin)
+const settlePayout = async (req, res) => {
+    try {
+        const { transactionId, proofImage } = req.body;
+        const order = await Order.findById(req.params.id);
+
+        if (order) {
+            order.payoutInfo = {
+                status: 'Settled',
+                transactionId: transactionId || "CASH/MANUAL",
+                proofImage: proofImage || "", // URL from Cloudinary
+                settledAt: Date.now()
+            };
+
+            const updatedOrder = await order.save();
             res.json(updatedOrder);
         } else {
             res.status(404).json({ message: 'Order not found' });
@@ -171,15 +207,12 @@ const updateOrderStatus = async (req, res) => {
             } else if (req.body.status === 'Shipped') {
                 order.shippedAt = Date.now();
             } 
-            // --- NEW: CANCELLATION LOGIC ---
+            // --- CANCELLATION LOGIC ---
             else if (req.body.status === 'Cancelled') {
                 order.cancellationReason = req.body.cancellationReason || "Cancelled by seller.";
                 order.cancelledAt = Date.now();
-                
-                // Optional: Stock revert logic here if needed later
-                // for (const item of order.items) { ...increase stock... }
             }
-            // -------------------------------
+            // ---------------------------
 
             const updatedOrder = await order.save();
 
@@ -189,7 +222,7 @@ const updateOrderStatus = async (req, res) => {
                     orderId: updatedOrder._id,
                     customerId: updatedOrder.customer, 
                     status: updatedOrder.orderStatus,
-                    reason: updatedOrder.cancellationReason // Send reason if cancelled
+                    reason: updatedOrder.cancellationReason
                 });
             }
 
@@ -216,7 +249,7 @@ const getMyOrders = async (req, res) => {
 
 // --- SELLER & ADMIN FEATURES ---
 
-// @desc    Get Seller's Shop Orders
+// @desc    Get Seller's Shop Orders (THE GATEKEEPER)
 // @route   GET /api/orders/shop-orders
 // @access  Private (Seller)
 const getShopOrders = async (req, res) => {
@@ -229,9 +262,14 @@ const getShopOrders = async (req, res) => {
 
         const shopIds = shops.map(shop => shop._id);
 
-        const orders = await Order.find({ 'items.shop': { $in: shopIds } })
-            .populate('customer', 'name email')
-            .sort({ createdAt: -1 });
+        const orders = await Order.find({ 
+            'items.shop': { $in: shopIds },
+            // --- IMPORTANT: Only show orders verified by Founder ---
+            isVerifiedByFounder: true 
+            // -------------------------------------------------------
+        })
+        .populate('customer', 'name email')
+        .sort({ createdAt: -1 });
         
         res.json(orders);
     } catch (error) {
@@ -239,11 +277,12 @@ const getShopOrders = async (req, res) => {
     }
 };
 
-// @desc    Get all orders (Updated for Founder Dashboard)
+// @desc    Get all orders (For Founder Dashboard)
 // @route   GET /api/orders
 // @access  Private (Admin/Founder)
 const getOrders = async (req, res) => {
     try {
+        // Founder sees EVERYTHING (Verified and Unverified)
         const orders = await Order.find({})
             .populate('customer', 'id name email')
             .populate({
@@ -262,7 +301,8 @@ const getOrders = async (req, res) => {
 module.exports = {
     addOrderItems,
     getOrderById,
-    updateOrderToPaid,
+    verifyOrderPayment, // Replaces updateOrderToPaid
+    settlePayout,       // New Payout Logic
     updateOrderStatus,
     getMyOrders,
     getShopOrders,

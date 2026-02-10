@@ -22,6 +22,7 @@ const orderItemSchema = new mongoose.Schema({
         text: { type: String },
         font: { type: String }
     },
+    // Seller's specific status for the item
     status: {
         type: String,
         enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
@@ -45,7 +46,7 @@ const orderSchema = new mongoose.Schema({
         phone: { type: String, required: true }
     },
     
-    // --- PAYMENT INFO SECTION ---
+    // --- 1. USER PAYMENT INFO (Incoming: Customer -> Founder) ---
     paymentInfo: {
         method: { 
             type: String, 
@@ -62,6 +63,27 @@ const orderSchema = new mongoose.Schema({
         }
     },
 
+    // --- 2. THE GATEKEEPER FIELD (SAFETY LOCK) ---
+    // If this is FALSE, the order is HIDDEN from the Seller.
+    // Founder must manually switch this to TRUE to reveal the order.
+    isVerifiedByFounder: {
+        type: Boolean,
+        default: false 
+    },
+
+    // --- 3. PAYOUT INFO (Outgoing: Founder -> Seller) ---
+    // This creates the "Digital Ledger" record accessible by both parties.
+    payoutInfo: {
+        status: {
+            type: String,
+            enum: ['Pending', 'Settled'],
+            default: 'Pending'
+        },
+        transactionId: { type: String, default: null }, // Founder's UTR to Seller
+        proofImage: { type: String, default: null },    // Screenshot URL
+        settledAt: { type: Date }
+    },
+
     itemsPrice: { type: Number, required: true, default: 0.0 },
     taxPrice: { type: Number, required: true, default: 0.0 },
     shippingPrice: { type: Number, required: true, default: 0.0 },
@@ -76,11 +98,12 @@ const orderSchema = new mongoose.Schema({
     },
     orderStatus: {
         type: String,
-        enum: ['Processing', 'Partially Shipped', 'Shipped', 'Delivered', 'Cancelled'],
-        default: 'Processing'
+        // Added 'Verifying Payment' as the initial state
+        enum: ['Verifying Payment', 'Processing', 'Partially Shipped', 'Shipped', 'Delivered', 'Cancelled'],
+        default: 'Verifying Payment' 
     },
     
-    // --- NEW: CANCELLATION FIELDS (ADDED HERE) ---
+    // --- CANCELLATION FIELDS ---
     cancellationReason: { 
         type: String,
         default: null 
@@ -88,7 +111,7 @@ const orderSchema = new mongoose.Schema({
     cancelledAt: { 
         type: Date 
     },
-    // ---------------------------------------------
+    // ---------------------------
 
     deliveredAt: { type: Date },
     shippedAt: { type: Date },

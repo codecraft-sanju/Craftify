@@ -1,3 +1,4 @@
+// src/StoreAdmin.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     LayoutDashboard, ShoppingBag, Package, Plus, X, 
@@ -5,7 +6,7 @@ import {
     MessageSquare, Send, User, Edit, Trash2, LogOut,
     ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2,
-    ChevronDown, Filter, Calendar, Sparkles
+    ChevronDown, Filter, Calendar, Sparkles, ExternalLink
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -128,6 +129,11 @@ export default function StoreAdmin({ currentUser }) {
         
         socket.on("new_order_placed", () => {
              fetchStoreData(); 
+        });
+
+        // Listen for Order Verified (Unlock from Founder)
+        socket.on("order_verified", () => {
+            fetchStoreData();
         });
 
         return () => { socket.disconnect(); }
@@ -690,28 +696,28 @@ export default function StoreAdmin({ currentUser }) {
                                 {/* Desktop Table View */}
                                 <div className="hidden md:block">
                                     <Card className="overflow-hidden border border-white/5 shadow-xl shadow-black/20 rounded-[2rem]">
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-sm text-left">
-                                                <thead className="bg-slate-800/50 text-slate-400 uppercase text-[11px] font-extrabold tracking-wider backdrop-blur-sm border-b border-white/5">
-                                                    <tr><th className="p-6">Order ID</th><th className="p-6">Customer</th><th className="p-6">Date</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-white/5 text-slate-300">
-                                                    {orders.map(o => (
-                                                        <tr key={o._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedOrder(o)}>
-                                                            <td className="p-6 font-mono font-bold text-slate-500 text-xs group-hover:text-rose-400">#{o._id.slice(-6).toUpperCase()}</td>
-                                                            <td className="p-6 font-bold text-white flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs font-bold ring-1 ring-white/10">{o.customer?.name?.charAt(0)}</div>
-                                                                {o.customer?.name}
-                                                            </td>
-                                                            <td className="p-6 text-slate-500 text-xs font-bold">{new Date(o.createdAt).toLocaleDateString()}</td>
-                                                            <td className="p-6 font-black text-rose-400">₹{o.totalAmount}</td>
-                                                            <td className="p-6"><Badge color={o.orderStatus === 'Delivered' ? 'green' : o.orderStatus === 'Cancelled' ? 'red' : 'blue'}>{o.orderStatus}</Badge></td>
-                                                            <td className="p-6 text-right"><ChevronRight className="w-5 h-5 text-slate-600 ml-auto group-hover:text-rose-500"/></td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead className="bg-slate-800/50 text-slate-400 uppercase text-[11px] font-extrabold tracking-wider backdrop-blur-sm border-b border-white/5">
+                                                        <tr><th className="p-6">Order ID</th><th className="p-6">Customer</th><th className="p-6">Date</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5 text-slate-300">
+                                                        {orders.map(o => (
+                                                            <tr key={o._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedOrder(o)}>
+                                                                <td className="p-6 font-mono font-bold text-slate-500 text-xs group-hover:text-rose-400">#{o._id.slice(-6).toUpperCase()}</td>
+                                                                <td className="p-6 font-bold text-white flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-xs font-bold ring-1 ring-white/10">{o.customer?.name?.charAt(0)}</div>
+                                                                    {o.customer?.name}
+                                                                </td>
+                                                                <td className="p-6 text-slate-500 text-xs font-bold">{new Date(o.createdAt).toLocaleDateString()}</td>
+                                                                <td className="p-6 font-black text-rose-400">₹{o.totalAmount}</td>
+                                                                <td className="p-6"><Badge color={o.orderStatus === 'Delivered' ? 'green' : o.orderStatus === 'Cancelled' ? 'red' : 'blue'}>{o.orderStatus}</Badge></td>
+                                                                <td className="p-6 text-right"><ChevronRight className="w-5 h-5 text-slate-600 ml-auto group-hover:text-rose-500"/></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                     </Card>
                                 </div>
 
@@ -992,6 +998,38 @@ export default function StoreAdmin({ currentUser }) {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Payout Status Section - NEW ADDITION */}
+                            <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-inner mt-6">
+                                <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
+                                    <DollarSign className="w-4 h-4 text-emerald-500"/> Payout Status
+                                </h4>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-bold text-white">
+                                            {selectedOrder.payoutInfo?.status === 'Settled' ? 'Payment Received' : 'Pending Settlement'}
+                                        </p>
+                                        {selectedOrder.payoutInfo?.settledAt && (
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                {new Date(selectedOrder.payoutInfo.settledAt).toLocaleDateString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {selectedOrder.payoutInfo?.status === 'Settled' ? (
+                                        <div className="flex items-center gap-3">
+                                            <Badge color="green">Settled</Badge>
+                                            {selectedOrder.payoutInfo.proofImage && (
+                                                <a href={selectedOrder.payoutInfo.proofImage} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors border border-indigo-500/30 px-3 py-1.5 rounded-lg bg-indigo-500/10">
+                                                    View Proof <ExternalLink className="w-3 h-3"/>
+                                                </a>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <Badge color="amber">Processing</Badge>
+                                    )}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>

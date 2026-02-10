@@ -4,7 +4,8 @@ const router = express.Router();
 const {
     addOrderItems,
     getOrderById,
-    updateOrderToPaid,
+    verifyOrderPayment, // Renamed from updateOrderToPaid
+    settlePayout,       // NEW: For Payout Proofs
     updateOrderStatus,
     getMyOrders,
     getShopOrders,
@@ -19,13 +20,16 @@ router.route('/')
 
 // Specific Lists (Static Paths)
 router.route('/myorders').get(protect, getMyOrders); // Customer History
-router.route('/shop-orders').get(protect, seller, getShopOrders); // Seller Dashboard
+router.route('/shop-orders').get(protect, seller, getShopOrders); // Seller Dashboard (Gatekeeper Active)
 
 // Dynamic ID Routes (Last)
 router.route('/:id').get(protect, getOrderById);
 
-// Payment Verification (FOUNDER ONLY) - Centralized Payment Flow
-router.route('/:id/pay').put(protect, founder, updateOrderToPaid); 
+// Payment Verification (FOUNDER ONLY) - The Gatekeeper Unlock
+router.route('/:id/pay').put(protect, founder, verifyOrderPayment); 
+
+// Payout Settlement (FOUNDER ONLY) - Upload Proof
+router.route('/:id/payout').put(protect, founder, settlePayout);
 
 // Delivery Status (SELLER Action)
 router.route('/:id/deliver').put(protect, seller, updateOrderStatus); 
