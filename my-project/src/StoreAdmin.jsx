@@ -1,5 +1,5 @@
 // src/StoreAdmin.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     LayoutDashboard, ShoppingBag, Package, Plus, X, 
     DollarSign, Star, Settings, Menu, RefreshCcw, Store,
@@ -12,8 +12,6 @@ import io from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const ENDPOINT = import.meta.env.VITE_API_URL;
-
-// --- CLOUDINARY CONFIG ---
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
@@ -22,7 +20,7 @@ var socket;
 // --- PREMIUM UI COMPONENTS (Midnight Rose Theme) ---
 
 const Button = ({ children, variant = 'primary', size = 'md', className = '', loading, ...props }) => {
-    const baseStyle = "relative flex items-center justify-center gap-2 font-bold transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 rounded-xl tracking-wide";
+    const baseStyle = "relative flex items-center justify-center gap-2 font-bold transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl tracking-wide";
     
     const variants = {
         primary: "bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg shadow-rose-500/20 border border-white/10 hover:shadow-rose-500/40 hover:border-white/20",
@@ -61,14 +59,14 @@ const Badge = ({ children, color = 'slate' }) => {
         pink: 'bg-pink-500/10 text-pink-400 border-pink-500/20',
         amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
     };
-    return <span className={`px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border ${colors[color]}`}>{children}</span>;
+    return <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border ${colors[color]}`}>{children}</span>;
 };
 
 // --- CSS CHART COMPONENT (Neon Glow) ---
 const CssBarChart = ({ data }) => (
-    <div className="flex items-end justify-between h-40 gap-1 sm:gap-2 mt-6">
+    <div className="flex items-end justify-between h-40 gap-2 mt-6 px-2">
         {data.map((h, i) => (
-            <div key={i} className="w-full bg-slate-800/50 rounded-t-lg relative group overflow-hidden h-full flex items-end">
+            <div key={i} className="w-full bg-slate-800/30 rounded-t-lg relative group overflow-hidden h-full flex items-end">
                 <div 
                     className="w-full bg-gradient-to-t from-rose-600 to-pink-500 rounded-t-lg opacity-80 group-hover:opacity-100 transition-all duration-500 ease-out group-hover:shadow-[0_0_20px_rgba(244,63,94,0.6)]"
                     style={{ height: `${h}%`, animation: `growUp 1s ease-out ${i * 0.1}s backwards` }}
@@ -97,6 +95,10 @@ export default function StoreAdmin({ currentUser }) {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false); 
     
+    // Search & Filter States
+    const [productSearch, setProductSearch] = useState("");
+    const [orderFilter, setOrderFilter] = useState("All");
+
     // Product Editing & Image Upload States
     const [editingProduct, setEditingProduct] = useState(null);
     const [images, setImages] = useState([]); 
@@ -127,14 +129,8 @@ export default function StoreAdmin({ currentUser }) {
         if(currentUser) socket.emit("setup", currentUser);
         fetchStoreData();
         
-        socket.on("new_order_placed", () => {
-             fetchStoreData(); 
-        });
-
-        // Listen for Order Verified (Unlock from Founder)
-        socket.on("order_verified", () => {
-            fetchStoreData();
-        });
+        socket.on("new_order_placed", () => fetchStoreData());
+        socket.on("order_verified", () => fetchStoreData());
 
         return () => { socket.disconnect(); }
     }, [currentUser]); 
@@ -211,9 +207,7 @@ export default function StoreAdmin({ currentUser }) {
         if (phoneRegex.test(cleanText)) return false;
         const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
         if (emailRegex.test(text)) return false;
-        const instaRegex = /(?:@|(?:instagram|insta|ig)(?:\.com)?\/|ig:? ?|insta:? ?)([a-zA-Z0-9_.]+)/i;
-        if (instaRegex.test(text)) return false;
-        const forbiddenWords = ['call me', 'phone number', 'contact number', 'whatsapp', 'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do', 'instagram', 'insta','dm me', 'link in bio', 'facebook', 'snapchat'];
+        const forbiddenWords = ['call me', 'contact number', 'whatsapp', 'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'instagram', 'snapchat'];
         for (let word of forbiddenWords) {
             if (lowerText.includes(word)) return false;
         }
@@ -454,6 +448,18 @@ export default function StoreAdmin({ currentUser }) {
         return [...new Set([...defaults, ...shopCategories, ...productCategories])].sort();
     };
 
+    // Filter Logic for Orders
+    const filteredOrders = useMemo(() => {
+        if (orderFilter === 'All') return orders;
+        return orders.filter(o => o.orderStatus === orderFilter);
+    }, [orders, orderFilter]);
+
+    // Search Logic for Products
+    const filteredProducts = useMemo(() => {
+        return products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
+    }, [products, productSearch]);
+
+
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
         <button 
             onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
@@ -498,27 +504,10 @@ export default function StoreAdmin({ currentUser }) {
         <div className="min-h-screen bg-slate-950 font-sans text-slate-200 selection:bg-rose-500/30 selection:text-rose-200 overflow-hidden flex relative">
             
             {/* ==========================================
-              PREMIUM MOBILE OVERLAY 
-              ==========================================
-              Uses cubic-bezier for a smooth fade and backdrop blur transition.
-            */}
-            <div 
-                className={`fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] md:hidden 
-                ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto backdrop-blur-md' : 'opacity-0 pointer-events-none'}`} 
-                onClick={() => setIsMobileMenuOpen(false)}
-            ></div>
-
-            {/* ==========================================
-              HIGH-END SIDEBAR NAVIGATION
-              ==========================================
-              - "backdrop-blur-2xl": Frosted glass effect
-              - "shadow-2xl": Deep depth when open
-              - "cubic-bezier(0.19,1,0.22,1)": The "Apple" style snap animation
-            */}
+              DESKTOP SIDEBAR
+              ========================================== */}
             <aside 
-                className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/80 backdrop-blur-2xl border-r border-white/10 flex flex-col shadow-[0_0_50px_-12px_rgba(0,0,0,0.8)] 
-                transform transition-transform duration-[600ms] ease-[cubic-bezier(0.19,1,0.22,1)] 
-                ${isMobileMenuOpen ? 'translate-x-0 shadow-rose-900/20' : '-translate-x-full'} md:translate-x-0`}
+                className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/80 backdrop-blur-2xl border-r border-white/10 hidden md:flex flex-col shadow-2xl`}
             >
                 {/* Header with Subtle Gradient */}
                 <div className="h-28 flex items-center px-8 gap-4 border-b border-white/5 bg-gradient-to-b from-slate-800/20 to-transparent">
@@ -527,7 +516,6 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
                 
                 <nav className="flex-1 space-y-2 p-6 overflow-y-auto custom-scrollbar relative">
-                    {/* Decorative Background Glow in Sidebar */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-rose-500/10 rounded-full blur-[60px] pointer-events-none"></div>
 
                     <p className="text-xs font-extrabold text-slate-500 uppercase px-4 mb-3 mt-2 tracking-widest relative z-10">Menu</p>
@@ -555,15 +543,14 @@ export default function StoreAdmin({ currentUser }) {
             </aside>
 
             {/* MAIN CONTENT AREA */}
-            <main className="flex-1 md:ml-72 flex flex-col h-screen overflow-hidden relative bg-slate-950 transition-all duration-500">
+            <main className="flex-1 md:ml-72 flex flex-col h-screen overflow-hidden relative bg-slate-950 transition-all duration-500 pb-20 md:pb-0">
                 
                 {/* HEADER */}
                 <header className="bg-slate-950/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30 px-6 py-4 flex-shrink-0">
                     <div className="flex items-center justify-between max-w-7xl mx-auto w-full">
                         <div className="flex items-center gap-4">
-                            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 active:scale-90 transition-transform shadow-sm">
-                                <Menu className="w-6 h-6"/>
-                            </button>
+                            {/* Mobile Logo instead of menu */}
+                            <div className="md:hidden w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center font-black text-xl text-white">S</div>
                             <h2 className="text-xl md:text-2xl font-black capitalize text-white tracking-tight flex items-center gap-2">{activeTab} {activeTab === 'dashboard' && <Sparkles className="w-4 h-4 text-rose-500"/>}</h2>
                         </div>
                         
@@ -582,7 +569,7 @@ export default function StoreAdmin({ currentUser }) {
 
                 {/* SCROLLABLE CONTENT */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar scroll-smooth">
-                    <div className="max-w-7xl mx-auto w-full pb-32"> {/* Extra padding for mobile bottom */}
+                    <div className="max-w-7xl mx-auto w-full"> 
                         
                         {/* --- DASHBOARD TAB --- */}
                         {activeTab === 'dashboard' && (
@@ -639,41 +626,50 @@ export default function StoreAdmin({ currentUser }) {
                         {activeTab === 'products' && (
                             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div><h2 className="text-2xl font-black text-white tracking-tight">Inventory</h2><p className="text-slate-500 text-sm font-medium">Manage {products.length} products</p></div>
+                                    <div><h2 className="text-2xl font-black text-white tracking-tight">Inventory</h2><p className="text-slate-500 text-sm font-medium">Manage {filteredProducts.length} products</p></div>
                                     <Button onClick={() => handleOpenModal(null)} className="shadow-lg shadow-rose-500/20"><Plus className="w-5 h-5"/> Add Product</Button>
                                 </div>
+
+                                {/* Product Search Bar - NEW */}
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"/>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search by product name..." 
+                                        value={productSearch}
+                                        onChange={(e) => setProductSearch(e.target.value)}
+                                        className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white focus:border-rose-500 outline-none font-medium placeholder:text-slate-600 shadow-sm"
+                                    />
+                                </div>
                                 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {products.length === 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {filteredProducts.length === 0 ? (
                                         <div className="col-span-full py-24 text-center text-slate-500 flex flex-col items-center border-2 border-dashed border-slate-800 rounded-[2.5rem] bg-slate-900/50">
                                             <ShoppingBag className="w-16 h-16 mb-4 opacity-20"/>
                                             <p className="font-bold text-lg text-slate-400">No products found.</p>
-                                            <p className="text-sm">Start by adding your first item.</p>
                                         </div>
-                                    ) : products.map(p => {
+                                    ) : filteredProducts.map(p => {
                                         const displayImage = p.coverImage || (p.images && p.images[0]?.url) || p.image || "https://via.placeholder.com/300";
                                         return (
-                                            <div key={p._id} className="group bg-slate-900/50 backdrop-blur rounded-3xl border border-white/5 hover:border-rose-500/50 shadow-lg hover:shadow-2xl hover:shadow-rose-900/20 transition-all duration-300 overflow-hidden flex flex-col relative">
-                                                <div className="absolute top-4 right-4 z-10">
-                                                    <span className="bg-slate-900/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide shadow-sm border border-white/10 flex items-center gap-1 text-rose-400">
-                                                        <Package className="w-3 h-3"/> {p.stock} Left
+                                            <div key={p._id} className="group bg-slate-900/50 backdrop-blur rounded-2xl border border-white/5 hover:border-rose-500/50 shadow-lg transition-all duration-300 overflow-hidden flex flex-col relative">
+                                                <div className="absolute top-2 right-2 z-10">
+                                                    <span className="bg-black/60 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wide text-white flex items-center gap-1">
+                                                        <Package className="w-3 h-3"/> {p.stock}
                                                     </span>
                                                 </div>
-                                                <div className="relative h-60 overflow-hidden bg-slate-800">
+                                                <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
                                                     <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                                                    {p.images && p.images.length > 1 && (
-                                                        <div className="absolute bottom-3 left-3 bg-black/60 text-white text-[10px] px-2 py-1 rounded-md backdrop-blur-md flex items-center gap-1 font-bold">
-                                                            <ImageIcon className="w-3 h-3" /> {p.images.length}
-                                                        </div>
-                                                    )}
+                                                    {/* Quick Actions Overlay */}
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <button onClick={() => handleOpenModal(p)} className="p-2 bg-white rounded-full text-black shadow-lg hover:scale-110 transition-transform"><Edit className="w-4 h-4"/></button>
+                                                        <button onClick={() => handleDeleteProduct(p._id)} className="p-2 bg-rose-500 rounded-full text-white shadow-lg hover:scale-110 transition-transform"><Trash2 className="w-4 h-4"/></button>
+                                                    </div>
                                                 </div>
-                                                <div className="p-5 flex-1 flex flex-col">
-                                                    <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-white line-clamp-1 text-base">{p.name}</h3></div>
-                                                    <p className="text-rose-400 font-black text-xl mb-2">₹{p.price}</p>
-                                                    <p className="text-slate-400 text-xs line-clamp-2 mb-6 flex-1 leading-relaxed font-medium">{p.description}</p>
-                                                    <div className="flex gap-2 pt-4 border-t border-white/5 mt-auto">
-                                                        <button onClick={() => handleOpenModal(p)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white text-xs font-bold transition-all"><Edit className="w-3.5 h-3.5"/> Edit</button>
-                                                        <button onClick={() => handleDeleteProduct(p._id)} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white text-xs font-bold transition-all"><Trash2 className="w-3.5 h-3.5"/> Delete</button>
+                                                <div className="p-3 flex flex-col flex-1">
+                                                    <h3 className="font-bold text-white text-sm line-clamp-1">{p.name}</h3>
+                                                    <div className="flex justify-between items-center mt-auto pt-2">
+                                                        <p className="text-rose-400 font-black text-sm">₹{p.price}</p>
+                                                        <p className="text-[10px] text-slate-500 font-bold uppercase">{p.category}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -683,13 +679,23 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- ORDERS TAB (MOBILE OPTIMIZED) --- */}
+                        {/* --- ORDERS TAB (MOBILE OPTIMIZED & TABBED) --- */}
                         {activeTab === 'orders' && (
                             <div className="animate-in slide-in-from-right-4 duration-300">
-                                <div className="flex items-center justify-between mb-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                                     <h2 className="text-2xl font-black text-white tracking-tight">Orders</h2>
-                                    <div className="flex gap-2">
-                                        <button className="p-2 bg-slate-900 border border-slate-700 rounded-lg shadow-sm text-slate-400 hover:text-white"><Filter className="w-4 h-4"/></button>
+                                    
+                                    {/* Order Tabs - NEW */}
+                                    <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
+                                        {['All', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
+                                            <button 
+                                                key={status} 
+                                                onClick={() => setOrderFilter(status)}
+                                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${orderFilter === status ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                            >
+                                                {status}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -702,7 +708,7 @@ export default function StoreAdmin({ currentUser }) {
                                                         <tr><th className="p-6">Order ID</th><th className="p-6">Customer</th><th className="p-6">Date</th><th className="p-6">Amount</th><th className="p-6">Status</th><th className="p-6 text-right">Action</th></tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-white/5 text-slate-300">
-                                                        {orders.map(o => (
+                                                        {filteredOrders.map(o => (
                                                             <tr key={o._id} className="hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => setSelectedOrder(o)}>
                                                                 <td className="p-6 font-mono font-bold text-slate-500 text-xs group-hover:text-rose-400">#{o._id.slice(-6).toUpperCase()}</td>
                                                                 <td className="p-6 font-bold text-white flex items-center gap-3">
@@ -723,7 +729,7 @@ export default function StoreAdmin({ currentUser }) {
 
                                 {/* Mobile Card View (Cards Stack) */}
                                 <div className="md:hidden space-y-4">
-                                    {orders.map(o => (
+                                    {filteredOrders.map(o => (
                                         <div key={o._id} onClick={() => setSelectedOrder(o)} className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 shadow-lg active:scale-[0.98] transition-all relative overflow-hidden backdrop-blur-md">
                                             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${o.orderStatus === 'Delivered' ? 'bg-emerald-500' : o.orderStatus === 'Cancelled' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
                                             <div className="flex justify-between items-start mb-3 pl-3">
@@ -745,7 +751,7 @@ export default function StoreAdmin({ currentUser }) {
                                             </div>
                                         </div>
                                     ))}
-                                    {orders.length === 0 && <div className="text-center py-10 text-slate-500 font-bold">No orders found.</div>}
+                                    {filteredOrders.length === 0 && <div className="text-center py-10 text-slate-500 font-bold">No orders found.</div>}
                                 </div>
                             </div>
                         )}
@@ -846,7 +852,28 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             </main>
 
-            {/* --- ADD/EDIT MODAL (FULL SCREEN ON MOBILE, DARK THEME) --- */}
+            {/* --- MOBILE BOTTOM NAVIGATION --- */}
+            {/* This replaces the sidebar on mobile screens for better UX */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-white/10 z-50 flex justify-around p-2 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+                 {[
+                    { id: 'dashboard', icon: LayoutDashboard },
+                    { id: 'orders', icon: Package, badge: orders.some(o => o.orderStatus === 'Processing') },
+                    { id: 'products', icon: ShoppingBag },
+                    { id: 'messages', icon: MessageSquare, badge: chats.length > 0 },
+                    { id: 'settings', icon: Settings }
+                ].map((item) => (
+                    <button 
+                        key={item.id} 
+                        onClick={() => setActiveTab(item.id)} 
+                        className={`relative p-3 rounded-2xl transition-all duration-300 ${activeTab === item.id ? 'text-rose-500 bg-rose-500/10' : 'text-slate-400'}`}
+                    >
+                        <item.icon className={`w-6 h-6 ${activeTab === item.id ? 'scale-110 drop-shadow-sm' : ''}`} />
+                        {item.badge && <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
+                    </button>
+                ))}
+            </div>
+
+            {/* --- ADD/EDIT MODAL --- */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-0 md:p-4 animate-in fade-in duration-200">
                     <div className="bg-slate-900 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-[2rem] shadow-2xl shadow-rose-900/10 relative flex flex-col scale-100 animate-in zoom-in-95 duration-200 border border-white/10">
@@ -915,7 +942,7 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             )}
 
-            {/* --- ORDER DETAILS MODAL (BOTTOM SHEET STYLE ON MOBILE, DARK) --- */}
+            {/* --- ORDER DETAILS MODAL --- */}
             {selectedOrder && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center z-[60] animate-in fade-in duration-200">
                     <div className="bg-slate-950 w-full h-[90vh] md:h-auto md:max-h-[90vh] md:max-w-2xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl shadow-rose-900/10 relative flex flex-col scale-100 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300 border border-white/10">
@@ -958,47 +985,6 @@ export default function StoreAdmin({ currentUser }) {
                                 )}
                             </div>
 
-                            {/* Cancellation Notice */}
-                            {selectedOrder.orderStatus === 'Cancelled' && (
-                                <div className="bg-red-900/10 border border-red-500/20 rounded-2xl p-5 flex gap-3 items-start">
-                                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5"/>
-                                    <div>
-                                        <h4 className="text-red-400 font-bold text-sm">Cancellation Reason</h4>
-                                        <p className="text-slate-300 text-sm mt-1">{selectedOrder.cancellationReason || "No reason provided."}</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div>
-                                    <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest"><MapPin className="w-4 h-4 text-indigo-500"/> Shipping Details</h4>
-                                    <div className="bg-slate-900 p-6 rounded-3xl border border-white/5 shadow-inner text-sm space-y-2">
-                                        <p className="font-black text-white text-lg">{selectedOrder.shippingAddress?.fullName}</p>
-                                        <p className="text-slate-400 font-medium">{selectedOrder.shippingAddress?.address}, {selectedOrder.shippingAddress?.city}</p>
-                                        <p className="text-slate-400 font-medium">{selectedOrder.shippingAddress?.postalCode}, {selectedOrder.shippingAddress?.country}</p>
-                                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 font-bold text-slate-300"><Phone className="w-4 h-4 text-indigo-500"/> {selectedOrder.shippingAddress?.phone}</div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest"><Package className="w-4 h-4 text-rose-500"/> Items</h4>
-                                    <div className="space-y-3">
-                                        {selectedOrder.items.map((item, idx) => (
-                                            <div key={idx} className="flex gap-4 p-4 border border-white/5 rounded-3xl bg-slate-900 shadow-sm items-center">
-                                                <img src={item.image} alt="" className="w-16 h-16 rounded-xl object-cover bg-slate-800"/>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-white text-sm truncate">{item.name}</p>
-                                                    <p className="text-xs text-slate-500 font-bold mt-0.5">Qty: {item.qty} × ₹{item.price}</p>
-                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                        {item.selectedSize && <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700 font-bold">Size: {item.selectedSize}</span>}
-                                                        {item.customization?.text && <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20 font-bold">Custom: "{item.customization.text}"</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Payout Status Section - NEW ADDITION */}
                             <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-inner mt-6">
                                 <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
@@ -1029,7 +1015,6 @@ export default function StoreAdmin({ currentUser }) {
                                     )}
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
