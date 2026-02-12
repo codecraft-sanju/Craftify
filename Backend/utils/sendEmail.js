@@ -6,13 +6,14 @@ const sendEmailOtp = async (email, otp) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "vaishnavlibrary18@gmail.com", // Aapki Gmail ID
-        pass: "bedn wcgp kfaf ndq",          // 16-Digit App Password (Google Account -> Security -> App Passwords)
+        user: process.env.EMAIL_USER, // .env se lega
+        pass: process.env.EMAIL_PASS, // .env se lega
       },
     });
 
     const mailOptions = {
-      from: '"Giftomize Security" <sanjaychoudhury693@gmail.com>',
+      // 'from' address auth user same hona chahiye best delivery ke liye
+      from: `"Giftomize Security" <${process.env.EMAIL_USER}>`, 
       to: email,
       subject: `${otp} is your verification code`,
       html: `
