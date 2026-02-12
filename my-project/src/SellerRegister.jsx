@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, ShoppingBag, ShieldCheck, 
-  KeyRound, Sparkles, Loader2
+  KeyRound, Sparkles, Loader2, Eye, EyeOff, Edit2
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,34 +35,53 @@ const BackgroundAurora = () => (
   </div>
 );
 
-const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength }) => (
-  <div className="relative w-full mb-6 group">
-    <input
-      name={name}
-      value={value}
-      onChange={onChange}
-      type={type}
-      required={required}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      maxLength={maxLength}
-      className="inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 pl-2 outline-none 
-                 focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
-    />
-    <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                      peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
-                      peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
-      {label}
-    </span>
-    <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
-  </div>
-);
+// Updated InputGroup with Password Toggle
+const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
+  return (
+    <div className="relative w-full mb-6 group">
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        type={inputType}
+        required={required}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        maxLength={maxLength}
+        className="inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 pl-2 pr-10 outline-none 
+                   focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
+      />
+      <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
+                        peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
+                        peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
+        {label}
+      </span>
+      
+      {/* Main Icon */}
+      <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
+
+      {/* Password Toggle Icon */}
+      {isPassword && (
+        <button 
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-8 top-3 text-zinc-400 hover:text-black dark:hover:text-white transition-colors focus:outline-none"
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
+    </div>
+  );
+};
 
 const CustomSelect = ({ icon: Icon, label, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = (option) => {
-    // Mimic event object for generic handler
     onChange({ target: { name: 'category', value: option } });
     setIsOpen(false);
   };
@@ -78,7 +97,6 @@ const CustomSelect = ({ icon: Icon, label, value, options, onChange }) => {
         </span>
         <Icon size={18} className={`text-zinc-300 transition-transform duration-300 group-hover:text-black dark:group-hover:text-white ${isOpen ? 'rotate-180' : ''}`} />
         
-        {/* Floating Label */}
         <span className="absolute left-0 -top-4 text-zinc-500 text-[10px] font-bold uppercase tracking-widest pointer-events-none">
           {label}
         </span>
@@ -135,8 +153,11 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // --- NEW STATE: Track Verification Method (whatsapp/email) ---
+  // Verification Method (whatsapp/email)
   const [verificationMethod, setVerificationMethod] = useState('whatsapp'); 
+  
+  // Timer for Step 3
+  const [timer, setTimer] = useState(30);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -156,8 +177,24 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     setError("");
   }, [initialMode]);
 
+  // Timer Effect
+  useEffect(() => {
+    let interval;
+    if (step === 3 && timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // Strict Number Validation for Phone
+    if (name === 'phone') {
+        if (!/^\d*$/.test(value)) return; // Only allows digits
+    }
+
+    setFormData({ ...formData, [name]: value });
     setError(""); 
   };
 
@@ -224,23 +261,14 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
                 setLoading(false);
 
-                // --- SMART UI UPDATE START ---
-                // Backend batayega OTP kahan gaya
+                // Check method from backend
                 if (userData.otpMethod === 'email') {
                     setVerificationMethod('email');
                 } else {
                     setVerificationMethod('whatsapp');
                 }
 
-                // Agar dono fail hue aur Secret OTP aaya (Dev Mode)
-                if (userData.secretOtp) {
-                    console.log("Dev Mode Active: Auto-filling OTP");
-                    setTimeout(() => {
-                        setFormData(prev => ({ ...prev, otp: userData.secretOtp }));
-                    }, 1500);
-                }
-                // --- SMART UI UPDATE END ---
-
+                setTimer(30); // Reset timer
                 setStep(3); // Move to OTP
                 return;
             }
@@ -368,14 +396,17 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     <motion.div key="step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="WhatsApp Number" />
+                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="WhatsApp Number" maxLength={10} />
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
                         <div className="pt-4">
                             <ShimmerButton 
                                 type="button" 
                                 onClick={() => {
-                                    if(formData.name && formData.email && formData.password && formData.phone) setStep(2);
+                                    if(formData.name && formData.email && formData.password && formData.phone) {
+                                        if(formData.phone.length < 10) setError("Phone number must be 10 digits");
+                                        else setStep(2);
+                                    }
                                     else setError("Please fill all fields to continue.");
                                 }} 
                                 className="w-full text-base"
@@ -401,7 +432,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl flex gap-3 items-start border border-zinc-200 dark:border-zinc-800">
                             <ShieldCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
                             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                We will send a One-Time Password (OTP) to your registered contact to verify your identity.
+                                We will send an OTP to your registered contact to verify your identity.
                             </p>
                         </div>
 
@@ -420,38 +451,47 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 {!isLoginView && step === 3 && (
                     <motion.div key="step3" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <div className="text-center py-6 mb-4">
-                             {/* DYNAMIC ICON COLOR */}
+                             {/* DYNAMIC ICON */}
                              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce ${
                                  verificationMethod === 'email' 
                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
                                  : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                              }`}>
-                                {/* DYNAMIC ICON */}
                                 {verificationMethod === 'email' ? <Mail className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
                              </div>
 
-                             {/* DYNAMIC HEADING */}
                              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
                                 {verificationMethod === 'email' ? 'Check Your Email' : 'OTP Sent via WhatsApp'}
                              </h3>
                              
-                             {/* DYNAMIC DESCRIPTION */}
                              <p className="text-zinc-500 text-sm mt-2">
-                                We sent a code to <br/> 
-                                <span className="font-bold text-black dark:text-white">
+                                Code sent to <span className="font-bold text-black dark:text-white">
                                     {verificationMethod === 'email' ? formData.email : formData.phone}
                                 </span>
+                                {/* EDIT BUTTON (NEW) */}
+                                <button onClick={() => setStep(1)} className="ml-2 text-indigo-500 hover:underline inline-flex items-center gap-1">
+                                    <Edit2 size={12} /> Edit
+                                </button>
                              </p>
                              
                              {verificationMethod === 'email' && (
                                 <p className="text-[10px] text-zinc-400 mt-2 font-medium tracking-wide">
-                                    (Please check your Spam/Junk folder if not in Inbox)
+                                    (Check Spam/Junk folder if not in Inbox)
                                 </p>
                              )}
                         </div>
                         
                         <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter 6-Digit Code" autoFocus maxLength={6} />
                         
+                        {/* TIMER UI */}
+                        <div className="text-center text-xs text-zinc-400 font-medium">
+                            {timer > 0 ? (
+                                <span>Resend code in 00:{timer < 10 ? `0${timer}` : timer}</span>
+                            ) : (
+                                <span className="text-zinc-500">Didn't get the code? Please try registering again with correct details.</span>
+                            )}
+                        </div>
+
                         <div className="pt-4">
                             <ShimmerButton isLoading={loading} className="w-full text-base">
                                 Confirm & Login <ArrowRight size={18} />
