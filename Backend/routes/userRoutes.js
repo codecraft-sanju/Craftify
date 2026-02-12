@@ -1,8 +1,10 @@
+// backend/routes/userRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const {
     registerUser,
-    verifyUserOtp, // <--- NEW: Isko import kiya
+    verifyUserOtp, 
     authUser,
     logoutUser, 
     getUserProfile,
@@ -24,7 +26,7 @@ const {
 const { protect, founder } = require('../middleware/authMiddleware');
 
 // --- AUTH ROUTES ---
-router.post('/verify-otp', verifyUserOtp); // <--- NEW: Verification Route yahan add kiya
+router.post('/verify-otp', verifyUserOtp);
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
 
@@ -57,7 +59,7 @@ router.route('/wishlist/:id')
 
 // --- ADMIN / FOUNDER ROUTES + REGISTER ---
 router.route('/')
-    .post(registerUser) // Register is public (Sends OTP)
+    .post(registerUser) // Register is public (Sends OTP via WhatsApp or Email)
     .get(protect, founder, getUsers); // List users (Founder only)
 
 // IMPORTANT: Keep this route at the bottom to avoid conflicts

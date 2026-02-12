@@ -135,6 +135,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
+  // --- NEW STATE: Track Verification Method (whatsapp/email) ---
+  const [verificationMethod, setVerificationMethod] = useState('whatsapp'); 
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -201,7 +204,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         } else {
             // === REGISTER LOGIC ===
             
-            // Phase 1: Step 2 -> Create User (Triggers OTP)
+            // Phase 1: Step 2 -> Create User (Triggers Smart OTP)
             if (step === 2) {
                 const userRes = await fetch(`${API_URL}/api/users`, {
                     method: 'POST',
@@ -220,6 +223,24 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 if (!userRes.ok) throw new Error(userData.message || "User registration failed");
 
                 setLoading(false);
+
+                // --- SMART UI UPDATE START ---
+                // Backend batayega OTP kahan gaya
+                if (userData.otpMethod === 'email') {
+                    setVerificationMethod('email');
+                } else {
+                    setVerificationMethod('whatsapp');
+                }
+
+                // Agar dono fail hue aur Secret OTP aaya (Dev Mode)
+                if (userData.secretOtp) {
+                    console.log("Dev Mode Active: Auto-filling OTP");
+                    setTimeout(() => {
+                        setFormData(prev => ({ ...prev, otp: userData.secretOtp }));
+                    }, 1500);
+                }
+                // --- SMART UI UPDATE END ---
+
                 setStep(3); // Move to OTP
                 return;
             }
@@ -380,7 +401,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl flex gap-3 items-start border border-zinc-200 dark:border-zinc-800">
                             <ShieldCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
                             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                We will send a One-Time Password (OTP) to <strong>{formData.phone}</strong> to verify your identity.
+                                We will send a One-Time Password (OTP) to your registered contact to verify your identity.
                             </p>
                         </div>
 
@@ -395,14 +416,38 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     </motion.div>
                 )}
 
+                {/* === STEP 3: SMART OTP UI === */}
                 {!isLoginView && step === 3 && (
                     <motion.div key="step3" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <div className="text-center py-6 mb-4">
-                             <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                <Phone className="w-8 h-8" />
+                             {/* DYNAMIC ICON COLOR */}
+                             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce ${
+                                 verificationMethod === 'email' 
+                                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                             }`}>
+                                {/* DYNAMIC ICON */}
+                                {verificationMethod === 'email' ? <Mail className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
                              </div>
-                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white">OTP Sent</h3>
-                             <p className="text-zinc-500 text-sm">Check WhatsApp on {formData.phone}</p>
+
+                             {/* DYNAMIC HEADING */}
+                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                                {verificationMethod === 'email' ? 'Check Your Email' : 'OTP Sent via WhatsApp'}
+                             </h3>
+                             
+                             {/* DYNAMIC DESCRIPTION */}
+                             <p className="text-zinc-500 text-sm mt-2">
+                                We sent a code to <br/> 
+                                <span className="font-bold text-black dark:text-white">
+                                    {verificationMethod === 'email' ? formData.email : formData.phone}
+                                </span>
+                             </p>
+                             
+                             {verificationMethod === 'email' && (
+                                <p className="text-[10px] text-zinc-400 mt-2 font-medium tracking-wide">
+                                    (Please check your Spam/Junk folder if not in Inbox)
+                                </p>
+                             )}
                         </div>
                         
                         <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter 6-Digit Code" autoFocus maxLength={6} />

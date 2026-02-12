@@ -1,31 +1,27 @@
+// backend/controllers/userController.js
 const User = require('../models/User');
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
-const axios = require('axios'); // WhatsApp API ke liye zaroori hai
+const axios = require('axios'); 
+const sendEmailOtp = require('../utils/sendEmail'); 
 
-// --- HELPER: Send WhatsApp OTP (UPDATED & FIXED) ---
+// --- HELPER: Send WhatsApp OTP (Internal) ---
 const sendWhatsAppOtp = async (phone, otp) => {
     try {
-        // 1. Credentials Load
         const instanceId = process.env.WHATSAPP_INSTANCE_ID;
         const token = process.env.WHATSAPP_TOKEN;
 
-        console.log("DEBUG: WhatsApp Instance:", instanceId ? "Loaded" : "Missing");
-
-        if (!instanceId || !token) {
-            console.error("❌ ERROR: WhatsApp Instance ID or Token is MISSING in .env");
-            return false;
-        }
+        // Agar keys nahi hain, toh seedha fail return karo taaki Email try ho sake
+        if (!instanceId || !token) return false;
         
-        const message = `Welcome to *Giftomize* – Where Gifting Meets Personalization! 🎁\n\nThank you for choosing us. To complete your registration and secure your account, please use the following One-Time Password (OTP):\n\n👉 *${otp}*\n\n⏳ This code is valid for the next 10 minutes.\n\n⚠️ *Security Alert:* For your safety, please do not share this code with anyone, including Giftomize support staff.\n\nWe are excited to have you on board!\n\nBest Regards,\n*Team Giftomize*`;
+        const message = `Welcome to *Giftomize*! 🎁\n\nYour OTP is: *${otp}*\n\nValid for 10 minutes.\nDo not share this code.`;
         
-        // 2. Phone Formatting (India Code Fix)
+        // India code formatting (Remove non-digits, add 91 if 10 digits)
         let formattedPhone = phone.toString().replace(/\D/g, ''); 
         if (formattedPhone.length === 10) {
             formattedPhone = "91" + formattedPhone;
         }
 
-        // 3. API Request (Using URLSearchParams for better compatibility)
         const payload = new URLSearchParams({
             token: token,
             to: formattedPhone,
@@ -34,49 +30,65 @@ const sendWhatsAppOtp = async (phone, otp) => {
 
         const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
         
-        const response = await axios.post(url, payload, {
+        await axios.post(url, payload, {
             headers: { 'content-type': 'application/x-www-form-urlencoded' }
         });
 
-        console.log("✅ WhatsApp OTP Sent successfully");
+        console.log(`✅ WhatsApp OTP Sent to ${formattedPhone}`);
         return true;
 
     } catch (error) {
-        console.error("❌ WhatsApp Send Error:", error.message);
-        if (error.response) {
-            console.error("API Response Data:", JSON.stringify(error.response.data, null, 2));
-            console.error("API Status:", error.response.status);
-        }
+        // Error log karo par crash mat hone do, false return karo taaki Email logic chale
+        console.warn("⚠️ WhatsApp Send Failed (Will try Email):", error.message);
         return false;
     }
 };
 
-// @desc    Register a new user & Send WhatsApp OTP
+// @desc    Register a new user & Send OTP (Smart Failover with Strict Validation)
 // @route   POST /api/users
 // @access  Public
 const registerUser = async (req, res) => {
     try {
         const { name, email, password, phone, role } = req.body;
 
-        // 1. Basic Validation
+        // 1. --- STRICT VALIDATION ---
+        
+        // Empty Fields Check
         if (!name || !email || !password || !phone) {
-            return res.status(400).json({ message: 'Please add all fields including Phone Number' });
+            return res.status(400).json({ message: 'Please fill in all fields.' });
         }
 
-        // 2. Check if User Exists (Email or Phone)
+        // Email Format Check (Regex)
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Please enter a valid email address.' });
+        }
+
+        // Phone Length Check (Indian numbers usually)
+        const cleanPhone = phone.toString().replace(/\D/g, '');
+        if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+             return res.status(400).json({ message: 'Please enter a valid phone number (10 digits).' });
+        }
+
+        // 2. --- DUPLICATE CHECK ---
         const userExists = await User.findOne({ 
             $or: [{ email: email }, { phone: phone }] 
         });
 
         if (userExists) {
-            return res.status(400).json({ message: 'User with this Email or Phone already exists' });
+            if (userExists.email === email) {
+                return res.status(400).json({ message: 'This Email is already registered.' });
+            }
+            if (userExists.phone === phone) {
+                return res.status(400).json({ message: 'This Phone Number is already registered.' });
+            }
         }
 
-        // 3. Generate 6 Digit OTP
+        // 3. --- GENERATE OTP ---
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpire = Date.now() + 10 * 60 * 1000; // 10 Minutes expiry
 
-        // 4. Role Assignment
+        // 4. --- ROLE ASSIGNMENT ---
         let userRole = 'customer';
         if (email.toLowerCase() === 'admin@gmail.com') {
             userRole = 'founder';
@@ -84,7 +96,7 @@ const registerUser = async (req, res) => {
             userRole = 'seller';
         }
 
-        // 5. Create User (Not Verified Yet)
+        // 5. --- CREATE USER (Pending Verification) ---
         const user = await User.create({
             name,
             email,
@@ -98,24 +110,57 @@ const registerUser = async (req, res) => {
         });
 
         if (user) {
-            // 6. Send OTP via WhatsApp
-            const isSent = await sendWhatsAppOtp(phone, otp);
-
-            if (isSent) {
-                res.status(201).json({
-                    message: `OTP sent successfully to ${phone}. Please verify to login.`,
-                    phone: phone, // Frontend ko phone bhejo taki wo verify screen pe dikha sake
-                    userId: user._id
-                });
+            // 6. --- SMART FAILOVER LOGIC ---
+            let otpMethod = 'none'; 
+            
+            // Step A: Try WhatsApp First
+            let isWhatsAppSent = await sendWhatsAppOtp(phone, otp);
+            
+            if (isWhatsAppSent) {
+                otpMethod = 'whatsapp';
             } else {
-                // Agar WhatsApp fail ho jaye, toh error dikhana chahiye
-                res.status(500).json({ message: "User created but failed to send WhatsApp OTP. Please check backend logs." });
+                // Step B: WhatsApp Failed? Try Email
+                console.log("⚠️ WhatsApp failed. Attempting Email OTP...");
+                let isEmailSent = await sendEmailOtp(email, otp);
+                
+                if (isEmailSent) {
+                    otpMethod = 'email';
+                } else {
+                    // Step C: BOTH FAILED (Critical Error)
+                    console.error("❌ Both WhatsApp and Email services failed.");
+                    
+                    // CLEANUP: Delete the user we just created so they can try again later
+                    await User.deleteOne({ _id: user._id });
+
+                    return res.status(503).json({ 
+                        message: "Verification service currently unavailable. Please check your internet or try again later." 
+                    });
+                }
             }
+
+            // Step D: Send Success Response
+            res.status(201).json({
+                success: true,
+                userId: user._id,
+                phone: phone,
+                email: email,
+                otpMethod: otpMethod, // Frontend will show Icon based on this
+                message: otpMethod === 'whatsapp' 
+                    ? `OTP sent via WhatsApp to ${phone}` 
+                    : `OTP sent to Email ${email}`
+            });
+
         } else {
             res.status(400).json({ message: 'Invalid user data' });
         }
     } catch (error) {
         console.error("Register Error:", error);
+        
+        // Handle Duplicate Key Error (Database level safety)
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'User details already exist.' });
+        }
+        
         res.status(500).json({ message: error.message });
     }
 };
@@ -127,7 +172,7 @@ const verifyUserOtp = async (req, res) => {
     try {
         const { phone, otp } = req.body;
 
-        // Find user by phone and include 'otp' field (kyunki model me select: false hai)
+        // Find user by phone and include 'otp' field
         const user = await User.findOne({ phone }).select('+otp');
 
         if (!user) {
@@ -136,20 +181,20 @@ const verifyUserOtp = async (req, res) => {
 
         // Check Logic
         if (user.otp !== otp) {
-            return res.status(400).json({ message: "Invalid OTP" });
+            return res.status(400).json({ message: "Invalid OTP. Please check and try again." });
         }
 
         if (user.otpExpire < Date.now()) {
-            return res.status(400).json({ message: "OTP Expired. Please try to login again to resend." });
+            return res.status(400).json({ message: "OTP has Expired. Please login again to request a new code." });
         }
 
         // Success: Verify User & Clear OTP
-        user.isPhoneVerified = true;
+        user.isPhoneVerified = true; 
         user.otp = undefined;
         user.otpExpire = undefined;
         await user.save();
 
-        // Generate Token (Login karwa do)
+        // Generate Token
         generateToken(res, user._id);
 
         // Socket Notification (Optional)
@@ -188,14 +233,6 @@ const authUser = async (req, res) => {
 
         if (user && (await user.matchPassword(password))) {
             
-            // --- CHECK: Is Verified? ---
-            // Agar aap chahte hain bina verification ke login na ho, toh ye uncomment karein:
-            /*
-            if (!user.isPhoneVerified) {
-                return res.status(401).json({ message: 'Please verify your phone number first.' });
-            }
-            */
-
             // --- GOD MODE FIX ---
             if (user.email === 'admin@gmail.com' && user.role !== 'founder') {
                 user.role = 'founder';
@@ -219,7 +256,7 @@ const authUser = async (req, res) => {
                 role: user.role,
                 avatar: user.avatar,
                 address: user.address,
-                phone: user.phone // Added phone to response
+                phone: user.phone
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
@@ -275,7 +312,7 @@ const updateUserProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email || user.email;
-            user.phone = req.body.phone || user.phone; // Allow phone update
+            user.phone = req.body.phone || user.phone; 
             
             if (req.body.password) {
                 user.password = req.body.password;
@@ -524,7 +561,7 @@ const removeFromWishlist = async (req, res) => {
 
 module.exports = {
     registerUser,
-    verifyUserOtp, // Add this to exports
+    verifyUserOtp,
     authUser,
     logoutUser,
     getUserProfile,
