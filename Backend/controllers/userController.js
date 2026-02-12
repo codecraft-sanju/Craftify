@@ -3,22 +3,50 @@ const GlobalSettings = require('../models/GlobalSettings');
 const generateToken = require('../utils/generateToken'); 
 const axios = require('axios'); // WhatsApp API ke liye zaroori hai
 
-// --- HELPER: Send WhatsApp OTP ---
+// --- HELPER: Send WhatsApp OTP (UPDATED & FIXED) ---
 const sendWhatsAppOtp = async (phone, otp) => {
     try {
-        const instanceId = process.env.WHATSAPP_INSTANCE_ID || 'instance161263';
-        const token = process.env.WHATSAPP_TOKEN || 'llnm6k6wusbr8z5q';
+        // 1. Credentials Load
+        const instanceId = process.env.WHATSAPP_INSTANCE_ID;
+        const token = process.env.WHATSAPP_TOKEN;
+
+        console.log("DEBUG: WhatsApp Instance:", instanceId ? "Loaded" : "Missing");
+
+        if (!instanceId || !token) {
+            console.error("❌ ERROR: WhatsApp Instance ID or Token is MISSING in .env");
+            return false;
+        }
         
-      const message = `Welcome to *Giftomize* – Where Gifting Meets Personalization! 🎁\n\nThank you for choosing us. To complete your registration and secure your account, please use the following One-Time Password (OTP):\n\n👉 *${otp}*\n\n⏳ This code is valid for the next 10 minutes.\n\n⚠️ *Security Alert:* For your safety, please do not share this code with anyone, including Giftomize support staff.\n\nWe are excited to have you on board!\n\nBest Regards,\n*Team Giftomize*`;
-        // UltraMsg API Call
-        await axios.post(`https://api.ultramsg.com/${instanceId}/messages/chat`, {
+        const message = `Welcome to *Giftomize* – Where Gifting Meets Personalization! 🎁\n\nThank you for choosing us. To complete your registration and secure your account, please use the following One-Time Password (OTP):\n\n👉 *${otp}*\n\n⏳ This code is valid for the next 10 minutes.\n\n⚠️ *Security Alert:* For your safety, please do not share this code with anyone, including Giftomize support staff.\n\nWe are excited to have you on board!\n\nBest Regards,\n*Team Giftomize*`;
+        
+        // 2. Phone Formatting (India Code Fix)
+        let formattedPhone = phone.toString().replace(/\D/g, ''); 
+        if (formattedPhone.length === 10) {
+            formattedPhone = "91" + formattedPhone;
+        }
+
+        // 3. API Request (Using URLSearchParams for better compatibility)
+        const payload = new URLSearchParams({
             token: token,
-            to: phone, 
+            to: formattedPhone,
             body: message
         });
+
+        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+        
+        const response = await axios.post(url, payload, {
+            headers: { 'content-type': 'application/x-www-form-urlencoded' }
+        });
+
+        console.log("✅ WhatsApp OTP Sent successfully");
         return true;
+
     } catch (error) {
-        console.error("WhatsApp Send Error:", error.message);
+        console.error("❌ WhatsApp Send Error:", error.message);
+        if (error.response) {
+            console.error("API Response Data:", JSON.stringify(error.response.data, null, 2));
+            console.error("API Status:", error.response.status);
+        }
         return false;
     }
 };
@@ -80,9 +108,8 @@ const registerUser = async (req, res) => {
                     userId: user._id
                 });
             } else {
-                // Agar WhatsApp fail ho jaye, toh hume user ko delete karna chahiye ya error dikhana chahiye
-                // Filhal error dikhate hain
-                res.status(500).json({ message: "User created but failed to send WhatsApp OTP. Please try logging in." });
+                // Agar WhatsApp fail ho jaye, toh error dikhana chahiye
+                res.status(500).json({ message: "User created but failed to send WhatsApp OTP. Please check backend logs." });
             }
         } else {
             res.status(400).json({ message: 'Invalid user data' });
