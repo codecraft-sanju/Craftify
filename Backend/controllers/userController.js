@@ -544,7 +544,7 @@ const addToWishlist = async (req, res) => {
     }
 };
 
-// Remove from Wishlist
+// Remove from Wishlis
 const removeFromWishlist = async (req, res) => {
     try {
         const productId = req.params.id;
