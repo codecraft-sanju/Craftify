@@ -295,11 +295,11 @@ const ProcessPipeline = () => {
             <div className="absolute left-8 md:left-1/2 -translate-x-1/2 flex items-center justify-center">
                {/* Core Dot */}
                <div className="w-4 h-4 rounded-full bg-black border border-white/20 shadow-[0_0_20px_rgba(0,0,0,1)] z-30 flex items-center justify-center">
-                  <motion.div 
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    className="w-2 h-2 bg-green-500 rounded-full"
-                  />
+                 <motion.div 
+                   initial={{ scale: 0 }}
+                   whileInView={{ scale: 1 }}
+                   className="w-2 h-2 bg-green-500 rounded-full"
+                 />
                </div>
                {/* Pulse effect */}
                <motion.div 
@@ -405,8 +405,8 @@ const LandingPage = ({ onLoginClick }) => {
       {/* --- MAIN CONTENT AREA --- */}
       <main className="md:pl-20 relative z-10 pt-20 md:pt-0 w-full max-w-[100vw]">
         
-        {/* HERO SECTION */}
-        <section className="min-h-[95vh] flex flex-col justify-between px-6 md:px-12 py-8 md:py-12 relative overflow-hidden">
+        {/* HERO SECTION - ADJUSTED FOR MOBILE BUTTON POSITION */}
+        <section className="min-h-[80dvh] md:min-h-[95vh] flex flex-col justify-between px-6 md:px-12 py-6 md:py-12 relative overflow-hidden">
           
           {/* Replaced 3D Scene with Responsive Background */}
           <HeroBackground />
@@ -427,18 +427,19 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
           </motion.div>
 
-          <div className="relative my-8 md:my-12 z-10 pointer-events-none">
+          {/* Text Container - Reduced margins on mobile to pull content up */}
+          <div className="relative my-4 md:my-12 z-10 pointer-events-none">
             <h1 className="massive-text leading-[0.9] tracking-tighter break-words">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <motion.span initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="block pointer-events-auto">
-                  <HackerText text="DIGITAL" />
+                  <HackerText text="DESIGN" />
                 </motion.span>
               </div>
               <motion.span initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="stroked-text block pointer-events-auto">
-                MERCHANDISE
+                CRAFT
               </motion.span>
               <motion.span initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="block text-zinc-600">
-                REDEFINED.
+                SELL
               </motion.span>
             </h1>
           </div>
@@ -447,7 +448,8 @@ const LandingPage = ({ onLoginClick }) => {
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             transition={{ delay: 1, duration: 1 }} 
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-8 z-10 bg-black/20 backdrop-blur-sm"
+            // Reduced top padding on mobile (pt-5)
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-white/10 pt-5 md:pt-8 z-10 bg-black/20 backdrop-blur-sm"
           >
             <div className="col-span-1">
               <p className="text-base md:text-lg text-zinc-300 leading-relaxed max-w-sm">
@@ -465,63 +467,83 @@ const LandingPage = ({ onLoginClick }) => {
           </motion.div>
         </section>
 
-        {/* BENTO GRID SECTION */}
-        <section className="px-4 md:px-12 py-12 border-t border-white/10 perspective-[2000px]">
-          <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-auto md:grid-rows-2 gap-4 h-auto md:h-[800px]">
+        {/* BENTO GRID SECTION - Hybrid Layout (Swipe on Mobile, Grid on Desktop) */}
+        <section className="py-12 border-t border-white/10 perspective-[2000px] overflow-hidden">
+          
+          {/* Mobile Header for this section */}
+          <div className="px-6 md:px-12 mb-6 md:hidden">
+            <h3 className="text-zinc-500 text-xs font-mono uppercase tracking-widest">System Modules <span className="animate-pulse text-green-500">●</span></h3>
+            <p className="text-white text-lg font-bold">Swipe to explore</p>
+          </div>
+
+          <div className="
+            /* Mobile: Horizontal Scroll container */
+            flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-6 pb-8
+            /* Desktop: Grid layout */
+            md:grid md:grid-cols-4 md:grid-rows-2 md:gap-4 md:px-12 md:h-[800px] md:pb-0 md:overflow-visible
+          ">
             
             {/* Box 1: Core Engine */}
-            <BentoBox3D className="md:col-span-2 md:row-span-2 flex flex-col justify-between bg-zinc-900 min-h-[400px]" title="Core Engine">
-              <div className="z-10 mt-6 md:mt-10">
-                <Cpu size={40} className="mb-6 text-white" />
-                <h3 className="text-3xl md:text-4xl font-bold mb-4">Neural Production.</h3>
-                <p className="text-zinc-400 text-base md:text-lg max-w-md leading-relaxed">
-                  Our API automatically routes your order to the print facility closest to the customer.
-                </p>
-              </div>
-              <div className="w-full h-40 bg-black/80 border border-white/10 mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs text-green-500/80 shadow-inner">
-                  {logs.map((log, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-                      {log}
-                    </motion.div>
-                  ))}
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
-            </BentoBox3D>
+            <div className="min-w-[85vw] md:min-w-0 snap-center md:col-span-2 md:row-span-2 h-full">
+              <BentoBox3D className="h-full flex flex-col justify-between bg-zinc-900 min-h-[400px]" title="Core Engine">
+                <div className="z-10 mt-6 md:mt-10">
+                  <Cpu size={40} className="mb-6 text-white" />
+                  <h3 className="text-3xl md:text-4xl font-bold mb-4">Neural Production.</h3>
+                  <p className="text-zinc-400 text-base md:text-lg max-w-md leading-relaxed">
+                    Our API automatically routes your order to the print facility closest to the customer.
+                  </p>
+                </div>
+                <div className="w-full h-40 bg-black/80 border border-white/10 mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs text-green-500/80 shadow-inner">
+                    {logs.map((log, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+                        {log}
+                      </motion.div>
+                    ))}
+                    <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+              </BentoBox3D>
+            </div>
             
             {/* Box 2: Analytics */}
-            <BentoBox3D className="md:col-span-2 min-h-[200px] flex flex-col" title="Analytics">
-              <div className="flex items-end justify-between flex-1 relative z-10">
-                <div>
-                  <h3 className="text-2xl font-bold">Real-time Insights</h3>
-                  <p className="text-zinc-500 text-sm">Track every penny.</p>
+            <div className="min-w-[85vw] md:min-w-0 snap-center md:col-span-2 h-full">
+              <BentoBox3D className="h-full min-h-[250px] flex flex-col" title="Analytics">
+                <div className="flex items-end justify-between flex-1 relative z-10">
+                  <div>
+                    <h3 className="text-2xl font-bold">Real-time Insights</h3>
+                    <p className="text-zinc-500 text-sm">Track every penny.</p>
+                  </div>
+                  <TrendingUp size={40} className="text-zinc-600" />
                 </div>
-                <TrendingUp size={40} className="text-zinc-600" />
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 h-16 opacity-20">
-                <svg viewBox="0 0 100 20" className="w-full h-full fill-none stroke-white" preserveAspectRatio="none">
-                  <path d="M0 20 Q 20 5 40 10 T 80 5 T 100 15" strokeWidth="0.5" />
-                </svg>
-              </div>
-            </BentoBox3D>
+                <div className="absolute bottom-0 left-0 right-0 h-16 opacity-20">
+                  <svg viewBox="0 0 100 20" className="w-full h-full fill-none stroke-white" preserveAspectRatio="none">
+                    <path d="M0 20 Q 20 5 40 10 T 80 5 T 100 15" strokeWidth="0.5" />
+                  </svg>
+                </div>
+              </BentoBox3D>
+            </div>
 
             {/* Box 3: Global */}
-            <BentoBox3D className="md:col-span-1 min-h-[200px]" title="Global">
-              <Globe size={32} className="mb-4 text-zinc-400" />
-              <h3 className="text-xl font-bold">Worldwide</h3>
-              <p className="text-xs text-zinc-500 mt-2">Shipping to 195 nations instantly.</p>
-            </BentoBox3D>
+            <div className="min-w-[70vw] md:min-w-0 snap-center md:col-span-1 h-full">
+              <BentoBox3D className="h-full min-h-[250px]" title="Global">
+                <Globe size={32} className="mb-4 text-zinc-400" />
+                <h3 className="text-xl font-bold">Worldwide</h3>
+                <p className="text-xs text-zinc-500 mt-2">Shipping to 195 nations.</p>
+              </BentoBox3D>
+            </div>
 
             {/* Box 4: Start CTA */}
-            <BentoBox3D className="md:col-span-1 bg-white text-black min-h-[200px]" title="Start">
-              <div className="flex flex-col h-full justify-between">
-                <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
-                  <Zap size={20} />
+            <div className="min-w-[70vw] md:min-w-0 snap-center md:col-span-1 h-full">
+              <BentoBox3D className="h-full bg-white text-black min-h-[250px]" title="Start">
+                <div className="flex flex-col h-full justify-between">
+                  <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
+                    <Zap size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold leading-tight tracking-tight text-white">Launch in<br/>Seconds</h3>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold leading-tight tracking-tight text-white">Launch in<br/>Seconds</h3>
-                </div>
-              </div>
-            </BentoBox3D>
+              </BentoBox3D>
+            </div>
           </div>
         </section>
         
@@ -620,6 +642,26 @@ const LandingPage = ({ onLoginClick }) => {
              <p className="text-xs text-zinc-600">© 2026 GIFTOMIZE INC.</p>
           </div>
         </footer>
+
+        {/* FLOATING MOBILE ACTION BAR */}
+        <motion.div 
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ delay: 2, type: 'spring' }}
+          className="fixed bottom-6 left-6 right-6 h-16 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl md:hidden z-50 flex items-center justify-between px-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+        >
+          <div className="flex items-center gap-3 pl-4">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs font-mono text-zinc-400">ONLINE</span>
+          </div>
+          
+          <button 
+            onClick={() => onLoginClick('seller')}
+            className="bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-transform"
+          >
+            Start Now
+          </button>
+        </motion.div>
 
       </main>
     </div>

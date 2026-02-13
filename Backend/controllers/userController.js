@@ -6,6 +6,7 @@ const axios = require('axios');
 const sendEmailOtp = require('../utils/sendEmail'); 
 
 // --- HELPER: Send WhatsApp OTP (Internal) ---
+// Note: Yeh function future use ke liye rakha hai, agar .env me 'whatsapp' enable karoge tabhi call hoga.
 const sendWhatsAppOtp = async (phone, otp) => {
     try {
         const instanceId = process.env.WHATSAPP_INSTANCE_ID;
@@ -110,45 +111,58 @@ const registerUser = async (req, res) => {
         });
 
         if (user) {
-            // 6. --- SMART FAILOVER LOGIC ---
+            // 6. --- SMART FAILOVER LOGIC (Controlled via .env) ---
             let otpMethod = 'none'; 
+            let isOtpSent = false;
             
-            // Step A: Try WhatsApp First
-            let isWhatsAppSent = await sendWhatsAppOtp(phone, otp);
-            
-            if (isWhatsAppSent) {
-                otpMethod = 'whatsapp';
-            } else {
-                // Step B: WhatsApp Failed? Try Email
-                console.log("⚠️ WhatsApp failed. Attempting Email OTP...");
-                let isEmailSent = await sendEmailOtp(email, otp);
-                
-                if (isEmailSent) {
-                    otpMethod = 'email';
-                } else {
-                    // Step C: BOTH FAILED (Critical Error)
-                    console.error("❌ Both WhatsApp and Email services failed.");
-                    
-                    // CLEANUP: Delete the user we just created so they can try again later
-                    await User.deleteOne({ _id: user._id });
+            // .env se check karega ki konsi service use karni hai (Default: 'email')
+            const preferredService = process.env.OTP_SERVICE || 'email'; 
 
-                    return res.status(503).json({ 
-                        message: "Verification service currently unavailable. Please check your internet or try again later." 
-                    });
+            if (preferredService === 'whatsapp') {
+                // CASE 1: WhatsApp Priority (Future Use)
+                // Pehle WhatsApp try karega, agar fail hua toh backup ke liye Email bhejega
+                isOtpSent = await sendWhatsAppOtp(phone, otp);
+                
+                if (isOtpSent) {
+                    otpMethod = 'whatsapp';
+                } else {
+                    console.log("⚠️ WhatsApp failed. Attempting Email OTP...");
+                    isOtpSent = await sendEmailOtp(email, otp);
+                    if (isOtpSent) otpMethod = 'email';
                 }
+
+            } else {
+                // CASE 2: Email Only (Current Requirement)
+                // WhatsApp ko bilkul touch nahi karega, seedha Email bhejega
+                console.log("📧 Using Email OTP Service (Configured in .env)");
+                isOtpSent = await sendEmailOtp(email, otp);
+                if (isOtpSent) otpMethod = 'email';
             }
 
-            // Step D: Send Success Response
-            res.status(201).json({
-                success: true,
-                userId: user._id,
-                phone: phone,
-                email: email,
-                otpMethod: otpMethod, // Frontend will show Icon based on this
-                message: otpMethod === 'whatsapp' 
-                    ? `OTP sent via WhatsApp to ${phone}` 
-                    : `OTP sent to Email ${email}`
-            });
+            // --- FINAL STATUS CHECK & RESPONSE ---
+            if (isOtpSent) {
+                // Success Response
+                res.status(201).json({
+                    success: true,
+                    userId: user._id,
+                    phone: phone,
+                    email: email,
+                    otpMethod: otpMethod, // Frontend will show Icon based on this
+                    message: otpMethod === 'whatsapp' 
+                        ? `OTP sent via WhatsApp to ${phone}` 
+                        : `OTP sent to Email ${email}`
+                });
+            } else {
+                // CRITICAL FAIL: Dono fail ho gaye ya service down hai
+                console.error("❌ OTP Service Failed (User Deleted for Retry).");
+                
+                // Cleanup: User delete karo taaki woh wapas register kar sake
+                await User.deleteOne({ _id: user._id });
+
+                return res.status(503).json({ 
+                    message: "Verification service currently unavailable. Please check your internet or try again later." 
+                });
+            }
 
         } else {
             res.status(400).json({ message: 'Invalid user data' });

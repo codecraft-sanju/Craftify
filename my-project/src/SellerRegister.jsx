@@ -35,7 +35,7 @@ const BackgroundAurora = () => (
   </div>
 );
 
-// Updated InputGroup with Password Toggle
+// Input Group with Password Toggle
 const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -153,8 +153,8 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // Verification Method (whatsapp/email)
-  const [verificationMethod, setVerificationMethod] = useState('whatsapp'); 
+  // Verification Method (whatsapp/email) - Default 'email' but waits for backend
+  const [verificationMethod, setVerificationMethod] = useState('email'); 
   
   // Timer for Step 3
   const [timer, setTimer] = useState(30);
@@ -261,10 +261,10 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
                 setLoading(false);
 
-                // Check method from backend
+                // --- CRITICAL: Check Backend Response for OTP Method ---
                 if (userData.otpMethod === 'email') {
                     setVerificationMethod('email');
-                } else {
+                } else if (userData.otpMethod === 'whatsapp') {
                     setVerificationMethod('whatsapp');
                 }
 
@@ -351,7 +351,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         <motion.div
           variants={staggerContainer}
           className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
-                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                      [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
@@ -396,7 +396,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     <motion.div key="step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="WhatsApp Number" maxLength={10} />
+                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} />
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
                         <div className="pt-4">
@@ -432,7 +432,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl flex gap-3 items-start border border-zinc-200 dark:border-zinc-800">
                             <ShieldCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
                             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                We will send an OTP to your registered contact to verify your identity.
+                                We will send a verification code to your {verificationMethod === 'email' ? 'Email' : 'WhatsApp'} to verify your identity.
                             </p>
                         </div>
 
@@ -451,7 +451,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 {!isLoginView && step === 3 && (
                     <motion.div key="step3" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <div className="text-center py-6 mb-4">
-                             {/* DYNAMIC ICON */}
+                             {/* DYNAMIC ICON BASED ON SERVICE */}
                              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce ${
                                  verificationMethod === 'email' 
                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
@@ -468,7 +468,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 Code sent to <span className="font-bold text-black dark:text-white">
                                     {verificationMethod === 'email' ? formData.email : formData.phone}
                                 </span>
-                                {/* EDIT BUTTON (NEW) */}
+                                {/* EDIT BUTTON */}
                                 <button onClick={() => setStep(1)} className="ml-2 text-indigo-500 hover:underline inline-flex items-center gap-1">
                                     <Edit2 size={12} /> Edit
                                 </button>

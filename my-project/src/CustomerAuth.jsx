@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, KeyRound, Loader2, Sparkles,
-  ShieldCheck, ShoppingBag, Star
+  ShieldCheck, ShoppingBag, Star, Edit2
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -85,9 +85,14 @@ const CustomerAuth = ({ onLoginSuccess }) => {
 
   // Form State
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', otp: '' });
+  
+  // Verification State
   const [verificationStep, setVerificationStep] = useState(false); // Step 2 of Register
+  const [verificationMethod, setVerificationMethod] = useState('email'); // 'email' or 'whatsapp'
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [timer, setTimer] = useState(30);
 
   // Sync state with URL
   useEffect(() => {
@@ -96,8 +101,21 @@ const CustomerAuth = ({ onLoginSuccess }) => {
     setVerificationStep(false);
   }, [location.pathname]);
 
+  // Timer Effect
+  useEffect(() => {
+    let interval;
+    if (verificationStep && timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [verificationStep, timer]);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // Strict number check for phone
+    if (name === 'phone' && !/^\d*$/.test(value)) return;
+    
+    setFormData({ ...formData, [name]: value });
     setError("");
   };
 
@@ -138,6 +156,14 @@ const CustomerAuth = ({ onLoginSuccess }) => {
               const data = await res.json();
               if (!res.ok) throw new Error(data.message || "Registration failed");
               
+              // Detect Method from Backend Response
+              if (data.otpMethod === 'email') {
+                  setVerificationMethod('email');
+              } else if (data.otpMethod === 'whatsapp') {
+                  setVerificationMethod('whatsapp');
+              }
+
+              setTimer(30);
               setVerificationStep(true); // Move to OTP
               
           } else {
@@ -166,6 +192,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
 
   const handleSwitchMode = () => {
       setVerificationStep(false);
+      setTimer(30);
       if(isLogin) navigate('/register');
       else navigate('/login');
   };
@@ -204,7 +231,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
         <motion.div
           variants={staggerContainer}
           className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
-                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                      [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
@@ -214,7 +241,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
               {isLogin 
                 ? "Sign in to track orders and view your wishlist." 
                 : verificationStep 
-                  ? "Verify your phone number to continue." 
+                  ? "Verify your identity to continue." 
                   : "Discover unique products tailored for you."}
             </p>
           </motion.div>
@@ -252,7 +279,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                     <motion.div key="reg-step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Full Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="WhatsApp Number" />
+                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} />
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
                         <div className="pt-4">
@@ -266,16 +293,44 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                 {/* === REGISTER STEP 2 (OTP) === */}
                 {!isLogin && verificationStep && (
                     <motion.div key="reg-step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
-                        <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl flex gap-3 items-start border border-zinc-200 dark:border-zinc-800 mb-6">
-                            <ShieldCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
-                            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                We sent a 6-digit code to <strong>{formData.phone}</strong> via WhatsApp.
+                        <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-6 flex flex-col items-center text-center">
+                            {/* Dynamic Icon */}
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
+                                verificationMethod === 'email' 
+                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
+                                : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            }`}>
+                                {verificationMethod === 'email' ? <Mail size={24} /> : <Phone size={24} />}
+                            </div>
+
+                            <p className="text-sm text-zinc-800 dark:text-zinc-200 font-bold mb-1">
+                                OTP Sent via {verificationMethod === 'email' ? 'Email' : 'WhatsApp'}
                             </p>
+                            <p className="text-xs text-zinc-500">
+                                to {verificationMethod === 'email' ? formData.email : formData.phone}
+                                <button type="button" onClick={() => setVerificationStep(false)} className="ml-2 text-indigo-500 hover:underline inline-flex items-center gap-1">
+                                    <Edit2 size={10} /> Edit
+                                </button>
+                            </p>
+                            {verificationMethod === 'email' && (
+                                <p className="text-[10px] text-zinc-400 mt-2 font-medium tracking-wide">
+                                    (Check Spam/Junk folder if not in Inbox)
+                                </p>
+                            )}
                         </div>
 
-                        <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter OTP Code" autoFocus maxLength={6} />
+                        <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter 6-Digit Code" autoFocus maxLength={6} />
                         
-                        <div className="pt-4 flex gap-4">
+                        {/* TIMER UI */}
+                        <div className="text-center text-xs text-zinc-400 font-medium mb-4">
+                            {timer > 0 ? (
+                                <span>Resend code in 00:{timer < 10 ? `0${timer}` : timer}</span>
+                            ) : (
+                                <span className="text-zinc-500">Didn't get the code? Please try registering again.</span>
+                            )}
+                        </div>
+
+                        <div className="pt-2 flex gap-4">
                             <button 
                                 type="button" 
                                 onClick={() => setVerificationStep(false)} 
