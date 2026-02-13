@@ -3,21 +3,20 @@ const nodemailer = require("nodemailer");
 const sendEmailOtp = async (email, otp) => {
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail",
-      host: "smtp.gmail.com",
+      // service: "gmail",  <-- YEH LINE HATA DI HAI (Yeh problem kar rahi thi)
+      host: "smtp.gmail.com", // Ab hum direct address bata rahe hain
       port: 465,
       secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      // --- STRICT IPV4 ONLY ---
-      // Hum system ko choice nahi de rahe, hum order de rahe hain ki sirf IPv4 use karo.
+      // Ab system isko ignore nahi karega
       family: 4 
     });
 
     const mailOptions = {
-      from: `"Giftomize Security" <${process.env.EMAIL_USER}>`,
+      from: `"Giftomize Security" <${process.env.EMAIL_USER}>`, 
       to: email,
       subject: `${otp} is your verification code`,
       html: `
