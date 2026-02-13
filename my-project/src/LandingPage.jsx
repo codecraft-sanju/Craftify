@@ -467,24 +467,24 @@ const LandingPage = ({ onLoginClick }) => {
           </motion.div>
         </section>
 
-        {/* BENTO GRID SECTION - Hybrid Layout (Swipe on Mobile, Grid on Desktop) */}
+        {/* BENTO GRID SECTION - UPDATED FOR VERTICAL STACK ON MOBILE */}
         <section className="py-12 border-t border-white/10 perspective-[2000px] overflow-hidden">
           
           {/* Mobile Header for this section */}
           <div className="px-6 md:px-12 mb-6 md:hidden">
             <h3 className="text-zinc-500 text-xs font-mono uppercase tracking-widest">System Modules <span className="animate-pulse text-green-500">●</span></h3>
-            <p className="text-white text-lg font-bold">Swipe to explore</p>
+            <p className="text-white text-lg font-bold">Explore Modules</p>
           </div>
 
           <div className="
-            /* Mobile: Horizontal Scroll container */
-            flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-6 pb-8
+            /* Mobile: Vertical Stack (Modified per request) */
+            flex flex-col gap-6 px-6 pb-8
             /* Desktop: Grid layout */
             md:grid md:grid-cols-4 md:grid-rows-2 md:gap-4 md:px-12 md:h-[800px] md:pb-0 md:overflow-visible
           ">
             
             {/* Box 1: Core Engine */}
-            <div className="min-w-[85vw] md:min-w-0 snap-center md:col-span-2 md:row-span-2 h-full">
+            <div className="w-full md:w-auto md:col-span-2 md:row-span-2 h-full">
               <BentoBox3D className="h-full flex flex-col justify-between bg-zinc-900 min-h-[400px]" title="Core Engine">
                 <div className="z-10 mt-6 md:mt-10">
                   <Cpu size={40} className="mb-6 text-white" />
@@ -505,7 +505,7 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
             
             {/* Box 2: Analytics */}
-            <div className="min-w-[85vw] md:min-w-0 snap-center md:col-span-2 h-full">
+            <div className="w-full md:w-auto md:col-span-2 h-full">
               <BentoBox3D className="h-full min-h-[250px] flex flex-col" title="Analytics">
                 <div className="flex items-end justify-between flex-1 relative z-10">
                   <div>
@@ -523,7 +523,7 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
 
             {/* Box 3: Global */}
-            <div className="min-w-[70vw] md:min-w-0 snap-center md:col-span-1 h-full">
+            <div className="w-full md:w-auto md:col-span-1 h-full">
               <BentoBox3D className="h-full min-h-[250px]" title="Global">
                 <Globe size={32} className="mb-4 text-zinc-400" />
                 <h3 className="text-xl font-bold">Worldwide</h3>
@@ -532,7 +532,7 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
 
             {/* Box 4: Start CTA */}
-            <div className="min-w-[70vw] md:min-w-0 snap-center md:col-span-1 h-full">
+            <div className="w-full md:w-auto md:col-span-1 h-full">
               <BentoBox3D className="h-full bg-white text-black min-h-[250px]" title="Start">
                 <div className="flex flex-col h-full justify-between">
                   <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full shadow-xl">
@@ -643,25 +643,7 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </footer>
 
-        {/* FLOATING MOBILE ACTION BAR */}
-        <motion.div 
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 2, type: 'spring' }}
-          className="fixed bottom-6 left-6 right-6 h-16 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl md:hidden z-50 flex items-center justify-between px-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
-        >
-          <div className="flex items-center gap-3 pl-4">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs font-mono text-zinc-400">ONLINE</span>
-          </div>
-          
-          <button 
-            onClick={() => onLoginClick('seller')}
-            className="bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-transform"
-          >
-            Start Now
-          </button>
-        </motion.div>
+        
 
       </main>
     </div>
