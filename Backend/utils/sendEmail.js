@@ -3,16 +3,14 @@ const nodemailer = require("nodemailer");
 const sendEmailOtp = async (email, otp) => {
   try {
     const transporter = nodemailer.createTransport({
-      // service: "gmail",  <-- YEH LINE HATA DI HAI (Yeh problem kar rahi thi)
-      host: "smtp.gmail.com", // Ab hum direct address bata rahe hain
-      port: 465,
-      secure: true,
+      host: "smtp.gmail.com",
+      port: 587,        // <-- FIX 1: 465 ki jagah 587 (Yeh block nahi hota)
+      secure: false,    // <-- FIX 2: 587 ke liye yeh FALSE hona zaroori hai
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      // Ab system isko ignore nahi karega
-      family: 4 
+      family: 4 // IPv4 Force abhi bhi rakho, yeh zaroori hai
     });
 
     const mailOptions = {
