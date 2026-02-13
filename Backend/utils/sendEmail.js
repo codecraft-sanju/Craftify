@@ -1,34 +1,62 @@
 const nodemailer = require("nodemailer");
 const dns = require("dns");
 
-// 🔥 FIX 1: Zabardasti IPv4 use karne ka global order set kar rahe hain
-// Isse wo IPv6 (:::0) wala error kabhi nahi aayega.
+// --- DNS FIX: Force IPv4 ---
+// Yeh line bahut zaroori hai taaki 'ENETUNREACH' (IPv6) error na aaye
 try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (error) {
-  // Agar purana Node version hai toh ignore karega, par naye versions me yeh fix hai
-  console.log("Could not set IPv4 preference, continuing...");
+  console.log("IPv4 preference setting skipped (older Node version).");
 }
 
 const sendEmailOtp = async (email, otp) => {
-  let attempt = 1;
-  const maxRetries = 3; // 3 baar koshish karega agar fail hua toh
+  // Check: Agar credentials nahi hain toh turant ruk jao
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("❌ Critical Error: EMAIL_USER or EMAIL_PASS missing in .env");
+    return false;
+  }
 
-  // Loop chalayenge taaki agar ek baar fail ho toh dubara try kare
-  while (attempt <= maxRetries) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail", // 'service: gmail' use karne se port/secure ki chinta nahi karni padti
+  // --- ENVIRONMENT CONFIGURATION ---
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Production ke liye strict settings, Development ke liye easy settings
+  const transporterConfig = isProduction
+    ? {
+        // PRODUCTION SETTINGS (Cloud/Vercel/Render)
+        host: "smtp.gmail.com",
+        port: 465, // SSL Port (Cloud servers par sabse reliable)
+        secure: true, // 465 ke liye True
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        family: 4, // Force IPv4
+      }
+    : {
+        // DEVELOPMENT SETTINGS (Localhost)
+        service: "gmail", // Google ka default behavior (Port 587)
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
         tls: {
-          rejectUnauthorized: false, // Localhost errors ko rokne ke liye
+          rejectUnauthorized: false, // Local SSL errors ignore karne ke liye
         },
-        // 🔥 FIX 2: Connection settings me bhi IPv4 force kar rahe hain
-        family: 4, 
-      });
+        family: 4,
+      };
+
+  // --- RETRY LOGIC (3 Attempts) ---
+  let attempt = 1;
+  const maxRetries = 3;
+
+  while (attempt <= maxRetries) {
+    try {
+      const transporter = nodemailer.createTransport(transporterConfig);
+
+      // Verify connection before sending (Optional but good for debugging)
+      if (attempt === 1) {
+        await transporter.verify(); 
+      }
 
       const mailOptions = {
         from: `"Giftomize Security" <${process.env.EMAIL_USER}>`,
@@ -42,25 +70,27 @@ const sendEmailOtp = async (email, otp) => {
             <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">${otp}</span>
           </div>
           <p style="color: #666; font-size: 12px;">This code expires in 10 minutes.</p>
+          <p style="color: #9ca3af; font-size: 10px; margin-top: 20px;">
+            Request from: ${isProduction ? 'Secure Server' : 'Development Server'}
+          </p>
         </div>
       `,
       };
 
-      // Mail send karne ki koshish
       await transporter.sendMail(mailOptions);
-      console.log(`✅ Email OTP sent successfully to ${email}`);
-      return true; // Agar success ho gaya, toh yahin se return true karke nikal jayega
+      console.log(`✅ Email OTP sent to ${email} (Mode: ${isProduction ? 'Production' : 'Dev'})`);
+      return true;
 
     } catch (error) {
       console.error(`⚠️ Attempt ${attempt} failed: ${error.message}`);
       
       if (attempt === maxRetries) {
-        console.error(`❌ Final Error: Could not send email to ${email} after ${maxRetries} attempts.`);
+        console.error(`❌ Final Failure: Could not send email to ${email}.`);
         return false;
       }
       
-      // Thoda wait karte hain agle try se pehle (1 second)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait 1.5 seconds before retry
+      await new Promise(resolve => setTimeout(resolve, 1500));
       attempt++;
     }
   }
