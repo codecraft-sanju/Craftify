@@ -2,7 +2,6 @@ const nodemailer = require("nodemailer");
 const dns = require("dns");
 
 // --- DNS FIX: Force IPv4 ---
-// Yeh line bahut zaroori hai taaki 'ENETUNREACH' (IPv6) error na aaye
 try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (error) {
@@ -10,52 +9,63 @@ try {
 }
 
 const sendEmailOtp = async (email, otp) => {
-  // Check: Agar credentials nahi hain toh turant ruk jao
+  console.log("\n--- 📧 EMAIL DEBUG START ---");
+  console.log(`Target Email: ${email}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // 1. CHECK ENV VARIABLES (Password print nahi karenge, bas length check karenge)
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.error("❌ Critical Error: EMAIL_USER or EMAIL_PASS missing in .env");
+    console.log("EMAIL_USER Present:", !!process.env.EMAIL_USER);
+    console.log("EMAIL_PASS Present:", !!process.env.EMAIL_PASS);
     return false;
   }
 
-  // --- ENVIRONMENT CONFIGURATION ---
+  console.log(`Sender: ${process.env.EMAIL_USER}`);
+  console.log(`Pass Length: ${process.env.EMAIL_PASS.length} (Should be 16 for App Password)`);
+
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // Production ke liye strict settings, Development ke liye easy settings
+  // 2. CONFIGURATION WITH DEBUGGING ENABLED
   const transporterConfig = isProduction
     ? {
-        // PRODUCTION SETTINGS (Cloud/Vercel/Render)
-        host: "smtp.gmail.com",
-        port: 465, // SSL Port (Cloud servers par sabse reliable)
-        secure: true, // 465 ke liye True
+        // PRODUCTION SETTINGS
+        service: "gmail", 
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
-        family: 4, // Force IPv4
+        // --- DEBUGGING FLAGS ---
+        logger: true, // Console me poora SMTP log print karega
+        debug: true,  // Connection details include karega
       }
     : {
-        // DEVELOPMENT SETTINGS (Localhost)
-        service: "gmail", // Google ka default behavior (Port 587)
+        // DEVELOPMENT SETTINGS
+        service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
         },
         tls: {
-          rejectUnauthorized: false, // Local SSL errors ignore karne ke liye
+          rejectUnauthorized: false, 
         },
-        family: 4,
+        logger: true, // Dev me bhi logs dikhao
+        debug: true,
       };
 
-  // --- RETRY LOGIC (3 Attempts) ---
   let attempt = 1;
   const maxRetries = 3;
 
   while (attempt <= maxRetries) {
     try {
+      console.log(`\n🔄 Attempt ${attempt} of ${maxRetries}...`);
       const transporter = nodemailer.createTransport(transporterConfig);
 
-      // Verify connection before sending (Optional but good for debugging)
+      // 3. VERIFY CONNECTION (Detailed Error Catching)
       if (attempt === 1) {
+        console.log("Testing SMTP Connection...");
         await transporter.verify(); 
+        console.log("✅ SMTP Connection Verified!");
       }
 
       const mailOptions = {
@@ -77,19 +87,27 @@ const sendEmailOtp = async (email, otp) => {
       `,
       };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email OTP sent to ${email} (Mode: ${isProduction ? 'Production' : 'Dev'})`);
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`✅ Email Sent Successfully! Message ID: ${info.messageId}`);
+      console.log("--- 📧 EMAIL DEBUG END ---\n");
       return true;
 
     } catch (error) {
-      console.error(`⚠️ Attempt ${attempt} failed: ${error.message}`);
+      console.error(`⚠️ Attempt ${attempt} FAILED.`);
       
+      // 4. PRINT DETAILED ERROR
+      console.error("--- ERROR DETAILS ---");
+      console.error("Error Code:", error.code);     // e.g., EAUTH, ETIMEDOUT
+      console.error("Error Command:", error.command); // e.g., CONN, AUTH
+      console.error("Error Response:", error.response); // Google se kya jawab aaya
+      console.error("Full Message:", error.message);
+      console.error("---------------------");
+
       if (attempt === maxRetries) {
-        console.error(`❌ Final Failure: Could not send email to ${email}.`);
+        console.error(`❌ Final Failure: Giving up on ${email}.`);
         return false;
       }
       
-      // Wait 1.5 seconds before retry
       await new Promise(resolve => setTimeout(resolve, 1500));
       attempt++;
     }
