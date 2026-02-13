@@ -1,5 +1,6 @@
 // backend/controllers/userController.js
 const User = require('../models/User');
+const Shop = require('../models/Shop'); // <--- IMP: Shop Model Import
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
 const axios = require('axios'); 
@@ -179,45 +180,80 @@ const registerUser = async (req, res) => {
     }
 };
 
-// @desc    Verify OTP & Login User
+// @desc    Verify OTP & Create Shop (Atomic Operation)
 // @route   POST /api/users/verify-otp
 // @access  Public
 const verifyUserOtp = async (req, res) => {
-    try {
-        const { phone, otp } = req.body;
+    let createdShop = null; // Track created shop for rollback
 
-        // Find user by phone and include 'otp' field
+    try {
+        // Frontend se ab OTP ke saath Shop Details bhi aayengi (Optional)
+        const { phone, otp, shopName, description, categories } = req.body;
+
+        // 1. User dhoondo
         const user = await User.findOne({ phone }).select('+otp');
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Check Logic
+        // 2. OTP Check
         if (user.otp !== otp) {
             return res.status(400).json({ message: "Invalid OTP. Please check and try again." });
         }
 
         if (user.otpExpire < Date.now()) {
-            return res.status(400).json({ message: "OTP has Expired. Please login again to request a new code." });
+            return res.status(400).json({ message: "OTP has Expired. Please login again." });
         }
 
-        // Success: Verify User & Clear OTP
+        // --- NEW LOGIC: Shop Creation (If Details Provided) ---
+        if (shopName) {
+            // Check Duplicate Shop Name BEFORE verifying user
+            const shopExists = await Shop.findOne({ name: shopName });
+            if (shopExists) {
+                return res.status(400).json({ message: "Shop Name is already taken. Please choose another." });
+            }
+
+            // Create Shop
+            createdShop = await Shop.create({
+                name: shopName,
+                description: description || 'Welcome to my shop',
+                phone: phone,
+                categories: categories || [],
+                owner: user._id,
+                isActive: true
+            });
+        }
+
+        // 3. Success: User Update (Link Shop & Verify)
         user.isPhoneVerified = true; 
         user.otp = undefined;
         user.otpExpire = undefined;
+        
+        if (createdShop) {
+            user.shop = createdShop._id; // User model me shop ID save karo
+            user.role = 'seller'; // Ensure role is seller
+        }
+        
         await user.save();
 
         // Generate Token
         generateToken(res, user._id);
 
-        // Socket Notification (Optional)
+        // Socket Notification
         if (req.io) {
             req.io.emit('new_user_registered', {
                 _id: user._id,
                 name: user.name,
                 role: user.role
             });
+            if (createdShop) {
+                req.io.emit('shop_created', {
+                    _id: createdShop._id,
+                    name: createdShop.name,
+                    ownerName: user.name
+                });
+            }
         }
 
         res.status(200).json({
@@ -226,12 +262,21 @@ const verifyUserOtp = async (req, res) => {
             email: user.email,
             phone: user.phone,
             role: user.role,
-            avatar: user.avatar,
-            message: "Verification Successful!"
+            shop: createdShop ? createdShop._id : null,
+            message: createdShop ? "Account & Shop Created Successfully!" : "Verification Successful!"
         });
 
     } catch (error) {
         console.error("Verify Error:", error);
+        
+        // --- ROLLBACK LOGIC ---
+        // Agar user save hone se pehle error aaya, toh Shop delete kardo
+        // taaki "Orphan Shop" na bane bina owner/verification ke.
+        if (createdShop) {
+            await Shop.findByIdAndDelete(createdShop._id);
+            console.log("⚠️ Rolled back shop creation due to verification error.");
+        }
+
         res.status(500).json({ message: error.message });
     }
 };
@@ -269,6 +314,7 @@ const authUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 avatar: user.avatar,
+                shop: user.shop, // Return Shop ID for frontend checks
                 address: user.address,
                 phone: user.phone
             });
@@ -306,7 +352,8 @@ const getUserProfile = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 avatar: user.avatar,
-                address: user.address
+                address: user.address,
+                shop: user.shop
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -558,7 +605,7 @@ const addToWishlist = async (req, res) => {
     }
 };
 
-// Remove from Wishlis
+// Remove from Wishlist
 const removeFromWishlist = async (req, res) => {
     try {
         const productId = req.params.id;
