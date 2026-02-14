@@ -1,9 +1,9 @@
-// backend/controllers/userController.js
 const User = require('../models/User');
 const Shop = require('../models/Shop'); 
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
 const axios = require('axios'); 
+// Yaha humne central file import ki hai, taaki email logic bas ek jagah rahe
 const sendEmailOtp = require('../utils/sendEmail'); 
 
 // --- HELPER: Send WhatsApp OTP (Internal) ---
@@ -81,6 +81,7 @@ const registerUser = async (req, res) => {
 
         // 3. --- ROLE ASSIGNMENT ---
         let userRole = 'customer';
+        // Note: Yeh sirf role check karne ke liye hai, email bhejne ke liye nahi.
         if (email.toLowerCase() === 'admin@gmail.com') {
             userRole = 'founder';
         } else if (role === 'seller') {
@@ -104,7 +105,6 @@ const registerUser = async (req, res) => {
                 role: userRole,
                 avatar: name.charAt(0).toUpperCase(),
                 isPhoneVerified: true, // Auto Verified
-                // otp field ki jarurat nahi
             });
 
             if (user) {
@@ -155,12 +155,14 @@ const registerUser = async (req, res) => {
                 } else {
                     // Fallback: Email if WhatsApp fails
                     console.log("⚠️ WhatsApp failed. Switching to Email...");
+                    // EMAIL LOGIC: Calling function from sendEmail.js
                     isOtpSent = await sendEmailOtp(email, otp);
                     if (isOtpSent) otpMethod = 'email';
                 }
             } else {
                 // Default: Email Only
                 console.log("📧 Using Email OTP Service");
+                // EMAIL LOGIC: Calling function from sendEmail.js
                 isOtpSent = await sendEmailOtp(email, otp);
                 if (isOtpSent) otpMethod = 'email';
             }
