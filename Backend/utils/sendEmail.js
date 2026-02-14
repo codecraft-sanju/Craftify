@@ -13,13 +13,16 @@ const sendEmailOtp = async (toEmail, otp) => {
         }
 
         // Transporter create karo
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: EMAIL_USER,
-                pass: EMAIL_PASS, // App Password hona chahiye
-            },
-        });
+     const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true sirf 465 ke liye hota hai
+    auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+    },
+    family: 4 // 🔥 IPv4 force karega (main fix)
+});
 
         // Mail template
         const mailOptions = {
