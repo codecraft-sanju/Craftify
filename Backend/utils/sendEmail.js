@@ -1,8 +1,23 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns");
+
+// --- HELPER: Manually Resolve Gmail IP (IPv4 Only) ---
+// Render ka server IPv6 force karta hai, isliye hum manually IPv4 nikalenge
+const getGmailIp = async () => {
+  return new Promise((resolve) => {
+    dns.resolve4('smtp.gmail.com', (err, addresses) => {
+      if (err || !addresses || addresses.length === 0) {
+        console.warn("⚠️ DNS Resolve Failed, using domain name fallback.");
+        resolve('smtp.gmail.com'); 
+      } else {
+        resolve(addresses[0]); // Pehla IPv4 address utha lo
+      }
+    });
+  });
+};
 
 const sendEmailOtp = async (email, otp) => {
-  // 1. Password Cleaner (Spaces remove karega)
-  // Yeh ensure karta hai ki .env password me koi galti se space na reh jaye
+  // 1. Password Cleaner
   const cleanPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
 
   if (!process.env.EMAIL_USER || !cleanPass) {
@@ -10,25 +25,25 @@ const sendEmailOtp = async (email, otp) => {
     return false;
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  // 2. FIXED CONFIGURATION (Port 465 SSL + Force IPv4)
+  // 2. IP ADDRESS RESOLUTION (The Fix)
+  const gmailHost = await getGmailIp();
+  console.log(`🔍 Resolved SMTP Host: ${gmailHost} (Using this to bypass IPv6)`);
+
   const transporterConfig = {
-    host: "smtp.gmail.com",
-    port: 465,            // SSL Port (Cloud Servers ke liye best)
-    secure: true,         // 465 ke liye TRUE hona zaroori hai
+    host: gmailHost,      // <--- Yahan hum Domain nahi, seedha IP use kar rahe hain
+    port: 465,            // SSL Port
+    secure: true,         // True for 465
     auth: {
       user: process.env.EMAIL_USER,
       pass: cleanPass,
     },
-    // --- CRITICAL FIX: FORCE IPv4 ---
-    family: 4,            // <--- Yeh line 'ENETUNREACH' IPv6 error ko rokegi
-    // --------------------------------
+    // SSL Certificate Fix (Kyunki hum IP use kar rahe hain, hamein servername batana padega)
     tls: {
-      rejectUnauthorized: false // Handshake errors avoid karne ke liye
+      servername: 'smtp.gmail.com', 
+      rejectUnauthorized: false 
     },
-    // Timeouts (Taaki server hang na ho)
-    connectionTimeout: 10000, // 10 seconds
+    // Timeouts
+    connectionTimeout: 10000, 
     greetingTimeout: 5000,
     socketTimeout: 10000
   };
@@ -38,10 +53,9 @@ const sendEmailOtp = async (email, otp) => {
 
   while (attempt <= maxRetries) {
     try {
-      console.log(`\n🔄 Attempt ${attempt} (Port 465, Force IPv4)...`);
+      console.log(`\n🔄 Attempt ${attempt} (Connecting to ${gmailHost})...`);
       const transporter = nodemailer.createTransport(transporterConfig);
 
-      // Pehli baar connection verify karo
       if (attempt === 1) await transporter.verify(); 
 
       const mailOptions = {
@@ -55,7 +69,7 @@ const sendEmailOtp = async (email, otp) => {
           <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">${otp}</span>
           </div>
-          <p style="color: #9ca3af; font-size: 10px;">Server: ${isProduction ? 'Cloud' : 'Local'}</p>
+          <p style="color: #9ca3af; font-size: 10px;">Valid for 10 minutes.</p>
         </div>
       `,
       };
@@ -71,7 +85,6 @@ const sendEmailOtp = async (email, otp) => {
         console.error("❌ Final Failure.");
         return false;
       }
-      // 2 second wait karo phir retry karo
       await new Promise(resolve => setTimeout(resolve, 2000));
       attempt++;
     }
