@@ -1,9 +1,7 @@
 const nodemailer = require("nodemailer");
 const dns = require("dns");
 
-// --- 🛡️ NUCLEAR IPv6 BLOCKER (Global Fix) ---
-// Render ka server IPv6 use karne ki koshish karta hai jo fail hota hai.
-// Hum Node.js ka 'lookup' function hi badal rahe hain taaki woh HAMESHA IPv4 return kare.
+// --- 🛡️ DNS HACK: Force IPv4 (Isse rehne do, ye zaroori hai) ---
 const originalLookup = dns.lookup;
 dns.lookup = (hostname, options, callback) => {
     if (typeof options === 'function') {
@@ -11,7 +9,7 @@ dns.lookup = (hostname, options, callback) => {
         options = {};
     }
     options = options || {};
-    options.family = 4; // <--- FORCE IPv4 GLOBALLY
+    options.family = 4; // Force IPv4
     return originalLookup(hostname, options, callback);
 };
 
@@ -24,36 +22,39 @@ const sendEmailOtp = async (email, otp) => {
         return false;
     }
 
-    // 2. STANDARD GMAIL CONFIG (With Global IPv4 Fix)
-    // Hum 'service: gmail' wapas use kar rahe hain kyunki ye Google ke saath best handshake karta hai.
-    // Upar wala 'DNS Hack' ensure karega ki ye IPv6 use na kare.
+    // --- 2. NEW STRATEGY: GOOGLEMAIL DOMAIN + POOLING ---
+    // Hum 'service: gmail' hata rahe hain aur manual config kar rahe hain.
     const transporter = nodemailer.createTransport({
-        service: 'gmail', // <--- Auto-configures Host & Ports
+        host: 'smtp.googlemail.com', // <--- MAGIC CHANGE: Old Google Domain
+        port: 465,                   // SSL Port
+        secure: true,                // True for 465
         auth: {
             user: process.env.EMAIL_USER,
             pass: cleanPass,
         },
-        // Handshake fix
+        pool: true,          // <--- CONNECTION POOLING ON (Keeps connection alive)
+        maxConnections: 1,   // Sirf 1 connection maintain karo
+        rateLimit: 1,        // Dheere bhejo
         tls: {
-            rejectUnauthorized: false 
+            rejectUnauthorized: false
         },
-        // Timeouts badha diye
-        connectionTimeout: 20000, 
-        greetingTimeout: 20000,
-        socketTimeout: 20000
+        // Timeouts
+        connectionTimeout: 10000, 
+        greetingTimeout: 10000,
+        socketTimeout: 10000
     });
 
     try {
-        console.log(`\n🔄 Sending Email via Gmail Service (Force IPv4)...`);
+        console.log(`\n🔄 Connecting to smtp.googlemail.com (Pooled)...`);
         
-        // Connection Check
+        // Verify connection status
         await transporter.verify();
-        console.log("✅ Connection Verified!");
+        console.log("✅ Server is ready to take our messages");
 
         const mailOptions = {
-            from: `"Giftomize Security" <${process.env.EMAIL_USER}>`,
+            from: `"Giftomize" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: `${otp} is your verification code`,
+            subject: `Your OTP is ${otp}`,
             html: `
             <div style="font-family: sans-serif; padding: 20px; text-align: center; border: 1px solid #eee; border-radius: 10px; max-width: 400px; margin: auto;">
               <h2 style="color: #4F46E5;">Giftomize</h2>
