@@ -1,78 +1,64 @@
 const nodemailer = require("nodemailer");
-const dns = require("dns");
 
-// --- 🛡️ DNS HACK: Force IPv4 (Isse rehne do, ye zaroori hai) ---
-const originalLookup = dns.lookup;
-dns.lookup = (hostname, options, callback) => {
-    if (typeof options === 'function') {
-        callback = options;
-        options = {};
-    }
-    options = options || {};
-    options.family = 4; // Force IPv4
-    return originalLookup(hostname, options, callback);
-};
-
-const sendEmailOtp = async (email, otp) => {
-    // 1. Password Cleaner
-    const cleanPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
-
-    if (!process.env.EMAIL_USER || !cleanPass) {
-        console.error("❌ Critical: EMAIL_USER or EMAIL_PASS missing.");
-        return false;
-    }
-
-    // --- 2. NEW STRATEGY: GOOGLEMAIL DOMAIN + POOLING ---
-    // Hum 'service: gmail' hata rahe hain aur manual config kar rahe hain.
-    const transporter = nodemailer.createTransport({
-        host: 'smtp.googlemail.com', // <--- MAGIC CHANGE: Old Google Domain
-        port: 465,                   // SSL Port
-        secure: true,                // True for 465
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: cleanPass,
-        },
-        pool: true,          // <--- CONNECTION POOLING ON (Keeps connection alive)
-        maxConnections: 1,   // Sirf 1 connection maintain karo
-        rateLimit: 1,        // Dheere bhejo
-        tls: {
-            rejectUnauthorized: false
-        },
-        // Timeouts
-        connectionTimeout: 10000, 
-        greetingTimeout: 10000,
-        socketTimeout: 10000
-    });
-
+// Reusable Email OTP Sender Function
+const sendEmailOtp = async (toEmail, otp) => {
     try {
-        console.log(`\n🔄 Connecting to smtp.googlemail.com (Pooled)...`);
-        
-        // Verify connection status
-        await transporter.verify();
-        console.log("✅ Server is ready to take our messages");
+        // .env se credentials
+        const EMAIL_USER = process.env.EMAIL_USER;
+        const EMAIL_PASS = process.env.EMAIL_PASS;
 
+        if (!EMAIL_USER || !EMAIL_PASS) {
+            console.error("❌ Email credentials missing in .env");
+            return false;
+        }
+
+        // Transporter create karo
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: EMAIL_USER,
+                pass: EMAIL_PASS, // App Password hona chahiye
+            },
+        });
+
+        // Mail template
         const mailOptions = {
-            from: `"Giftomize" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: `Your OTP is ${otp}`,
+            from: `"Giftomize 🎁" <${EMAIL_USER}>`,
+            to: toEmail,
+            subject: "Your OTP Code - Giftomize",
             html: `
-            <div style="font-family: sans-serif; padding: 20px; text-align: center; border: 1px solid #eee; border-radius: 10px; max-width: 400px; margin: auto;">
-              <h2 style="color: #4F46E5;">Giftomize</h2>
-              <p style="color: #333;">Your verification code is:</p>
-              <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">${otp}</span>
-              </div>
-              <p style="color: #9ca3af; font-size: 10px;">Valid for 10 minutes.</p>
-            </div>
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color:#4f46e5;">Welcome to Giftomize 🎁</h2>
+                    <p>Your One-Time Password (OTP) is:</p>
+                    
+                    <h1 style="
+                        background:#f3f4f6;
+                        padding:15px;
+                        letter-spacing:5px;
+                        display:inline-block;
+                        border-radius:8px;
+                        color:#111827;
+                    ">
+                        ${otp}
+                    </h1>
+                    
+                    <p>This OTP is valid for <strong>10 minutes</strong>.</p>
+                    <p style="color:red;">Do not share this code with anyone.</p>
+
+                    <br/>
+                    <p>– Team Giftomize 🚀</p>
+                </div>
             `,
         };
 
+        // Send mail
         await transporter.sendMail(mailOptions);
-        console.log(`✅ Email Sent Successfully to ${email}`);
+
+        console.log(`✅ Email OTP Sent to ${toEmail}`);
         return true;
 
     } catch (error) {
-        console.error(`❌ Email Failed: ${error.message}`);
+        console.error("❌ Email Send Failed:", error.message);
         return false;
     }
 };
