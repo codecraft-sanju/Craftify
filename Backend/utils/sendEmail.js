@@ -1,16 +1,8 @@
 const nodemailer = require("nodemailer");
-const dns = require("dns");
-
-// --- DNS FIX: Force IPv4 ---
-// Render kabhi-kabhi IPv6 force karta hai jo fail ho jata hai.
-try {
-  dns.setDefaultResultOrder('ipv4first');
-} catch (error) {
-  console.log("IPv4 preference setting skipped.");
-}
 
 const sendEmailOtp = async (email, otp) => {
   // 1. Password Cleaner (Spaces remove karega)
+  // Yeh ensure karta hai ki .env password me koi galti se space na reh jaye
   const cleanPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
 
   if (!process.env.EMAIL_USER || !cleanPass) {
@@ -20,23 +12,25 @@ const sendEmailOtp = async (email, otp) => {
 
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // 2. FIXED CONFIGURATION (Port 465 - SSL)
-  // Port 587 Render par timeout deta hai, isliye hum 465 (SSL) use kar rahe hain.
+  // 2. FIXED CONFIGURATION (Port 465 SSL + Force IPv4)
   const transporterConfig = {
     host: "smtp.gmail.com",
-    port: 465,            // <--- CHANGED: 587 se 465 (SSL)
-    secure: true,         // <--- CHANGED: 465 ke liye yeh TRUE hona zaroori hai
+    port: 465,            // SSL Port (Cloud Servers ke liye best)
+    secure: true,         // 465 ke liye TRUE hona zaroori hai
     auth: {
       user: process.env.EMAIL_USER,
       pass: cleanPass,
     },
-    // Connection timeouts taaki server hang na ho
-    connectionTimeout: 10000, 
-    greetingTimeout: 5000,
-    socketTimeout: 10000,
+    // --- CRITICAL FIX: FORCE IPv4 ---
+    family: 4,            // <--- Yeh line 'ENETUNREACH' IPv6 error ko rokegi
+    // --------------------------------
     tls: {
-      rejectUnauthorized: false // Handshake errors fix karne ke liye
-    }
+      rejectUnauthorized: false // Handshake errors avoid karne ke liye
+    },
+    // Timeouts (Taaki server hang na ho)
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 10000
   };
 
   let attempt = 1;
@@ -44,7 +38,7 @@ const sendEmailOtp = async (email, otp) => {
 
   while (attempt <= maxRetries) {
     try {
-      console.log(`\n🔄 Attempt ${attempt} (Port 465 SSL)...`);
+      console.log(`\n🔄 Attempt ${attempt} (Port 465, Force IPv4)...`);
       const transporter = nodemailer.createTransport(transporterConfig);
 
       // Pehli baar connection verify karo
