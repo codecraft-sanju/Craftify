@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const dns = require("dns");
 
 // --- DNS FIX: Force IPv4 ---
+// Render kabhi-kabhi IPv6 force karta hai jo fail ho jata hai.
 try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (error) {
@@ -9,8 +10,7 @@ try {
 }
 
 const sendEmailOtp = async (email, otp) => {
-  // 1. PASSWORD CLEANER (Spaces hata dega agar galti se reh gaye)
-  // Sabse important fix: Password ke spaces remove karna
+  // 1. Password Cleaner (Spaces remove karega)
   const cleanPass = process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '';
 
   if (!process.env.EMAIL_USER || !cleanPass) {
@@ -20,23 +20,23 @@ const sendEmailOtp = async (email, otp) => {
 
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // 2. FIXED CONFIGURATION (Force Port 587 for Render/Cloud)
-  // Hum 'service: gmail' HATA rahe hain taaki hum manually Port 587 set kar sakein
+  // 2. FIXED CONFIGURATION (Port 465 - SSL)
+  // Port 587 Render par timeout deta hai, isliye hum 465 (SSL) use kar rahe hain.
   const transporterConfig = {
     host: "smtp.gmail.com",
-    port: 587,            // <--- Cloud Servers ke liye best port (465 block hota hai)
-    secure: false,        // 587 ke liye false hi hona chahiye (STARTTLS use karega)
+    port: 465,            // <--- CHANGED: 587 se 465 (SSL)
+    secure: true,         // <--- CHANGED: 465 ke liye yeh TRUE hona zaroori hai
     auth: {
       user: process.env.EMAIL_USER,
-      pass: cleanPass,    // Cleaned password use karega
+      pass: cleanPass,
     },
+    // Connection timeouts taaki server hang na ho
+    connectionTimeout: 10000, 
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
     tls: {
-      ciphers: "SSLv3",
-      rejectUnauthorized: false // Thoda less secure but highly compatible fix
-    },
-    // Debugging on rakhi hai taaki hum dekh sakein kya ho raha hai
-    logger: true,
-    debug: true,
+      rejectUnauthorized: false // Handshake errors fix karne ke liye
+    }
   };
 
   let attempt = 1;
@@ -44,9 +44,10 @@ const sendEmailOtp = async (email, otp) => {
 
   while (attempt <= maxRetries) {
     try {
-      console.log(`\n🔄 Attempt ${attempt} (Port 587)...`);
+      console.log(`\n🔄 Attempt ${attempt} (Port 465 SSL)...`);
       const transporter = nodemailer.createTransport(transporterConfig);
 
+      // Pehli baar connection verify karo
       if (attempt === 1) await transporter.verify(); 
 
       const mailOptions = {
@@ -76,7 +77,7 @@ const sendEmailOtp = async (email, otp) => {
         console.error("❌ Final Failure.");
         return false;
       }
-      // Wait 2 seconds before retry
+      // 2 second wait karo phir retry karo
       await new Promise(resolve => setTimeout(resolve, 2000));
       attempt++;
     }
