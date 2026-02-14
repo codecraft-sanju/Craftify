@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 const dns = require("dns");
 
 // --- HELPER: Manually Resolve Gmail IP (IPv4 Only) ---
-// Render ka server IPv6 force karta hai, isliye hum manually IPv4 nikalenge
+// Render IPv6 force karta hai jo fail hota hai. Hum manually IPv4 nikalenge.
 const getGmailIp = async () => {
   return new Promise((resolve) => {
     dns.resolve4('smtp.gmail.com', (err, addresses) => {
@@ -25,27 +25,26 @@ const sendEmailOtp = async (email, otp) => {
     return false;
   }
 
-  // 2. IP ADDRESS RESOLUTION (The Fix)
+  // 2. IP ADDRESS RESOLUTION (Solved IPv6 Issue)
   const gmailHost = await getGmailIp();
-  console.log(`🔍 Resolved SMTP Host: ${gmailHost} (Using this to bypass IPv6)`);
+  console.log(`🔍 Resolved SMTP Host: ${gmailHost} (Force IPv4)`);
 
   const transporterConfig = {
-    host: gmailHost,      // <--- Yahan hum Domain nahi, seedha IP use kar rahe hain
-    port: 465,            // SSL Port
-    secure: true,         // True for 465
+    host: gmailHost,      // <--- Resolved IPv4 IP
+    port: 587,            // <--- BACK TO 587 (Standard for Cloud)
+    secure: false,        // <--- 587 ke liye FALSE hona chahiye (STARTTLS use hoga)
     auth: {
       user: process.env.EMAIL_USER,
       pass: cleanPass,
     },
-    // SSL Certificate Fix (Kyunki hum IP use kar rahe hain, hamein servername batana padega)
     tls: {
-      servername: 'smtp.gmail.com', 
+      servername: 'smtp.gmail.com', // Zaroori hai kyunki hum IP use kar rahe hain
       rejectUnauthorized: false 
     },
-    // Timeouts
-    connectionTimeout: 10000, 
-    greetingTimeout: 5000,
-    socketTimeout: 10000
+    // Timeouts badha diye
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000,
+    socketTimeout: 20000
   };
 
   let attempt = 1;
@@ -53,7 +52,7 @@ const sendEmailOtp = async (email, otp) => {
 
   while (attempt <= maxRetries) {
     try {
-      console.log(`\n🔄 Attempt ${attempt} (Connecting to ${gmailHost})...`);
+      console.log(`\n🔄 Attempt ${attempt} (Connecting to ${gmailHost} via Port 587)...`);
       const transporter = nodemailer.createTransport(transporterConfig);
 
       if (attempt === 1) await transporter.verify(); 
@@ -85,7 +84,8 @@ const sendEmailOtp = async (email, otp) => {
         console.error("❌ Final Failure.");
         return false;
       }
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait 3 seconds before retry
+      await new Promise(resolve => setTimeout(resolve, 3000));
       attempt++;
     }
   }
