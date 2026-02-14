@@ -50,8 +50,8 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
                  focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
     />
     <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                      peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
-                      peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
+                     peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
+                     peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
       {label}
     </span>
     <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
@@ -141,7 +141,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
       } else {
           // === REGISTER FLOW ===
           if (!verificationStep) {
-              // STEP 1: SEND DATA & GET OTP
+              // STEP 1: SEND DATA
               const res = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -156,6 +156,15 @@ const CustomerAuth = ({ onLoginSuccess }) => {
               const data = await res.json();
               if (!res.ok) throw new Error(data.message || "Registration failed");
               
+              // --- SMART LOGIC CHECK (New Feature) ---
+              // Agar backend ne bola 'none', matlab direct login ho gaya hai
+              if (data.otpMethod === 'none') {
+                  // Skip OTP step, success directly
+                  onLoginSuccess(data);
+                  return; 
+              }
+              // ----------------------------------------
+
               // Detect Method from Backend Response
               if (data.otpMethod === 'email') {
                   setVerificationMethod('email');
@@ -284,7 +293,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                         
                         <div className="pt-4">
                             <ShimmerButton isLoading={loading} className="w-full text-base">
-                                Send OTP & Join <ArrowRight size={18} />
+                                Join Now <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
                     </motion.div>

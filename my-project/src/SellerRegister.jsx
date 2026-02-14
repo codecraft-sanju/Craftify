@@ -56,8 +56,8 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
                    focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
       />
       <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                        peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
-                        peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
+                       peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
+                       peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
         {label}
       </span>
       
@@ -241,7 +241,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         } else {
             // === REGISTER LOGIC ===
             
-            // Phase 1: Step 2 -> Create User (Triggers Smart OTP)
+            // Phase 1: Step 2 -> Create User & Smart OTP Check
             if (step === 2) {
                 const userRes = await fetch(`${API_URL}/api/users`, {
                     method: 'POST',
@@ -259,9 +259,41 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 const userData = await userRes.json();
                 if (!userRes.ok) throw new Error(userData.message || "User registration failed");
 
+                // --- SMART LOGIC CHECK (Skip OTP if 'none') ---
+                if (userData.otpMethod === 'none') {
+                    // User is created and logged in via cookie.
+                    // Now create shop immediately.
+                    try {
+                        const shopRes = await fetch(`${API_URL}/api/shops`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                name: formData.shopName,
+                                description: formData.description,
+                                phone: formData.phone,
+                                categories: [formData.category]
+                            })
+                        });
+
+                        const shopData = await shopRes.json();
+                        if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
+
+                        // Add shop ID to user object manually since we skipped verify-otp
+                        const finalUser = { ...userData, shop: shopData._id };
+                        onLoginSuccess(finalUser);
+                        return; // Exit here, no Step 3
+
+                    } catch (shopErr) {
+                         // Fallback error if shop fails even though user created
+                         throw new Error(shopErr.message);
+                    }
+                }
+                // ----------------------------------------------
+
                 setLoading(false);
 
-                // --- CRITICAL: Check Backend Response for OTP Method ---
+                // Normal OTP Flow
                 if (userData.otpMethod === 'email') {
                     setVerificationMethod('email');
                 } else if (userData.otpMethod === 'whatsapp') {
@@ -273,7 +305,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 return;
             }
 
-            // Phase 2: Step 3 -> Verify OTP & Create Shop
+            // Phase 2: Step 3 -> Verify OTP & Create Shop (Standard Flow)
             if (step === 3) {
                 // 1. Verify OTP
                 const verifyRes = await fetch(`${API_URL}/api/users/verify-otp`, {
