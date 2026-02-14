@@ -3,29 +3,30 @@ const nodemailer = require("nodemailer");
 // Reusable Email OTP Sender Function
 const sendEmailOtp = async (toEmail, otp) => {
     try {
-        // .env se credential
-        const BREVO_USER = process.env.BREVO_USER;
-        const BREVO_PASS = process.env.BREVO_PASS;
+        // .env se credentials
+        const EMAIL_USER = process.env.EMAIL_USER;
+        const EMAIL_PASS = process.env.EMAIL_PASS;
 
-        if (!BREVO_USER || !BREVO_PASS) {
-            console.error("❌ Brevo SMTP credentials missing in .env");
+        if (!EMAIL_USER || !EMAIL_PASS) {
+            console.error("❌ Email credentials missing in .env");
             return false;
         }
 
-        // Brevo SMTP Transporter
-        const transporter = nodemailer.createTransport({
-            host: "smtp-relay.brevo.com",
-            port: 587,
-            secure: false,
-            auth: {
-                user: BREVO_USER,
-                pass: BREVO_PASS,
-            },
-        });
+        // Transporter create karo
+     const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true sirf 465 ke liye hota hai
+    auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+    },
+    family: 4 // 🔥 IPv4 force karega (main fix)
+});
 
         // Mail template
         const mailOptions = {
-            from: `"Giftomize 🎁" <${BREVO_USER}>`, 
+            from: `"Giftomize 🎁" <${EMAIL_USER}>`,
             to: toEmail,
             subject: "Your OTP Code - Giftomize",
             html: `
@@ -53,6 +54,7 @@ const sendEmailOtp = async (toEmail, otp) => {
             `,
         };
 
+        // Send mail
         await transporter.sendMail(mailOptions);
 
         console.log(`✅ Email OTP Sent to ${toEmail}`);
