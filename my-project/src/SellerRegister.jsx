@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
-  Mail, Lock, ShoppingBag, ShieldCheck, 
-  KeyRound, Sparkles, Loader2, Eye, EyeOff, Edit2
+  Mail, Lock, ShoppingBag, 
+  Sparkles, Loader2, Eye, EyeOff
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -153,12 +153,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // Verification Method (whatsapp/email) - Default 'email' but waits for backend
-  const [verificationMethod, setVerificationMethod] = useState('email'); 
-  
-  // Timer for Step 3
-  const [timer, setTimer] = useState(30);
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -167,7 +161,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     shopName: '',
     category: 'Clothing & Apparel',
     description: 'Welcome to my new shop on Giftomize!',
-    otp: ''
   });
 
   // Switcher Effect
@@ -176,15 +169,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     setStep(1);
     setError("");
   }, [initialMode]);
-
-  // Timer Effect
-  useEffect(() => {
-    let interval;
-    if (step === 3 && timer > 0) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [step, timer]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -239,108 +223,30 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             onLoginSuccess(data);
 
         } else {
-            // === REGISTER LOGIC ===
+            // === REGISTER LOGIC (Direct - Single Step) ===
+            // This endpoint now creates User AND Shop in one go
             
-            // Phase 1: Step 2 -> Create User & Smart OTP Check
-            if (step === 2) {
-                const userRes = await fetch(`${API_URL}/api/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        name: formData.name,
-                        email: formData.email,
-                        password: formData.password,
-                        phone: formData.phone,
-                        role: 'seller'
-                    })
-                });
+            const res = await fetch(`${API_URL}/api/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    phone: formData.phone,
+                    role: 'seller', // Explicitly request seller role
+                    shopName: formData.shopName,
+                    description: formData.description,
+                    categories: [formData.category] // Pass as array
+                })
+            });
 
-                const userData = await userRes.json();
-                if (!userRes.ok) throw new Error(userData.message || "User registration failed");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Registration failed");
 
-                // --- SMART LOGIC CHECK (Skip OTP if 'none') ---
-                if (userData.otpMethod === 'none') {
-                    // User is created and logged in via cookie.
-                    // Now create shop immediately.
-                    try {
-                        const shopRes = await fetch(`${API_URL}/api/shops`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({
-                                name: formData.shopName,
-                                description: formData.description,
-                                phone: formData.phone,
-                                categories: [formData.category]
-                            })
-                        });
-
-                        const shopData = await shopRes.json();
-                        if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
-
-                        // Add shop ID to user object manually since we skipped verify-otp
-                        const finalUser = { ...userData, shop: shopData._id };
-                        onLoginSuccess(finalUser);
-                        return; // Exit here, no Step 3
-
-                    } catch (shopErr) {
-                         // Fallback error if shop fails even though user created
-                         throw new Error(shopErr.message);
-                    }
-                }
-                // ----------------------------------------------
-
-                setLoading(false);
-
-                // Normal OTP Flow
-                if (userData.otpMethod === 'email') {
-                    setVerificationMethod('email');
-                } else if (userData.otpMethod === 'whatsapp') {
-                    setVerificationMethod('whatsapp');
-                }
-
-                setTimer(30); // Reset timer
-                setStep(3); // Move to OTP
-                return;
-            }
-
-            // Phase 2: Step 3 -> Verify OTP & Create Shop (Standard Flow)
-            if (step === 3) {
-                // 1. Verify OTP
-                const verifyRes = await fetch(`${API_URL}/api/users/verify-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        phone: formData.phone,
-                        otp: formData.otp
-                    })
-                });
-
-                const verifyData = await verifyRes.json();
-                if (!verifyRes.ok) throw new Error(verifyData.message || "Invalid OTP");
-
-                // 2. Create Shop
-                const shopRes = await fetch(`${API_URL}/api/shops`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', 
-                    body: JSON.stringify({
-                        name: formData.shopName,
-                        description: formData.description,
-                        phone: formData.phone,
-                        categories: [formData.category]
-                    })
-                });
-
-                const shopData = await shopRes.json();
-                if (!shopRes.ok) throw new Error(shopData.message || "Shop creation failed");
-
-                // 3. Success
-                const finalUser = { ...verifyData, shop: shopData._id };
-                onLoginSuccess(finalUser);
-            }
+            // Direct Success
+            onLoginSuccess(data);
         }
 
     } catch (err) {
@@ -392,7 +298,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">
                 {isLoginView 
                     ? "Manage your inventory, analytics, and orders." 
-                    : step === 3 ? "Verify your identity." : "Join the fastest-growing creator marketplace."}
+                    : "Join the fastest-growing creator marketplace."}
             </p>
           </motion.div>
 
@@ -423,7 +329,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     </motion.div>
                 )}
 
-                {/* === REGISTER STEPS === */}
+                {/* === REGISTER STEP 1: Personal Info === */}
                 {!isLoginView && step === 1 && (
                     <motion.div key="step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
@@ -449,6 +355,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     </motion.div>
                 )}
 
+                {/* === REGISTER STEP 2: Shop Info & Submit === */}
                 {!isLoginView && step === 2 && (
                     <motion.div key="step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={Store} name="shopName" value={formData.shopName} onChange={handleChange} type="text" label="Shop Name" autoFocus />
@@ -461,72 +368,12 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                             onChange={handleChange}
                         />
 
-                        <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl flex gap-3 items-start border border-zinc-200 dark:border-zinc-800">
-                            <ShieldCheck className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
-                            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                We will send a verification code to your {verificationMethod === 'email' ? 'Email' : 'WhatsApp'} to verify your identity.
-                            </p>
-                        </div>
-
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => setStep(1)} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
                                 <ArrowLeft size={20} className="text-zinc-500" />
                             </button>
                             <ShimmerButton isLoading={loading} className="flex-1 text-base">
-                                Verify & Launch <ArrowRight size={18} />
-                            </ShimmerButton>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* === STEP 3: SMART OTP UI === */}
-                {!isLoginView && step === 3 && (
-                    <motion.div key="step3" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
-                        <div className="text-center py-6 mb-4">
-                             {/* DYNAMIC ICON BASED ON SERVICE */}
-                             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce ${
-                                 verificationMethod === 'email' 
-                                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                             }`}>
-                                {verificationMethod === 'email' ? <Mail className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
-                             </div>
-
-                             <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                                {verificationMethod === 'email' ? 'Check Your Email' : 'OTP Sent via WhatsApp'}
-                             </h3>
-                             
-                             <p className="text-zinc-500 text-sm mt-2">
-                                Code sent to <span className="font-bold text-black dark:text-white">
-                                    {verificationMethod === 'email' ? formData.email : formData.phone}
-                                </span>
-                                {/* EDIT BUTTON */}
-                                <button onClick={() => setStep(1)} className="ml-2 text-indigo-500 hover:underline inline-flex items-center gap-1">
-                                    <Edit2 size={12} /> Edit
-                                </button>
-                             </p>
-                             
-                             {verificationMethod === 'email' && (
-                                <p className="text-[10px] text-zinc-400 mt-2 font-medium tracking-wide">
-                                    (Check Spam/Junk folder if not in Inbox)
-                                </p>
-                             )}
-                        </div>
-                        
-                        <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter 6-Digit Code" autoFocus maxLength={6} />
-                        
-                        {/* TIMER UI */}
-                        <div className="text-center text-xs text-zinc-400 font-medium">
-                            {timer > 0 ? (
-                                <span>Resend code in 00:{timer < 10 ? `0${timer}` : timer}</span>
-                            ) : (
-                                <span className="text-zinc-500">Didn't get the code? Please try registering again with correct details.</span>
-                            )}
-                        </div>
-
-                        <div className="pt-4">
-                            <ShimmerButton isLoading={loading} className="w-full text-base">
-                                Confirm & Login <ArrowRight size={18} />
+                                Launch Your Store <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
                     </motion.div>
@@ -537,7 +384,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
           <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
             {isLoginView ? "Don't have a seller account? " : "Already have a seller account? "}
-            <button onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
+            <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
                 {isLoginView ? "Register Now" : "Login Here"}
             </button>
           </motion.p>

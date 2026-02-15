@@ -2,55 +2,15 @@ const User = require('../models/User');
 const Shop = require('../models/Shop'); 
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
-const axios = require('axios'); 
-// Yaha humne central file import ki hai, taaki email logic bas ek jagah rahe
-const sendEmailOtp = require('../utils/sendEmail'); 
+// Removed axios and sendEmail as they are no longer needed for OTP
 
-// --- HELPER: Send WhatsApp OTP (Internal) ---
-const sendWhatsAppOtp = async (phone, otp) => {
-    try {
-        const instanceId = process.env.WHATSAPP_INSTANCE_ID;
-        const token = process.env.WHATSAPP_TOKEN;
-
-        // Agar keys nahi hain, toh seedha fail return karo taaki Email try ho sake
-        if (!instanceId || !token) return false;
-        
-        const message = `Welcome to *Giftomize*! 🎁\n\nYour OTP is: *${otp}*\n\nValid for 10 minutes.\nDo not share this code.`;
-        
-        // India code formatting (Remove non-digits, add 91 if 10 digits)
-        let formattedPhone = phone.toString().replace(/\D/g, ''); 
-        if (formattedPhone.length === 10) {
-            formattedPhone = "91" + formattedPhone;
-        }
-
-        const payload = new URLSearchParams({
-            token: token,
-            to: formattedPhone,
-            body: message
-        });
-
-        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
-        
-        await axios.post(url, payload, {
-            headers: { 'content-type': 'application/x-www-form-urlencoded' }
-        });
-
-        console.log(`✅ WhatsApp OTP Sent to ${formattedPhone}`);
-        return true;
-
-    } catch (error) {
-        // Error log karo par crash mat hone do, false return karo taaki Email logic chale
-        console.warn("⚠️ WhatsApp Send Failed (Will try Email):", error.message);
-        return false;
-    }
-};
-
-// @desc    Register a new user & Send OTP (Smart Failover with Strict Validation)
+// @desc    Register a new user (Direct Registration & Optional Shop Creation)
 // @route   POST /api/users
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password, phone, role } = req.body;
+        // We now accept shop details here directly since there is no second verification step
+        const { name, email, password, phone, role, shopName, description, categories } = req.body;
 
         // 1. --- STRICT VALIDATION ---
         if (!name || !email || !password || !phone) {
@@ -63,13 +23,13 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please enter a valid email address.' });
         }
 
-        // Phone Length Check (Indian numbers usually)
+        // Phone Length Check
         const cleanPhone = phone.toString().replace(/\D/g, '');
         if (cleanPhone.length < 10 || cleanPhone.length > 15) {
              return res.status(400).json({ message: 'Please enter a valid phone number (10 digits).' });
         }
 
-        // 2. --- DUPLICATE CHECK ---
+        // 2. --- DUPLICATE CHECK (User) ---
         const userExists = await User.findOne({ 
             $or: [{ email: email }, { phone: phone }] 
         });
@@ -79,58 +39,23 @@ const registerUser = async (req, res) => {
             if (userExists.phone === phone) return res.status(400).json({ message: 'This Phone Number is already registered.' });
         }
 
-        // 3. --- ROLE ASSIGNMENT ---
-        let userRole = 'customer';
-        // Note: Yeh sirf role check karne ke liye hai, email bhejne ke liye nahi.
-        if (email.toLowerCase() === 'admin@gmail.com') {
-            userRole = 'founder';
-        } else if (role === 'seller') {
-            userRole = 'seller';
-        }
-
-        // 4. --- CHECK .ENV CONFIGURATION ---
-        const otpService = process.env.OTP_SERVICE || 'email'; // Default is email if not set
-
-        // ============================================================
-        // CASE A: NO OTP (DIRECT REGISTRATION)
-        // ============================================================
-        if (otpService === 'none') {
-            console.log("🚀 OTP Service is NONE. Direct Registration...");
-            
-            const user = await User.create({
-                name,
-                email,
-                phone,
-                password,
-                role: userRole,
-                avatar: name.charAt(0).toUpperCase(),
-                isPhoneVerified: true, // Auto Verified
-            });
-
-            if (user) {
-                generateToken(res, user._id); // Auto Login
-                return res.status(201).json({
-                    _id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    role: user.role,
-                    avatar: user.avatar,
-                    shop: null,
-                    otpMethod: 'none',
-                    message: "Registration Successful! (Direct Login)"
-                });
+        // 3. --- DUPLICATE CHECK (Shop - if applicable) ---
+        if (shopName) {
+            const shopExists = await Shop.findOne({ name: shopName });
+            if (shopExists) {
+                return res.status(400).json({ message: "Shop Name is already taken. Please choose another." });
             }
         }
 
-        // ============================================================
-        // CASE B: OTP REQUIRED (WhatsApp or Email)
-        // ============================================================
-        
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpire = Date.now() + 10 * 60 * 1000; // 10 Minutes expiry
+        // 4. --- ROLE ASSIGNMENT ---
+        let userRole = 'customer';
+        if (email.toLowerCase() === 'admin@gmail.com') {
+            userRole = 'founder';
+        } else if (role === 'seller' || shopName) {
+            userRole = 'seller';
+        }
 
-        // Create User (Pending Verification)
+        // 5. --- CREATE USER (Direct) ---
         const user = await User.create({
             name,
             email,
@@ -138,163 +63,70 @@ const registerUser = async (req, res) => {
             password,
             role: userRole,
             avatar: name.charAt(0).toUpperCase(),
-            otp: otp,
-            otpExpire: otpExpire,
-            isPhoneVerified: false 
+            isPhoneVerified: true, // Auto Verified since OTP is removed
+            // No OTP fields needed
         });
 
         if (user) {
-            let otpMethod = 'none'; 
-            let isOtpSent = false;
+            let createdShop = null;
 
-            if (otpService === 'whatsapp') {
-                // Priority: WhatsApp
-                isOtpSent = await sendWhatsAppOtp(phone, otp);
-                if (isOtpSent) {
-                    otpMethod = 'whatsapp';
-                } else {
-                    // Fallback: Email if WhatsApp fails
-                    console.log("⚠️ WhatsApp failed. Switching to Email...");
-                    // EMAIL LOGIC: Calling function from sendEmail.js
-                    isOtpSent = await sendEmailOtp(email, otp);
-                    if (isOtpSent) otpMethod = 'email';
-                }
-            } else {
-                // Default: Email Only
-                console.log("📧 Using Email OTP Service");
-                // EMAIL LOGIC: Calling function from sendEmail.js
-                isOtpSent = await sendEmailOtp(email, otp);
-                if (isOtpSent) otpMethod = 'email';
-            }
-
-            // Final Status Check
-            if (isOtpSent) {
-                res.status(201).json({
-                    success: true,
-                    userId: user._id,
+            // 6. --- CREATE SHOP (If details provided) ---
+            if (shopName) {
+                createdShop = await Shop.create({
+                    name: shopName,
+                    description: description || 'Welcome to my shop',
                     phone: phone,
-                    email: email,
-                    otpMethod: otpMethod,
-                    message: otpMethod === 'whatsapp' 
-                        ? `OTP sent via WhatsApp to ${phone}` 
-                        : `OTP sent to Email ${email}`
+                    categories: categories || [],
+                    owner: user._id,
+                    isActive: true
                 });
-            } else {
-                // Critical Fail: Delete user so they can retry
-                console.error("❌ All OTP Services Failed. Deleting User.");
-                await User.deleteOne({ _id: user._id });
-                return res.status(503).json({ 
-                    message: "Verification service unavailable. Please try again later." 
-                });
+
+                // Link Shop to User
+                user.shop = createdShop._id;
+                user.role = 'seller'; // Ensure role is seller
+                await user.save();
             }
 
+            // 7. --- GENERATE TOKEN & NOTIFY ---
+            generateToken(res, user._id); // Auto Login
+
+            // Socket Notification
+            if (req.io) {
+                req.io.emit('new_user_registered', {
+                    _id: user._id,
+                    name: user.name,
+                    role: user.role
+                });
+                if (createdShop) {
+                    req.io.emit('shop_created', {
+                        _id: createdShop._id,
+                        name: createdShop.name,
+                        ownerName: user.name
+                    });
+                }
+            }
+
+            // 8. --- SEND RESPONSE ---
+            return res.status(201).json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                avatar: user.avatar,
+                shop: createdShop ? createdShop._id : null,
+                message: createdShop ? "Account & Shop Created Successfully!" : "Registration Successful!"
+            });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
         }
 
     } catch (error) {
         console.error("Register Error:", error);
+        // Rollback Shop if user creation failed (unlikely here due to order, but good practice)
         if (error.code === 11000) {
             return res.status(400).json({ message: 'User details already exist.' });
         }
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// @desc    Verify OTP & Create Shop (Atomic Operation)
-// @route   POST /api/users/verify-otp
-// @access  Public
-const verifyUserOtp = async (req, res) => {
-    let createdShop = null; // Track created shop for rollback
-
-    try {
-        const { phone, otp, shopName, description, categories } = req.body;
-
-        // 1. User dhoondo
-        const user = await User.findOne({ phone }).select('+otp');
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        // 2. OTP Check
-        if (user.otp !== otp) {
-            return res.status(400).json({ message: "Invalid OTP. Please check and try again." });
-        }
-
-        if (user.otpExpire < Date.now()) {
-            return res.status(400).json({ message: "OTP has Expired. Please login again." });
-        }
-
-        // --- NEW LOGIC: Shop Creation (If Details Provided) ---
-        if (shopName) {
-            // Check Duplicate Shop Name BEFORE verifying user
-            const shopExists = await Shop.findOne({ name: shopName });
-            if (shopExists) {
-                return res.status(400).json({ message: "Shop Name is already taken. Please choose another." });
-            }
-
-            // Create Shop
-            createdShop = await Shop.create({
-                name: shopName,
-                description: description || 'Welcome to my shop',
-                phone: phone,
-                categories: categories || [],
-                owner: user._id,
-                isActive: true
-            });
-        }
-
-        // 3. Success: User Update (Link Shop & Verify)
-        user.isPhoneVerified = true; 
-        user.otp = undefined;
-        user.otpExpire = undefined;
-        
-        if (createdShop) {
-            user.shop = createdShop._id; // User model me shop ID save karo
-            user.role = 'seller'; // Ensure role is seller
-        }
-        
-        await user.save();
-
-        // Generate Token
-        generateToken(res, user._id);
-
-        // Socket Notification
-        if (req.io) {
-            req.io.emit('new_user_registered', {
-                _id: user._id,
-                name: user.name,
-                role: user.role
-            });
-            if (createdShop) {
-                req.io.emit('shop_created', {
-                    _id: createdShop._id,
-                    name: createdShop.name,
-                    ownerName: user.name
-                });
-            }
-        }
-
-        res.status(200).json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-            shop: createdShop ? createdShop._id : null,
-            message: createdShop ? "Account & Shop Created Successfully!" : "Verification Successful!"
-        });
-
-    } catch (error) {
-        console.error("Verify Error:", error);
-        
-        // --- ROLLBACK LOGIC ---
-        if (createdShop) {
-            await Shop.findByIdAndDelete(createdShop._id);
-            console.log("⚠️ Rolled back shop creation due to verification error.");
-        }
-
         res.status(500).json({ message: error.message });
     }
 };
@@ -640,7 +472,6 @@ const removeFromWishlist = async (req, res) => {
 
 module.exports = {
     registerUser,
-    verifyUserOtp,
     authUser,
     logoutUser,
     getUserProfile,

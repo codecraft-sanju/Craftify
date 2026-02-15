@@ -4,7 +4,6 @@ const express = require('express');
 const router = express.Router();
 const {
     registerUser,
-    verifyUserOtp, 
     authUser,
     logoutUser, 
     getUserProfile,
@@ -26,7 +25,6 @@ const {
 const { protect, founder } = require('../middleware/authMiddleware');
 
 // --- AUTH ROUTES ---
-router.post('/verify-otp', verifyUserOtp);
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
 
@@ -59,7 +57,7 @@ router.route('/wishlist/:id')
 
 // --- ADMIN / FOUNDER ROUTES + REGISTER ---
 router.route('/')
-    .post(registerUser) // Register is public (Sends OTP via WhatsApp or Email)
+    .post(registerUser) // Register is public (Direct Registration)
     .get(protect, founder, getUsers); // List users (Founder only)
 
 // IMPORTANT: Keep this route at the bottom to avoid conflicts

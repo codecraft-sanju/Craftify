@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Phone, ArrowRight, ArrowLeft,
-  Mail, Lock, KeyRound, Loader2, Sparkles,
-  ShieldCheck, ShoppingBag, Star, Edit2
+  Mail, Lock, Loader2, Sparkles,
+  ShoppingBag, Star
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -47,7 +47,7 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
       autoFocus={autoFocus}
       maxLength={maxLength}
       className="inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 pl-2 outline-none 
-                 focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
+                  focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
     />
     <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
                      peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
@@ -84,31 +84,16 @@ const CustomerAuth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(!isRegisterRoute);
 
   // Form State
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', otp: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '' });
   
-  // Verification State
-  const [verificationStep, setVerificationStep] = useState(false); // Step 2 of Register
-  const [verificationMethod, setVerificationMethod] = useState('email'); // 'email' or 'whatsapp'
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [timer, setTimer] = useState(30);
 
   // Sync state with URL
   useEffect(() => {
     setIsLogin(location.pathname === '/login');
     setError('');
-    setVerificationStep(false);
   }, [location.pathname]);
-
-  // Timer Effect
-  useEffect(() => {
-    let interval;
-    if (verificationStep && timer > 0) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [verificationStep, timer]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -139,58 +124,24 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           onLoginSuccess(data);
 
       } else {
-          // === REGISTER FLOW ===
-          if (!verificationStep) {
-              // STEP 1: SEND DATA
-              const res = await fetch(`${API_URL}/api/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                    phone: formData.phone
-                })
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.message || "Registration failed");
-              
-              // --- SMART LOGIC CHECK (New Feature) ---
-              // Agar backend ne bola 'none', matlab direct login ho gaya hai
-              if (data.otpMethod === 'none') {
-                  // Skip OTP step, success directly
-                  onLoginSuccess(data);
-                  return; 
-              }
-              // ----------------------------------------
-
-              // Detect Method from Backend Response
-              if (data.otpMethod === 'email') {
-                  setVerificationMethod('email');
-              } else if (data.otpMethod === 'whatsapp') {
-                  setVerificationMethod('whatsapp');
-              }
-
-              setTimer(30);
-              setVerificationStep(true); // Move to OTP
-              
-          } else {
-              // STEP 2: VERIFY OTP
-              const res = await fetch(`${API_URL}/api/users/verify-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    phone: formData.phone,
-                    otp: formData.otp
-                })
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.message || "Verification failed");
-
-              onLoginSuccess(data);
-          }
+          // === DIRECT REGISTER FLOW (No OTP) ===
+          const res = await fetch(`${API_URL}/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                phone: formData.phone
+            })
+          });
+          const data = await res.json();
+          
+          if (!res.ok) throw new Error(data.message || "Registration failed");
+          
+          // Direct Success
+          onLoginSuccess(data);
       }
     } catch (err) {
       setError(err.message);
@@ -200,8 +151,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
   };
 
   const handleSwitchMode = () => {
-      setVerificationStep(false);
-      setTimer(30);
       if(isLogin) navigate('/register');
       else navigate('/login');
   };
@@ -240,7 +189,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
         <motion.div
           variants={staggerContainer}
           className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
-                      [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                       [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
@@ -249,9 +198,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">
               {isLogin 
                 ? "Sign in to track orders and view your wishlist." 
-                : verificationStep 
-                  ? "Verify your identity to continue." 
-                  : "Discover unique products tailored for you."}
+                : "Discover unique products tailored for you."}
             </p>
           </motion.div>
 
@@ -283,9 +230,9 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                     </motion.div>
                 )}
 
-                {/* === REGISTER STEP 1 (Details) === */}
-                {!isLogin && !verificationStep && (
-                    <motion.div key="reg-step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
+                {/* === REGISTER FORM (Direct) === */}
+                {!isLogin && (
+                    <motion.div key="register" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Full Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
                         <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} />
@@ -294,61 +241,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                         <div className="pt-4">
                             <ShimmerButton isLoading={loading} className="w-full text-base">
                                 Join Now <ArrowRight size={18} />
-                            </ShimmerButton>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* === REGISTER STEP 2 (OTP) === */}
-                {!isLogin && verificationStep && (
-                    <motion.div key="reg-step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
-                        <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 mb-6 flex flex-col items-center text-center">
-                            {/* Dynamic Icon */}
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-                                verificationMethod === 'email' 
-                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' 
-                                : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            }`}>
-                                {verificationMethod === 'email' ? <Mail size={24} /> : <Phone size={24} />}
-                            </div>
-
-                            <p className="text-sm text-zinc-800 dark:text-zinc-200 font-bold mb-1">
-                                OTP Sent via {verificationMethod === 'email' ? 'Email' : 'WhatsApp'}
-                            </p>
-                            <p className="text-xs text-zinc-500">
-                                to {verificationMethod === 'email' ? formData.email : formData.phone}
-                                <button type="button" onClick={() => setVerificationStep(false)} className="ml-2 text-indigo-500 hover:underline inline-flex items-center gap-1">
-                                    <Edit2 size={10} /> Edit
-                                </button>
-                            </p>
-                            {verificationMethod === 'email' && (
-                                <p className="text-[10px] text-zinc-400 mt-2 font-medium tracking-wide">
-                                    (Check Spam/Junk folder if not in Inbox)
-                                </p>
-                            )}
-                        </div>
-
-                        <InputGroup icon={KeyRound} name="otp" value={formData.otp} onChange={handleChange} type="text" label="Enter 6-Digit Code" autoFocus maxLength={6} />
-                        
-                        {/* TIMER UI */}
-                        <div className="text-center text-xs text-zinc-400 font-medium mb-4">
-                            {timer > 0 ? (
-                                <span>Resend code in 00:{timer < 10 ? `0${timer}` : timer}</span>
-                            ) : (
-                                <span className="text-zinc-500">Didn't get the code? Please try registering again.</span>
-                            )}
-                        </div>
-
-                        <div className="pt-2 flex gap-4">
-                            <button 
-                                type="button" 
-                                onClick={() => setVerificationStep(false)} 
-                                className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
-                            >
-                                <ArrowLeft size={20} className="text-zinc-500" />
-                            </button>
-                            <ShimmerButton isLoading={loading} className="w-full text-base">
-                                Verify & Create Account <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
                     </motion.div>
@@ -392,7 +284,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                       <h2 className="text-4xl font-light text-zinc-900 dark:text-white">Priority Shipping</h2>
                     </div>
                     <div className="p-8 bg-black dark:bg-white rounded-[2.5rem] shadow-xl relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={100} /></div>
+                        <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={100} /></div>
                       <p className="text-xs font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2">Exclusive</p>
                       <h2 className="text-4xl font-light text-white dark:text-black">Early Access</h2>
                     </div>
