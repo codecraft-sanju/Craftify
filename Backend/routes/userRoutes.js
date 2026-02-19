@@ -3,7 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const {
-    registerUser,
+    // --- CHANGES MADE: Replaced registerUser with sendRegistrationOtp and verifyOtpAndRegister ---
+    sendRegistrationOtp,
+    verifyOtpAndRegister,
     authUser,
     logoutUser, 
     getUserProfile,
@@ -20,11 +22,16 @@ const {
     updateOfferBanners,  
     getWishlist,
     addToWishlist,
-    removeFromWishlist
+    removeFromWishlist,
+    receiveAirtextWebhook
 } = require('../controllers/userController');
 const { protect, founder } = require('../middleware/authMiddleware');
 
 // --- AUTH ROUTES ---
+// --- CHANGES MADE: Added routes for sending OTP and verifying/registering ---
+router.post('/send-otp', sendRegistrationOtp); 
+router.post('/register', verifyOtpAndRegister); 
+
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
 
@@ -57,7 +64,7 @@ router.route('/wishlist/:id')
 
 // --- ADMIN / FOUNDER ROUTES + REGISTER ---
 router.route('/')
-    .post(registerUser) // Register is public (Direct Registration)
+    // --- CHANGES MADE: Removed .post(registerUser) from here since we now use /register ---
     .get(protect, founder, getUsers); // List users (Founder only)
 
 // IMPORTANT: Keep this route at the bottom to avoid conflicts
@@ -65,5 +72,7 @@ router.route('/:id')
     .get(protect, founder, getUserById)
     .put(protect, founder, updateUser)
     .delete(protect, founder, deleteUser);
+
+    router.post('/webhook', receiveAirtextWebhook);
 
 module.exports = router;

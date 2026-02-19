@@ -25,9 +25,7 @@ const userSchema = new mongoose.Schema({
     
     avatar: { type: String, default: 'U' },
 
-    // OTP fields for WhatsApp verification
-    otp: { type: String, select: false },
-    otpExpire: Date,
+    // CHANGES MADE: Removed 'otp' and 'otpExpire' fields as they are now handled by the separate Otp.js model
     isPhoneVerified: { type: Boolean, default: false },
 
     address: [{
@@ -48,8 +46,7 @@ const userSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// --- FIX: Removed 'next' parameter ---
-// Async functions me 'next' ki zaroorat nahi hoti
+
 userSchema.pre('save', async function() {
     if (!this.isModified('password')) return;
     

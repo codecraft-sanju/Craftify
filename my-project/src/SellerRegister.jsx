@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, ShoppingBag, 
-  Sparkles, Loader2, Eye, EyeOff
+  Sparkles, Loader2, Eye, EyeOff, Key
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,14 +35,19 @@ const BackgroundAurora = () => (
   </div>
 );
 
-// Input Group with Password Toggle
-const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength }) => {
+// --- CHANGES MADE: Added 'prefix' prop and styling for +91 visual ---
+const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength, prefix }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
 
   return (
     <div className="relative w-full mb-6 group">
+      {prefix && (
+        <span className="absolute left-0 top-3 text-zinc-800 dark:text-zinc-200 font-medium z-10">
+          {prefix}
+        </span>
+      )}
       <input
         name={name}
         value={value}
@@ -52,12 +57,12 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
         placeholder={placeholder}
         autoFocus={autoFocus}
         maxLength={maxLength}
-        className="inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 pl-2 pr-10 outline-none 
-                   focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium"
+        className={`inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 ${prefix ? 'pl-9' : 'pl-2'} pr-10 outline-none 
+                   focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
       />
-      <span className="absolute left-0 top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                       peer-focus:-top-4 peer-focus:text-black dark:peer-focus:text-white
-                       peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:text-zinc-500">
+      <span className={`absolute ${prefix ? 'left-9' : 'left-0'} top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
+                       peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
+                       peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:left-0 peer-[:not(:placeholder-shown)]:text-zinc-500`}>
         {label}
       </span>
       
@@ -127,13 +132,13 @@ const CustomSelect = ({ icon: Icon, label, value, options, onChange }) => {
   );
 };
 
-const ShimmerButton = ({ children, isLoading, className = "", onClick, type="submit" }) => (
+const ShimmerButton = ({ children, isLoading, className = "", onClick, type="submit", disabled }) => (
   <motion.button
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
     type={type}
     onClick={onClick}
-    disabled={isLoading}
+    disabled={isLoading || disabled}
     className={`relative overflow-hidden bg-black dark:bg-white text-white dark:text-black font-bold py-4 px-8 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 w-full ${className}`}
   >
     {isLoading ? <Loader2 className="animate-spin" size={20} /> : children}
@@ -153,6 +158,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
+  // --- CHANGES MADE: Added OTP state ---
+  const [otp, setOtp] = useState("");
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -168,6 +176,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     setIsLoginView(initialMode === 'login');
     setStep(1);
     setError("");
+    setOtp(""); // Reset OTP on view change
   }, [initialMode]);
 
   const handleChange = (e) => {
@@ -185,6 +194,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const handleSwitchMode = () => {
     setError("");
     setStep(1);
+    setOtp("");
     if(isLoginView) {
         setIsLoginView(false);
         navigate('/seller-register');
@@ -223,34 +233,63 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             onLoginSuccess(data);
 
         } else {
-            // === REGISTER LOGIC (Direct - Single Step) ===
-            // This endpoint now creates User AND Shop in one go
-            
-            const res = await fetch(`${API_URL}/api/users`, {
+            // === REGISTER LOGIC (Step 2 -> Step 3: Send OTP) ===
+            const res = await fetch(`${API_URL}/api/users/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
                     password: formData.password,
                     phone: formData.phone,
-                    role: 'seller', // Explicitly request seller role
-                    shopName: formData.shopName,
-                    description: formData.description,
-                    categories: [formData.category] // Pass as array
+                    shopName: formData.shopName // Validates shop name duplication early
                 })
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || "Registration failed");
+            if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-            // Direct Success
-            onLoginSuccess(data);
+            // Move to OTP Step
+            setStep(3);
         }
 
     } catch (err) {
         setError(err.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+        const res = await fetch(`${API_URL}/api/users/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                phone: formData.phone,
+                role: 'seller', 
+                shopName: formData.shopName,
+                description: formData.description,
+                categories: [formData.category], 
+                otp: otp
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Registration failed");
+
+        onLoginSuccess(data);
+    } catch (err) {
+        setError(err.message);
+    } finally {
         setLoading(false);
     }
   };
@@ -269,7 +308,11 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 dark:border-zinc-800 shadow-sm">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                  if (!isLoginView && step === 3) setStep(2);
+                  else if (!isLoginView && step === 2) setStep(1);
+                  else navigate('/');
+              }}
               className="p-3 rounded-full bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-90 group"
             >
               <ArrowLeft size={20} className="text-zinc-600 dark:text-zinc-400 group-hover:-translate-x-1 transition-transform" />
@@ -293,12 +336,15 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
-              {isLoginView ? 'Welcome Back' : 'Create Empire'}
+              {isLoginView ? 'Welcome Back' : step === 3 ? 'Verify Identity' : 'Create Empire'}
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">
+                {/* --- CHANGES MADE: Added +91 to the success message --- */}
                 {isLoginView 
                     ? "Manage your inventory, analytics, and orders." 
-                    : "Join the fastest-growing creator marketplace."}
+                    : step === 3 
+                        ? `We've sent a 6-digit code to +91 ${formData.phone}`
+                        : "Join the fastest-growing creator marketplace."}
             </p>
           </motion.div>
 
@@ -313,12 +359,12 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
           )}
 
           {/* FORM AREA */}
-          <form onSubmit={handleSubmit} className="space-y-2 pb-10">
+          <div className="space-y-2 pb-10">
             <AnimatePresence mode="wait">
                 
                 {/* === LOGIN FORM === */}
                 {isLoginView && (
-                    <motion.div key="login" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
+                    <motion.form onSubmit={handleSubmit} key="login" variants={fadeInUp} initial="initial" animate="animate" exit="exit">
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" autoFocus />
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Password" />
                         <div className="pt-4">
@@ -326,7 +372,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 Access Dashboard <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
-                    </motion.div>
+                    </motion.form>
                 )}
 
                 {/* === REGISTER STEP 1: Personal Info === */}
@@ -334,7 +380,10 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     <motion.div key="step1" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} />
+                        
+                        {/* --- CHANGES MADE: Added prefix="+91" --- */}
+                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} prefix="+91" />
+                        
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
                         <div className="pt-4">
@@ -355,9 +404,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     </motion.div>
                 )}
 
-                {/* === REGISTER STEP 2: Shop Info & Submit === */}
+                {/* === REGISTER STEP 2: Shop Info === */}
                 {!isLoginView && step === 2 && (
-                    <motion.div key="step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
+                    <motion.form onSubmit={handleSubmit} key="step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={Store} name="shopName" value={formData.shopName} onChange={handleChange} type="text" label="Shop Name" autoFocus />
                         
                         <CustomSelect 
@@ -373,21 +422,62 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 <ArrowLeft size={20} className="text-zinc-500" />
                             </button>
                             <ShimmerButton isLoading={loading} className="flex-1 text-base">
-                                Launch Your Store <ArrowRight size={18} />
+                                Send OTP <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
-                    </motion.div>
+                    </motion.form>
+                )}
+
+                {/* === REGISTER STEP 3: Verify OTP === */}
+                {!isLoginView && step === 3 && (
+                    <motion.form onSubmit={handleVerifyOtp} key="step3" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
+                        <InputGroup 
+                            icon={Key} 
+                            name="otp" 
+                            value={otp} 
+                            onChange={(e) => {
+                                if (/^\d*$/.test(e.target.value)) setOtp(e.target.value);
+                            }} 
+                            type="text" 
+                            label="Enter 6-digit OTP" 
+                            maxLength={6} 
+                            autoFocus 
+                        />
+                        
+                        <div className="flex gap-4 pt-4">
+                            <button type="button" onClick={() => setStep(2)} className="h-[56px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors self-start">
+                                <ArrowLeft size={20} className="text-zinc-500" />
+                            </button>
+                            <div className="flex-1 space-y-3">
+                                <ShimmerButton isLoading={loading} disabled={otp.length !== 6} className="w-full text-base">
+                                    Verify & Launch <ArrowRight size={18} />
+                                </ShimmerButton>
+                                
+                                <button 
+                                    type="button" 
+                                    disabled={loading}
+                                    onClick={handleSubmit} // Resends the OTP
+                                    className="w-full text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors py-2"
+                                >
+                                    Didn't receive code? Resend
+                                </button>
+                            </div>
+                        </div>
+                    </motion.form>
                 )}
 
             </AnimatePresence>
-          </form>
+          </div>
 
-          <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
-            {isLoginView ? "Don't have a seller account? " : "Already have a seller account? "}
-            <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
-                {isLoginView ? "Register Now" : "Login Here"}
-            </button>
-          </motion.p>
+          {/* Hide Switch Mode text when inside multi-step process for cleaner UI */}
+          {(isLoginView || step === 1) && (
+            <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
+              {isLoginView ? "Don't have a seller account? " : "Already have a seller account? "}
+              <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
+                  {isLoginView ? "Register Now" : "Login Here"}
+              </button>
+            </motion.p>
+          )}
         </motion.div>
 
         {/* RIGHT SIDE: ILLUSTRATION CARD */}

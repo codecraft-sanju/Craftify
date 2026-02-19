@@ -2,15 +2,19 @@ const User = require('../models/User');
 const Shop = require('../models/Shop'); 
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
-// Removed axios and sendEmail as they are no longer needed for OTP
 
-// @desc    Register a new user (Direct Registration & Optional Shop Creation)
-// @route   POST /api/users
+// --- CHANGES MADE: Imported axios and Otp model ---
+const axios = require('axios');
+const Otp = require('../models/Otp');
+
+// --- CHANGES MADE: Replaced single registerUser function with sendRegistrationOtp and verifyOtpAndRegister ---
+
+// @desc    Send OTP for new user registration
+// @route   POST /api/users/send-otp
 // @access  Public
-const registerUser = async (req, res) => {
+const sendRegistrationOtp = async (req, res) => {
     try {
-        // We now accept shop details here directly since there is no second verification step
-        const { name, email, password, phone, role, shopName, description, categories } = req.body;
+        const { name, email, password, phone, shopName } = req.body;
 
         // 1. --- STRICT VALIDATION ---
         if (!name || !email || !password || !phone) {
@@ -23,20 +27,28 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please enter a valid email address.' });
         }
 
-        // Phone Length Check
-        const cleanPhone = phone.toString().replace(/\D/g, '');
-        if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-             return res.status(400).json({ message: 'Please enter a valid phone number (10 digits).' });
+        // --- PHONE NUMBER FORMATTING (Auto-add 91) ---
+        let formattedPhone = phone.toString().replace(/\D/g, ''); 
+        
+        if (formattedPhone.length === 10) {
+            formattedPhone = '91' + formattedPhone; 
+        } else if (formattedPhone.length === 11 && formattedPhone.startsWith('0')) {
+            formattedPhone = '91' + formattedPhone.substring(1); 
+        }
+
+        // Final Validation to ensure it's a valid 12-digit Indian number
+        if (formattedPhone.length !== 12 || !formattedPhone.startsWith('91')) {
+             return res.status(400).json({ message: 'Please enter a valid 10-digit phone number.' });
         }
 
         // 2. --- DUPLICATE CHECK (User) ---
         const userExists = await User.findOne({ 
-            $or: [{ email: email }, { phone: phone }] 
+            $or: [{ email: email }, { phone: formattedPhone }] 
         });
 
         if (userExists) {
             if (userExists.email === email) return res.status(400).json({ message: 'This Email is already registered.' });
-            if (userExists.phone === phone) return res.status(400).json({ message: 'This Phone Number is already registered.' });
+            if (userExists.phone === formattedPhone) return res.status(400).json({ message: 'This Phone Number is already registered.' });
         }
 
         // 3. --- DUPLICATE CHECK (Shop - if applicable) ---
@@ -45,6 +57,52 @@ const registerUser = async (req, res) => {
             if (shopExists) {
                 return res.status(400).json({ message: "Shop Name is already taken. Please choose another." });
             }
+        }
+
+        // --- OTP Generation and SMS API logic added ---
+        const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await Otp.findOneAndDelete({ phone: formattedPhone }); 
+        await Otp.create({ phone: formattedPhone, otp: generatedOtp });
+
+        await axios.post('https://airtext-fo6q.onrender.com/send-sms', {
+            apiKey: process.env.AIRTEXT_API_KEY,
+            phone: formattedPhone,
+            msg: `Your OTP for registration is ${generatedOtp}`,
+            webhookUrl: process.env.WEBHOOK_URL
+        });
+
+        res.status(200).json({ message: 'OTP sent successfully to your phone.' });
+
+    } catch (error) {
+        console.error("OTP Send Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Verify OTP and register a new user (Direct Registration & Optional Shop Creation)
+// @route   POST /api/users/register
+// @access  Public
+const verifyOtpAndRegister = async (req, res) => {
+    try {
+        const { name, email, password, phone, role, shopName, description, categories, otp } = req.body;
+
+        // --- PHONE NUMBER FORMATTING ---
+        let formattedPhone = phone.toString().replace(/\D/g, ''); 
+        if (formattedPhone.length === 10) {
+            formattedPhone = '91' + formattedPhone;
+        } else if (formattedPhone.length === 11 && formattedPhone.startsWith('0')) {
+            formattedPhone = '91' + formattedPhone.substring(1);
+        }
+
+        // --- OTP validation ---
+        if (!otp) {
+            return res.status(400).json({ message: 'OTP is required.' });
+        }
+
+        const validOtp = await Otp.findOne({ phone: formattedPhone, otp });
+        if (!validOtp) {
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
         }
 
         // 4. --- ROLE ASSIGNMENT ---
@@ -59,12 +117,11 @@ const registerUser = async (req, res) => {
         const user = await User.create({
             name,
             email,
-            phone,
+            phone: formattedPhone, // Saved with 91
             password,
             role: userRole,
             avatar: name.charAt(0).toUpperCase(),
-            isPhoneVerified: true, // Auto Verified since OTP is removed
-            // No OTP fields needed
+            isPhoneVerified: true, 
         });
 
         if (user) {
@@ -75,7 +132,7 @@ const registerUser = async (req, res) => {
                 createdShop = await Shop.create({
                     name: shopName,
                     description: description || 'Welcome to my shop',
-                    phone: phone,
+                    phone: formattedPhone, // Saved with 91
                     categories: categories || [],
                     owner: user._id,
                     isActive: true
@@ -106,6 +163,9 @@ const registerUser = async (req, res) => {
                 }
             }
 
+            // --- Delete OTP from database after successful registration ---
+            await Otp.deleteOne({ _id: validOtp._id });
+
             // 8. --- SEND RESPONSE ---
             return res.status(201).json({
                 _id: user._id,
@@ -123,7 +183,7 @@ const registerUser = async (req, res) => {
 
     } catch (error) {
         console.error("Register Error:", error);
-        // Rollback Shop if user creation failed (unlikely here due to order, but good practice)
+        // Rollback Shop if user creation failed
         if (error.code === 11000) {
             return res.status(400).json({ message: 'User details already exist.' });
         }
@@ -470,8 +530,35 @@ const removeFromWishlist = async (req, res) => {
     }
 };
 
+// @desc    Receive real-time SMS status from Airtext
+// @route   POST /api/webhook
+// @access  Public
+const receiveAirtextWebhook = async (req, res) => {
+    try {
+        const webhookData = req.body;
+
+        // Yeh line aapke Render server ke logs mein real-time data print karegi
+        console.log("====================================");
+        console.log("🔥 AIRTEXT WEBHOOK RECEIVED!");
+        console.log(JSON.stringify(webhookData, null, 2));
+        console.log("====================================");
+
+        // TODO: Agar aap chaho toh yahan database update ka code likh sakte ho
+        // (Jaise agar SMS fail hua toh user ko notification dena, etc.)
+
+        // Webhook ko humesha 200 OK bhej kar batana hota hai ki data mil gaya, 
+        // warna Airtext baar-baar data bhejta rahega.
+        res.status(200).send("Webhook Received Successfully");
+    } catch (error) {
+        console.error("Webhook Error:", error);
+        res.status(500).send("Server Error");
+    }
+};
+
+// --- Exported new functions ---
 module.exports = {
-    registerUser,
+    sendRegistrationOtp,
+    verifyOtpAndRegister,
     authUser,
     logoutUser,
     getUserProfile,
@@ -488,5 +575,6 @@ module.exports = {
     updateOfferBanners,  
     getWishlist,
     addToWishlist,
-    removeFromWishlist
+    removeFromWishlist,
+    receiveAirtextWebhook
 };
