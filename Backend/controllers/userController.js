@@ -3,11 +3,9 @@ const Shop = require('../models/Shop');
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
 
-// --- CHANGES MADE: Imported axios and Otp model ---
-const axios = require('axios');
+// --- CHANGES MADE: Removed axios, imported sendSms utility instead ---
 const Otp = require('../models/Otp');
-
-// --- CHANGES MADE: Replaced single registerUser function with sendRegistrationOtp and verifyOtpAndRegister ---
+const sendSms = require('../utils/sendSms');
 
 // @desc    Send OTP for new user registration
 // @route   POST /api/users/send-otp
@@ -69,7 +67,6 @@ const sendRegistrationOtp = async (req, res) => {
         // --- OTP Generation and SMS API logic added ---
         const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // --- CHANGES MADE: Added array of 3 distinct messages and random selection ---
         const otpMessages = [
             `Welcome to Giftomize! Your registration OTP is ${generatedOtp}. Please do not share this with anyone.`,
             `${generatedOtp} is your verification code to set up your Giftomize account. Happy shopping!`,
@@ -77,17 +74,12 @@ const sendRegistrationOtp = async (req, res) => {
         ];
         
         const randomMsg = otpMessages[Math.floor(Math.random() * otpMessages.length)];
-        // --- END CHANGES ---
 
         await Otp.findOneAndDelete({ phone: formattedPhone }); 
         await Otp.create({ phone: formattedPhone, otp: generatedOtp });
 
-        await axios.post('https://airtext-fo6q.onrender.com/send-sms', {
-            apiKey: process.env.AIRTEXT_API_KEY,
-            phone: formattedPhone,
-            msg: randomMsg, // --- CHANGES MADE: Passed the dynamically selected message here ---
-            webhookUrl: process.env.WEBHOOK_URL
-        });
+        // --- CHANGES MADE: Using the new sendSms utility function here ---
+        await sendSms(formattedPhone, randomMsg);
 
         res.status(200).json({ message: 'OTP sent successfully to your phone.' });
 
