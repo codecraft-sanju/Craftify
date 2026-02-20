@@ -69,13 +69,23 @@ const sendRegistrationOtp = async (req, res) => {
         // --- OTP Generation and SMS API logic added ---
         const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
+        // --- CHANGES MADE: Added array of 3 distinct messages and random selection ---
+        const otpMessages = [
+            `Welcome to Giftomize! Your registration OTP is ${generatedOtp}. Please do not share this with anyone.`,
+            `${generatedOtp} is your verification code to set up your Giftomize account. Happy shopping!`,
+            `Giftomize Alert: Please use OTP ${generatedOtp} to verify your phone number and complete registration.`
+        ];
+        
+        const randomMsg = otpMessages[Math.floor(Math.random() * otpMessages.length)];
+        // --- END CHANGES ---
+
         await Otp.findOneAndDelete({ phone: formattedPhone }); 
         await Otp.create({ phone: formattedPhone, otp: generatedOtp });
 
         await axios.post('https://airtext-fo6q.onrender.com/send-sms', {
             apiKey: process.env.AIRTEXT_API_KEY,
             phone: formattedPhone,
-            msg: `Your OTP for registration is ${generatedOtp}`,
+            msg: randomMsg, // --- CHANGES MADE: Passed the dynamically selected message here ---
             webhookUrl: process.env.WEBHOOK_URL
         });
 
@@ -549,17 +559,11 @@ const receiveAirtextWebhook = async (req, res) => {
     try {
         const webhookData = req.body;
 
-        // Yeh line aapke Render server ke logs mein real-time data print karegi
         console.log("====================================");
         console.log("🔥 AIRTEXT WEBHOOK RECEIVED!");
         console.log(JSON.stringify(webhookData, null, 2));
         console.log("====================================");
 
-        // TODO: Agar aap chaho toh yahan database update ka code likh sakte ho
-        // (Jaise agar SMS fail hua toh user ko notification dena, etc.)
-
-        // Webhook ko humesha 200 OK bhej kar batana hota hai ki data mil gaya, 
-        // warna Airtext baar-baar data bhejta rahega.
         res.status(200).send("Webhook Received Successfully");
     } catch (error) {
         console.error("Webhook Error:", error);
