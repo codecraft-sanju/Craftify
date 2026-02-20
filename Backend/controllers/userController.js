@@ -59,6 +59,13 @@ const sendRegistrationOtp = async (req, res) => {
             }
         }
 
+        if (process.env.OTP_SERVICE !== 'true') {
+            return res.status(200).json({ 
+                message: 'Validation successful. Proceed to register.', 
+                bypassOtp: true 
+            });
+        }
+
         // --- OTP Generation and SMS API logic added ---
         const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -96,13 +103,16 @@ const verifyOtpAndRegister = async (req, res) => {
         }
 
         // --- OTP validation ---
-        if (!otp) {
-            return res.status(400).json({ message: 'OTP is required.' });
-        }
+        let validOtp = null;
+        if (process.env.OTP_SERVICE === 'true') {
+            if (!otp) {
+                return res.status(400).json({ message: 'OTP is required.' });
+            }
 
-        const validOtp = await Otp.findOne({ phone: formattedPhone, otp });
-        if (!validOtp) {
-            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+            validOtp = await Otp.findOne({ phone: formattedPhone, otp });
+            if (!validOtp) {
+                return res.status(400).json({ message: 'Invalid or expired OTP.' });
+            }
         }
 
         // 4. --- ROLE ASSIGNMENT ---
@@ -163,8 +173,10 @@ const verifyOtpAndRegister = async (req, res) => {
                 }
             }
 
-            // --- Delete OTP from database after successful registration ---
-            await Otp.deleteOne({ _id: validOtp._id });
+            if (process.env.OTP_SERVICE === 'true' && validOtp) {
+                // --- Delete OTP from database after successful registration ---
+                await Otp.deleteOne({ _id: validOtp._id });
+            }
 
             // 8. --- SEND RESPONSE ---
             return res.status(201).json({

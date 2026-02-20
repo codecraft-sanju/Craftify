@@ -249,8 +249,33 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-            // Move to OTP Step
-            setStep(3);
+            // --- CHANGES MADE: Handle OTP bypass for direct registration ---
+            if (data.bypassOtp) {
+                const registerRes = await fetch(`${API_URL}/api/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: formData.name,
+                        email: formData.email,
+                        password: formData.password,
+                        phone: formData.phone,
+                        role: 'seller', 
+                        shopName: formData.shopName,
+                        description: formData.description,
+                        categories: [formData.category], 
+                        otp: 'bypass' // Backend ignores this when OTP_SERVICE is false
+                    })
+                });
+                const registerData = await registerRes.json();
+                
+                if (!registerRes.ok) throw new Error(registerData.message || "Registration failed");
+                
+                onLoginSuccess(registerData);
+            } else {
+                // Move to OTP Step
+                setStep(3);
+            }
         }
 
     } catch (err) {

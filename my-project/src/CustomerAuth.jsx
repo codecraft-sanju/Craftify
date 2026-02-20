@@ -152,8 +152,29 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           
           if (!res.ok) throw new Error(data.message || "Failed to send OTP");
           
-          // Show OTP screen
-          setShowOtpScreen(true);
+          // --- CHANGES MADE: Handle OTP bypass for direct registration ---
+          if (data.bypassOtp) {
+              const registerRes = await fetch(`${API_URL}/api/users/register`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                      name: formData.name,
+                      email: formData.email,
+                      password: formData.password,
+                      phone: formData.phone,
+                      otp: 'bypass' // Backend ignores this when OTP_SERVICE is false
+                  })
+              });
+              const registerData = await registerRes.json();
+              
+              if (!registerRes.ok) throw new Error(registerData.message || "Registration failed");
+              
+              onLoginSuccess(registerData);
+          } else {
+              // Show OTP screen
+              setShowOtpScreen(true);
+          }
       }
     } catch (err) {
       setError(err.message);
