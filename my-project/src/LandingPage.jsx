@@ -642,9 +642,6 @@ const LandingPage = ({ onLoginClick }) => {
              <p className="text-xs text-zinc-600">© 2026 GIFTOMIZE INC.</p>
           </div>
         </footer>
-
-        
-
       </main>
     </div>
   );

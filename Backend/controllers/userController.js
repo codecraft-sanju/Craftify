@@ -577,7 +577,7 @@ module.exports = {
     updateUser,
     getGlobalQR,
     updateGlobalQR,
-    getCategoryImages,   
+    getCategoryImages, 
     updateCategoryImage,
     getOfferBanners,     
     updateOfferBanners,  
