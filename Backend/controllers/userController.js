@@ -78,10 +78,18 @@ const sendRegistrationOtp = async (req, res) => {
         await Otp.findOneAndDelete({ phone: formattedPhone }); 
         await Otp.create({ phone: formattedPhone, otp: generatedOtp });
 
-        // --- CHANGES MADE: Using the new sendSms utility function here ---
-        await sendSms(formattedPhone, randomMsg);
-
-        res.status(200).json({ message: 'OTP sent successfully to your phone.' });
+        // --- CHANGES MADE: Wrapped in try-catch to allow bypass if SMS fails ---
+        try {
+            await sendSms(formattedPhone, randomMsg);
+            res.status(200).json({ message: 'OTP sent successfully to your phone.' });
+        } catch (smsError) {
+            console.error("SMS Failed, falling back to bypass:", smsError.message);
+            await Otp.findOneAndUpdate({ phone: formattedPhone }, { otp: 'SKIPPED' });
+            return res.status(200).json({ 
+                message: 'SMS service unavailable. Proceed to register.', 
+                bypassOtp: true 
+            });
+        }
 
     } catch (error) {
         console.error("OTP Send Error:", error);
@@ -107,13 +115,20 @@ const verifyOtpAndRegister = async (req, res) => {
         // --- OTP validation ---
         let validOtp = null;
         if (process.env.OTP_SERVICE === 'true') {
-            if (!otp) {
-                return res.status(400).json({ message: 'OTP is required.' });
-            }
+            // --- CHANGES MADE: Check if SMS failed previously and marked as SKIPPED ---
+            const skippedOtp = await Otp.findOne({ phone: formattedPhone, otp: 'SKIPPED' });
 
-            validOtp = await Otp.findOne({ phone: formattedPhone, otp });
-            if (!validOtp) {
-                return res.status(400).json({ message: 'Invalid or expired OTP.' });
+            if (skippedOtp) {
+                validOtp = skippedOtp;
+            } else {
+                if (!otp) {
+                    return res.status(400).json({ message: 'OTP is required.' });
+                }
+
+                validOtp = await Otp.findOne({ phone: formattedPhone, otp });
+                if (!validOtp) {
+                    return res.status(400).json({ message: 'Invalid or expired OTP.' });
+                }
             }
         }
 

@@ -153,6 +153,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           if (!res.ok) throw new Error(data.message || "Failed to send OTP");
           
           // --- CHANGES MADE: Handle OTP bypass for direct registration ---
+          // This naturally handles the new backend behavior where an SMS failure returns bypassOtp: true
           if (data.bypassOtp) {
               const registerRes = await fetch(`${API_URL}/api/users/register`, {
                   method: 'POST',
@@ -163,7 +164,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                       email: formData.email,
                       password: formData.password,
                       phone: formData.phone,
-                      otp: 'bypass' // Backend ignores this when OTP_SERVICE is false
+                      otp: 'bypass' // Backend ignores this when OTP_SERVICE is false or OTP is SKIPPED
                   })
               });
               const registerData = await registerRes.json();

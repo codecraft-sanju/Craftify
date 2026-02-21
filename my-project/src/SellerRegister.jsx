@@ -264,7 +264,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         shopName: formData.shopName,
                         description: formData.description,
                         categories: [formData.category], 
-                        otp: 'bypass' // Backend ignores this when OTP_SERVICE is false
+                        otp: 'bypass' // Backend ignores this when OTP_SERVICE is false or skipped
                     })
                 });
                 const registerData = await registerRes.json();
