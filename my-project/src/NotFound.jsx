@@ -24,7 +24,7 @@ const NotFound = () => {
       {/* Action buttons to guide the user back */}
       <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/shop')}
           className="flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
         >
           <Home className="w-5 h-5" />
@@ -32,7 +32,7 @@ const NotFound = () => {
         </button>
         
         <button
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/shop')}
           className="flex items-center justify-center gap-2 bg-white border-2 border-slate-200 text-slate-700 px-8 py-4 rounded-2xl font-bold hover:border-slate-300 hover:bg-slate-50 transition-all active:scale-95"
         >
           <Search className="w-5 h-5" />
