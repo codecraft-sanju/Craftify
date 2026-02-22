@@ -10,6 +10,7 @@ import {
   Navigate,
   Outlet,
 } from 'react-router-dom';
+import NotFound from './NotFound';
 import {
   ShoppingBag,
   X,
@@ -872,6 +873,7 @@ const CraftifyContent = () => {
             }
           />
           
+          
           {/* --- NEW WISHLIST ROUTE --- */}
           <Route 
             path="/wishlist" 
@@ -914,6 +916,7 @@ const CraftifyContent = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
           <Route
             path="/founder"
             element={
