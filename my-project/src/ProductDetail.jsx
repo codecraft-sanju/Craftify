@@ -11,10 +11,12 @@ import {
   Heart
 } from 'lucide-react';
 
-// Import UI components from App.jsx (See step 2 below)
 import { PremiumImage, Button, Badge } from './App';
+// --- IMPORT THE REUSABLE PRODUCT CARD ---
+import ProductCard from './ProductCard';
 
-// --- HELPER COMPONENT (Moved from App.jsx) ---
+const API_URL = import.meta.env.VITE_API_URL;
+
 const LiveCustomizer = ({ product, customText, setCustomText, activeImage }) => (
   <div className="relative w-full aspect-square bg-slate-100 rounded-3xl overflow-hidden shadow-inner group border border-slate-200">
     <PremiumImage
@@ -36,49 +38,65 @@ const LiveCustomizer = ({ product, customText, setCustomText, activeImage }) => 
   </div>
 );
 
-// --- MAIN COMPONENT ---
 const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const product = products.find((p) => p._id === id);
   const [customText, setCustomText] = useState('');
   
-  // --- Image Gallery State ---
   const [activeImage, setActiveImage] = useState(null);
-
-  // --- Size State ---
   const [selectedSize, setSelectedSize] = useState(null);
   const [sizeError, setSizeError] = useState(false);
 
+  // --- RELATED PRODUCTS STATE ---
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(true);
+
+  // --- SCROLL TO TOP & FETCH RELATED PRODUCTS ---
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    const fetchRelatedProducts = async () => {
+      try {
+        setIsLoadingRelated(true);
+        const res = await fetch(`${API_URL}/api/products/${id}/related`);
+        if (res.ok) {
+          const data = await res.json();
+          setRelatedProducts(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch related products", error);
+      } finally {
+        setIsLoadingRelated(false);
+      }
+    };
+
+    if (id) {
+        fetchRelatedProducts();
+    }
+  }, [id]);
+
   useEffect(() => {
     if (product) {
-        // Prefer coverImage, fallback to first image in array, fallback to legacy image
         const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
         setActiveImage(initialImage);
-        
-        // Reset selections on product change
         setSelectedSize(null);
         setSizeError(false);
+        setCustomText('');
     }
   }, [product]);
 
-  // Check if product is in wishlist
   const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
-
-  // Check if product has sizes
   const hasSizes = product?.sizes && product.sizes.length > 0;
 
   const handleAddToCart = () => {
-      // Logic: Agar product me sizes hain aur user ne select nahi kiya
       if (hasSizes && !selectedSize) {
           setSizeError(true);
-          // Shake effect or simple alert can be added here
           return;
       }
-
       addToCart({
         ...product,
-        selectedSize: selectedSize, // Add size to cart item
+        selectedSize: selectedSize,
         customization: customText ? { text: customText } : null,
       });
   };
@@ -86,7 +104,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
   if (!product)
     return (
       <div className="h-screen flex flex-col items-center justify-center">
-        {/* Note: RefreshCcw is not imported here to keep imports clean, using simple text or you can import it if needed */}
         <div className="w-8 h-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
         <p className="text-slate-500 mt-4 font-medium">Loading details...</p>
       </div>
@@ -103,18 +120,17 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
         </div>
         Back
       </button>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20">
-        
         {/* --- LEFT COLUMN: GALLERY --- */}
         <div className="space-y-6">
           <LiveCustomizer
             product={product}
             customText={customText}
             setCustomText={setCustomText}
-            activeImage={activeImage} // Pass active image
+            activeImage={activeImage} 
           />
 
-          {/* --- THUMBNAILS GRID (With Premium Loader) --- */}
           {product.images && product.images.length > 0 && (
             <div className="grid grid-cols-4 gap-4">
                 {product.images.map((img, index) => (
@@ -170,23 +186,21 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
             <div className="flex items-center gap-3 mb-6">
               <Badge color="indigo">{product.category}</Badge>
               
-              {/* --- STOCK LOGIC START --- */}
               {product.stock <= 0 ? (
                 <Badge color="red">Sold Out</Badge>
               ) : product.stock <= (product.lowStockThreshold || 5) ? (
-                // Agar Stock 5 se kam hai toh ye dikhega
                 <Badge color="amber" className="animate-pulse border-amber-200 bg-amber-100 text-amber-700">
                   🔥 Hurry! Only {product.stock} Left
                 </Badge>
               ) : (
                 <Badge color="green">In Stock</Badge>
               )}
-              {/* --- STOCK LOGIC END --- */}
-
             </div>
+
             <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-[1.1] tracking-tight">
               {product.name}
             </h1>
+            
             <div className="flex items-center justify-between border-y border-slate-100 py-6 mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
@@ -213,7 +227,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                         <h3 className={`font-bold text-sm ${sizeError ? 'text-red-600' : 'text-slate-900'}`}>
                             Select Size {sizeError && <span className="text-red-500 font-normal">- Required</span>}
                         </h3>
-                        <span className="text-xs text-indigo-600 font-bold cursor-pointer hover:underline">Size Guide</span>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         {product.sizes.map((size) => (
@@ -244,6 +257,7 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
             <p className="text-slate-600 leading-relaxed text-lg mb-10">
               {product.description}
             </p>
+            
             <div className="flex gap-4">
               <button
                 onClick={() => openChat(product)}
@@ -261,7 +275,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
             </div>
           </div>
           <div className="mt-auto sticky bottom-6 md:static z-20">
-            {/* Call handleAddToCart instead of direct addToCart */}
             <Button
               size="lg"
               onClick={handleAddToCart}
@@ -275,6 +288,32 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
           </div>
         </div>
       </div>
+
+      {/* --- NEW: RELATED PRODUCTS SECTION USING REUSABLE COMPONENT --- */}
+      <div className="mt-24 pt-12 border-t border-slate-200">
+        <h2 className="text-2xl font-black text-slate-900 mb-8 tracking-tight">You Might Also Like</h2>
+        
+        {isLoadingRelated ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="w-8 h-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+          </div>
+        ) : relatedProducts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {relatedProducts.map((item) => (
+                <ProductCard 
+                    key={item._id} 
+                    product={item} 
+                    wishlist={wishlist} 
+                    toggleWishlist={toggleWishlist} 
+                    /* Note: Hame yahan addToCart nahi bheja hai, toh related items ke card par quick add button nahi aayega, jo ki standard e-commerce practice hai */
+                />
+            ))}
+          </div>
+        ) : (
+          <p className="text-slate-500 italic">No recommendations found right now.</p>
+        )}
+      </div>
+      
     </div>
   );
 };

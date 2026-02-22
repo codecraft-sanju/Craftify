@@ -8,6 +8,7 @@ const {
     deleteProduct,
     createProductReview,
     getTopProducts,
+    getRelatedProducts,
     getProductsByShop,
     deleteProductsBatch // <--- IMPORT ADDED
 } = require('../controllers/productController');
@@ -29,6 +30,8 @@ router.get('/shop/:shopId', getProductsByShop);
 
 // Reviews
 router.route('/:id/reviews').post(protect, createProductReview);
+
+router.route('/:id/related').get(getRelatedProducts);
 
 // Dynamic ID Routes (Last)
 // Note: '/:id' sabse last mein hona chahiye taaki upar wale routes block na hon

@@ -384,6 +384,52 @@ const deleteProductsBatch = async (req, res) => {
     }
 };
 
+const getRelatedProducts = async (req, res) => {
+    try {
+        const currentProductId = req.params.id;
+
+        // 1. Current product find karo taki uski category pata chal sake
+        const product = await Product.findById(currentProductId);
+        
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        // 2. Same category ke 4 products nikal lo (current product ko exclude karke)
+        const sameCategoryProducts = await Product.find({
+            category: product.category,
+            _id: { $ne: currentProductId }
+        })
+        .populate('shop', 'name logo rating')
+        .limit(4);
+
+        // 3. Jo products mil gaye hain unki IDs alag kar lo taki random me repeat na ho
+        const excludeIds = sameCategoryProducts.map(p => p._id);
+        excludeIds.push(product._id); 
+
+        // 4. Random 4 products nikal lo pure database se ($sample ka use karke)
+        const randomProducts = await Product.aggregate([
+            { $match: { _id: { $nin: excludeIds } } }, 
+            { $sample: { size: 4 } } 
+        ]);
+
+        // Aggregate me populate direct kaam nahi karta, isliye alag se populate karenge
+        const populatedRandomProducts = await Product.populate(randomProducts, { 
+            path: 'shop', 
+            select: 'name logo rating' 
+        });
+
+        // 5. Dono arrays ko merge kar do aur response bhej do
+        const finalRecommendations = [...sameCategoryProducts, ...populatedRandomProducts];
+
+        res.json(finalRecommendations);
+
+    } catch (error) {
+        console.error("Related Products Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getProducts,
     getProductById,
@@ -393,5 +439,6 @@ module.exports = {
     createProductReview,
     getTopProducts,
     getProductsByShop,
-    deleteProductsBatch 
+    deleteProductsBatch ,
+    getRelatedProducts
 };

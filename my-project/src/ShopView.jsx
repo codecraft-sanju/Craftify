@@ -1,27 +1,13 @@
 // src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Star, ShoppingBag, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, Heart, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift } from 'lucide-react'; 
+import { Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift } from 'lucide-react'; 
+
+// --- IMPORT THE NEW PRODUCT CARD ---
+import ProductCard from './ProductCard'; 
 
 // --- CONFIGURATION ---
 const API_URL = import.meta.env.VITE_API_URL;
-
-// --- HELPER: BADGE (Updated to include 'amber' color) ---
-const Badge = ({ children, color = "slate", className="" }) => {
-  const colors = {
-    indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    amber: "bg-amber-50 text-amber-700 border-amber-100", // Added for Low Stock
-    red: "bg-rose-50 text-rose-700 border-rose-100",
-    slate: "bg-slate-100 text-slate-700 border-slate-200",
-    purple: "bg-purple-50 text-purple-700 border-purple-100",
-  };
-  return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${colors[color]} ${className}`}>
-      {children}
-    </span>
-  );
-};
 
 // --- HELPER: SKELETON LOADER (Premium Loading State) ---
 const ProductSkeleton = () => (
@@ -53,7 +39,6 @@ const MarqueeStrip = () => {
 
     return (
         <div className="relative bg-slate-900 border-b border-slate-800 text-slate-300 py-3 overflow-hidden select-none z-10">
-            {/* Inline style for the animation keyframes to avoid external CSS dependency */}
             <style>{`
                 @keyframes marquee {
                     0% { transform: translateX(0); }
@@ -70,7 +55,6 @@ const MarqueeStrip = () => {
             `}</style>
             
             <div className="animate-marquee-infinite">
-                {/* We map 4 times to ensure it fills wide screens seamlessly */}
                 {[...Array(4)].map((_, i) => (
                     <div key={i} className="flex shrink-0">
                         {items.map((item, idx) => (
@@ -93,7 +77,6 @@ const MarqueeStrip = () => {
 const OfferCarousel = ({ bannerData }) => {
     
     // 1. CRITICAL CHECK: Hidden by Founder?
-    // Agar data exist karta hai AUR isVisible false hai, toh return null (Hide Section)
     if (bannerData && bannerData.isVisible === false) {
         return null; 
     }
@@ -127,11 +110,7 @@ const OfferCarousel = ({ bannerData }) => {
     ];
 
     // 3. Determine Slides to Show
-    // Agar bannerData null hai (Fresh App) -> backendSlides = []
-    // Agar bannerData hai par slides empty hain -> backendSlides = []
     const backendSlides = bannerData?.slides || [];
-
-    // Agar backend se slides aayi hain toh woh dikhao, nahi toh default dikhao
     const displayOffers = backendSlides.length > 0 ? backendSlides : defaultOffers;
 
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -139,7 +118,6 @@ const OfferCarousel = ({ bannerData }) => {
     const [touchEnd, setTouchEnd] = useState(0);
   
     useEffect(() => {
-      // Auto-scroll logic
       if (displayOffers.length > 1) {
           const interval = setInterval(() => {
             nextSlide();
@@ -170,12 +148,6 @@ const OfferCarousel = ({ bannerData }) => {
   
     return (
       <div 
-        // --- UPDATED CLASS NAMES FOR FULL WIDTH ON MOBILE ---
-        // -mx-4: Mobile par margin -16px (parent padding cancel karne ke liye)
-        // w-[calc(100%+2rem)]: Mobile par width 100% + 32px
-        // sm:-mx-6 sm:w-[calc(100%+3rem)]: Tablet par margin -24px aur width adjust
-        // md:mx-0 md:w-full: Desktop par normal width aur 0 margin
-        // rounded-none md:rounded-3xl: Mobile par square edges, Desktop par rounded
         className="relative h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -398,14 +370,13 @@ const ShopView = ({
                 </div>
             </div>
 
-            {/* --- NEW MARQUEE STRIP (Placed here to be distinct but visible) --- */}
+            {/* --- NEW MARQUEE STRIP --- */}
             <MarqueeStrip />
 
             {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0">
                 
                 {/* --- OFFER CAROUSEL --- */}
-                {/* We pass the Full 'bannerData' object. Component handles hiding/defaults inside. */}
                 {!isBannersLoading && (
                     <div className="mt-0"> 
                         <OfferCarousel bannerData={bannerData} />
@@ -458,95 +429,16 @@ const ShopView = ({
                         </div>
                     )}
 
-                    {/* CASE 4: PRODUCT GRID */}
-                    {!isLoading && filteredProducts.map((product) => {
-                        const productId = product._id || product.id;
-                        const displayImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image) || "https://via.placeholder.com/300";
-                        const shopName = product.shop?.name || 'Verified Seller';
-                        const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-                        const isInWishlist = wishlist && wishlist.some(item => item._id === product._id);
-
-                        return (
-                           <Link to={`/product/${productId}`} key={productId} className="group bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 relative flex flex-col h-full transform hover:-translate-y-1">
-                               
-                               {/* Image Container */}
-                               <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden">
-                                 <img 
-                                   src={displayImage} 
-                                   className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`} 
-                                   alt={product.name} 
-                                   loading="lazy"
-                                 />
-                                 
-                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
-                                 
-                                 <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 items-start max-w-[70%]">
-                                     {product.customizationAvailable && <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px]">Custom</Badge>}
-                                     
-                                     {/* --- LOW STOCK ALERT LOGIC --- */}
-                                     {isOutOfStock ? (
-                                         <Badge color="red" className="shadow-sm">Sold Out</Badge>
-                                     ) : product.stock <= (product.lowStockThreshold || 10) ? (
-                                         <Badge color="amber" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px] text-amber-700 animate-pulse">
-                                              🔥 Only {product.stock} Left
-                                         </Badge>
-                                     ) : null}
-                                     {/* ----------------------------- */}
-                                 </div>
-
-                                 <button 
-                                     onClick={(e) => {
-                                         e.preventDefault(); 
-                                         e.stopPropagation();
-                                         toggleWishlist(product);
-                                     }}
-                                     className={`absolute top-3 right-3 md:top-4 md:right-4 p-2 md:p-2.5 rounded-full backdrop-blur-md shadow-sm transition-all duration-200 active:scale-90 ${isInWishlist ? 'bg-white text-red-500' : 'bg-white/70 text-slate-400 hover:bg-white hover:text-red-500'}`}
-                                 >
-                                     <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isInWishlist ? 'fill-current' : ''}`} />
-                                 </button>
-
-                                 <button 
-                                   onClick={(e) => { 
-                                     e.preventDefault(); 
-                                     e.stopPropagation(); 
-                                     if(!isOutOfStock) addToCart(product); 
-                                   }} 
-                                   disabled={isOutOfStock}
-                                   className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 py-3.5 rounded-xl font-bold shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-slate-900 hover:text-white disabled:hidden"
-                                 >
-                                   <ShoppingBag className="w-4 h-4" /> Quick Add
-                                 </button>
-                               </div>
-
-                               <div className="p-3 md:p-5 flex-1 flex flex-col">
-                                 <div className="mb-2">
-                                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-2">
-                                         <h3 className="font-bold text-slate-900 line-clamp-2 text-sm md:text-lg group-hover:text-indigo-600 transition-colors leading-tight">{product.name}</h3>
-                                         {product.rating > 0 && (
-                                             <div className="flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 shrink-0 self-start">
-                                                 <Star className="w-3 h-3 fill-current" /> {product.rating.toFixed(1)}
-                                             </div>
-                                         )}
-                                     </div>
-                                     <div className="flex items-center gap-1.5 mt-1.5 md:mt-1 text-slate-500">
-                                         <Store className="w-3 h-3" />
-                                         <span className="text-[10px] md:text-xs font-medium truncate">{shopName}</span>
-                                     </div>
-                                 </div>
-                                 
-                                 <div className="mt-auto pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between">
-                                     <div>
-                                         <p className="text-[10px] md:text-xs text-slate-400 font-medium line-through">₹{Math.round(product.price * 1.2)}</p>
-                                         <p className="text-base md:text-xl font-black text-slate-900">₹{product.price}</p>
-                                     </div>
-                                     <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                                         <ArrowRight className="w-3 h-3 md:w-4 md:h-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                                     </div>
-                                 </div>
-                               </div>
-                           </Link>
-                        );
-                    })}
+                    {/* CASE 4: PRODUCT GRID USING REUSABLE COMPONENT */}
+                    {!isLoading && filteredProducts.map((product) => (
+                        <ProductCard 
+                            key={product._id || product.id} 
+                            product={product} 
+                            wishlist={wishlist} 
+                            toggleWishlist={toggleWishlist} 
+                            addToCart={addToCart} 
+                        />
+                    ))}
                 </div>
             </div>
       </div>
