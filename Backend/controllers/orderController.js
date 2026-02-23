@@ -2,7 +2,6 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
-// --- CHANGES MADE: Renamed import to match utility export ---
 const sendWhatsApp = require('../utils/sendWhatsApp'); 
 
 // @desc    Create new order
@@ -50,7 +49,6 @@ const addOrderItems = async (req, res) => {
                 status: 'Pending' 
             },
             // --- GATEKEEPER LOGIC START ---
-            // Initially FALSE. Seller cannot see this.
             isVerifiedByFounder: false,
             orderStatus: 'Verifying Payment',
             // ------------------------------
@@ -63,39 +61,61 @@ const addOrderItems = async (req, res) => {
         const createdOrder = await order.save();
 
         // 2. STOCK MANAGEMENT & REAL-TIME ALERTS
-        const involvedShops = [...new Set(orderItems.map(item => item.shop))];
-
         for (const item of orderItems) {
             const updatedProduct = await Product.findByIdAndUpdate(
                 item.product,
-                // Decrease Stock, Increase Sold count
                 { $inc: { stock: -item.qty, sold: item.qty } },
                 { new: true } 
             );
 
-            if (updatedProduct) {
-                // --- SOCKET IO: Live Stock Update ---
-                if (req.io) {
-                    req.io.emit('product_updated', {
-                        _id: updatedProduct._id,
-                        stock: updatedProduct.stock
-                    });
-                }
+            if (updatedProduct && req.io) {
+                req.io.emit('product_updated', {
+                    _id: updatedProduct._id,
+                    stock: updatedProduct.stock
+                });
             }
         }
 
-        // 3. --- WHATSAPP NOTIFICATION TRIGGER ---
-        if (req.user) {
-            // --- CHANGES MADE: Updated function name to match utility ---
-            const customerMsg = `Your order ${createdOrder._id} has been placed successfully!`;
-            sendWhatsApp(req.user.phone, customerMsg)
-                .catch(err => console.error("WhatsApp Notification Failed:", err.message));
+        // 3. --- WHATSAPP NOTIFICATION TRIGGER (TO CUSTOMER) ---
+        if (req.user && req.user.phone) {
+            try {
+                // Generate Professional Message Content
+                const customerName = req.user.name.split(' ')[0]; // First name only
+                const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();
+                
+                // Format Product List nicely
+                let productDetails = "";
+                orderItems.forEach(item => {
+                    productDetails += `• ${item.name} (Qty: ${item.qty}) - ₹${item.price}\n`;
+                });
+
+                const message = 
+`*Order Confirmation: #${shortOrderId}* ✅
+
+Hello ${customerName},
+
+Thank you for shopping with Giftomize! Your order has been successfully placed.
+
+*Order Details:*
+${productDetails}
+*Total Amount:* ₹${totalPrice}
+*Current Status:* Verifying Payment ⏳
+
+We will notify you once your payment is verified and the seller begins processing your order.
+
+Best Regards,
+*Team Giftomize*`;
+
+                // Send silently (ignore errors)
+                sendWhatsApp(req.user.phone, message).catch(() => {});
+
+            } catch (msgError) {
+                // Ignore message generation errors
+            }
         }
 
-        // --- SOCKET IO: Notify FOUNDER Only (Not Sellers yet) ---
+        // --- SOCKET IO: Notify FOUNDER Only ---
         if (req.io) {
-            // Broadcasting to 'admin' room or generic 'new_order_placed'
-            // NOTE: Sellers won't see it in their list yet due to getShopOrders filter
             req.io.emit('new_order_placed', {
                 orderId: createdOrder._id,
                 totalAmount: createdOrder.totalAmount,
@@ -144,7 +164,7 @@ const verifyOrderPayment = async (req, res) => {
 
             // --- THE UNLOCK KEY ---
             order.isVerifiedByFounder = true; 
-            order.orderStatus = 'Processing'; // Now Seller knows to process it
+            order.orderStatus = 'Processing'; 
             // ----------------------
 
             const updatedOrder = await order.save();
@@ -152,24 +172,22 @@ const verifyOrderPayment = async (req, res) => {
             // NOW Notify involved sellers because order is valid
             const involvedShops = [...new Set(order.items.map(item => item.shop.toString()))];
             
-            // --- CHANGES MADE: Fetch shop details and send WhatsApp to Sellers silently ---
+            // --- WHATSAPP TO SELLERS (Silent) ---
             try {
                 const shopsToNotify = await Shop.find({ _id: { $in: involvedShops } });
                 
                 for (const shop of shopsToNotify) {
                     if (shop.phone) {
-                        // Create a professional and clear message
                         const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
                         const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Giftomize. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
                         
-                        // Send message and completely ignore any errors so the order passes through smoothly
                         sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                     }
                 }
             } catch (notifyError) {
-                // If fetching shops fails, we ignore it to keep the order flow active
+                // Ignore
             }
-            // -----------------------------------------------------------------------------
+            // ------------------------------------
 
             if (req.io) {
                 req.io.emit('order_verified', {
@@ -286,9 +304,7 @@ const getShopOrders = async (req, res) => {
 
         const orders = await Order.find({ 
             'items.shop': { $in: shopIds },
-            // --- IMPORTANT: Only show orders verified by Founder ---
             isVerifiedByFounder: true 
-            // -------------------------------------------------------
         })
         .populate('customer', 'name email')
         .sort({ createdAt: -1 });
@@ -323,8 +339,8 @@ const getOrders = async (req, res) => {
 module.exports = {
     addOrderItems,
     getOrderById,
-    verifyOrderPayment, // Replaces updateOrderToPaid
-    settlePayout,       // New Payout Logic
+    verifyOrderPayment,
+    settlePayout,
     updateOrderStatus,
     getMyOrders,
     getShopOrders,
