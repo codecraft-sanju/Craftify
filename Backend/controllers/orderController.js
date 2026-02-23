@@ -2,7 +2,8 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
-const sendOrderConfirmation = require('../utils/sendWhatsApp'); 
+// --- CHANGES MADE: Renamed import to match utility export ---
+const sendWhatsApp = require('../utils/sendWhatsApp'); 
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -85,7 +86,9 @@ const addOrderItems = async (req, res) => {
 
         // 3. --- WHATSAPP NOTIFICATION TRIGGER ---
         if (req.user) {
-            sendOrderConfirmation(createdOrder, req.user)
+            // --- CHANGES MADE: Updated function name to match utility ---
+            const customerMsg = `Your order ${createdOrder._id} has been placed successfully!`;
+            sendWhatsApp(req.user.phone, customerMsg)
                 .catch(err => console.error("WhatsApp Notification Failed:", err.message));
         }
 
@@ -149,6 +152,25 @@ const verifyOrderPayment = async (req, res) => {
             // NOW Notify involved sellers because order is valid
             const involvedShops = [...new Set(order.items.map(item => item.shop.toString()))];
             
+            // --- CHANGES MADE: Fetch shop details and send WhatsApp to Sellers silently ---
+            try {
+                const shopsToNotify = await Shop.find({ _id: { $in: involvedShops } });
+                
+                for (const shop of shopsToNotify) {
+                    if (shop.phone) {
+                        // Create a professional and clear message
+                        const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
+                        const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Giftomize. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
+                        
+                        // Send message and completely ignore any errors so the order passes through smoothly
+                        sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
+                    }
+                }
+            } catch (notifyError) {
+                // If fetching shops fails, we ignore it to keep the order flow active
+            }
+            // -----------------------------------------------------------------------------
+
             if (req.io) {
                 req.io.emit('order_verified', {
                     orderId: updatedOrder._id,
