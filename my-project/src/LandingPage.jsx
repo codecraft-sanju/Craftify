@@ -71,11 +71,11 @@ const styleInjection = `
   }
 
   /* --- CUSTOM CURSOR --- */
+  /* Updated to ensure visibility in both Light & Dark modes using difference blend */
   .custom-cursor {
     position: fixed; top: 0; left: 0;
     width: 20px; height: 20px;
-    border: 1px solid var(--text-main);
-    opacity: 0.5;
+    border: 1.5px solid #ffffff; /* Always white to difference correctly against bg */
     border-radius: 50%;
     pointer-events: none; z-index: 9999;
     transform: translate(-50%, -50%);
@@ -84,9 +84,9 @@ const styleInjection = `
   }
   .custom-cursor.hovered {
     width: 60px; height: 60px;
-    background-color: var(--text-main); 
+    background-color: #ffffff; 
     border-color: transparent;
-    opacity: 0.1;
+    opacity: 0.2;
   }
 
   /* --- TEXTURE & GRID BACKGROUND --- */
@@ -257,13 +257,13 @@ const BentoBox3D = ({ children, className = "", title }) => {
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`glass-panel p-6 relative group overflow-hidden hover:shadow-2xl transition-all duration-500 ${className} interactive theme-transition`}
+      className={`glass-panel p-5 relative group overflow-hidden hover:shadow-2xl transition-all duration-500 ${className} interactive theme-transition`}
     >
       <div style={{ transform: "translateZ(30px)" }} className="relative z-10 h-full flex flex-col">
          <div className="absolute top-0 right-0 p-0 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
             <ArrowUpRight size={16} />
          </div>
-         {title && <h4 className="text-xs font-mono mb-4 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>[{title}]</h4>}
+         {title && <h4 className="text-[10px] font-mono mb-2 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>[{title}]</h4>}
          {children}
       </div>
       
@@ -357,7 +357,7 @@ const ProcessPipeline = () => {
 const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState('light'); // Set default to 'light'
 
   // Toggle Theme Function
   const toggleTheme = () => {
@@ -366,9 +366,9 @@ const LandingPage = ({ onLoginClick }) => {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Ensure default is dark
+  // Ensure default is light on mount
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.setAttribute('data-theme', 'light');
   }, []);
   
   // --- Live Terminal Simulation ---
@@ -513,7 +513,7 @@ const LandingPage = ({ onLoginClick }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.9 }}
-              // mt-16 for gap from text
+              // mt-16 for increased vertical gap
               className="md:hidden mt-16 flex flex-col gap-3 pointer-events-auto w-full max-w-sm"
             >
               <button 
@@ -561,7 +561,7 @@ const LandingPage = ({ onLoginClick }) => {
           </motion.div>
         </section>
 
-        {/* BENTO GRID SECTION */}
+        {/* BENTO GRID SECTION (COMPACT HEIGHT ADJUSTMENTS) */}
         <section className="py-12 border-t perspective-[2000px] overflow-hidden theme-transition" style={{ borderColor: 'var(--border-color)' }}>
           
           <div className="px-6 md:px-12 mb-6 md:hidden">
@@ -569,19 +569,20 @@ const LandingPage = ({ onLoginClick }) => {
             <p className="text-lg font-bold">Explore Modules</p>
           </div>
 
-          <div className="flex flex-col gap-6 px-6 pb-8 md:grid md:grid-cols-4 md:grid-rows-2 md:gap-4 md:px-12 md:h-[800px] md:pb-0 md:overflow-visible">
+          {/* Grid Layout: Reduced Gap (gap-3 mobile) and Reduced Grid Height (md:h-[600px] desktop) */}
+          <div className="flex flex-col gap-3 px-6 pb-8 md:grid md:grid-cols-4 md:grid-rows-2 md:gap-4 md:px-12 md:h-[600px] md:pb-0 md:overflow-visible">
             
-            {/* Box 1: Core Engine */}
+            {/* Box 1: Core Engine - Reduced Height (min-h-[280px] mobile) */}
             <div className="w-full md:w-auto md:col-span-2 md:row-span-2 h-full">
-              <BentoBox3D className="h-full flex flex-col justify-between min-h-[400px]" style={{ backgroundColor: 'var(--bg-main)' }} title="Core Engine">
-                <div className="z-10 mt-6 md:mt-10">
-                  <Cpu size={40} className="mb-6" style={{ color: 'var(--text-main)' }} />
-                  <h3 className="text-3xl md:text-4xl font-bold mb-4">Neural Production.</h3>
-                  <p className="text-base md:text-lg max-w-md leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              <BentoBox3D className="h-full flex flex-col justify-between min-h-[280px]" style={{ backgroundColor: 'var(--bg-main)' }} title="Core Engine">
+                <div className="z-10 mt-2 md:mt-10">
+                  <Cpu size={32} className="mb-4" style={{ color: 'var(--text-main)' }} />
+                  <h3 className="text-2xl md:text-3xl font-bold mb-2">Neural Production.</h3>
+                  <p className="text-sm md:text-base max-w-md leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                     Our API automatically routes your order to the print facility closest to the customer.
                   </p>
                 </div>
-                <div className="w-full h-40 border mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs shadow-inner" 
+                <div className="w-full h-32 md:h-40 border mt-4 md:mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs shadow-inner" 
                      style={{ backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'var(--border-color)', color: 'var(--accent-glow)' }}>
                     {logs.map((log, i) => (
                       <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
@@ -593,15 +594,15 @@ const LandingPage = ({ onLoginClick }) => {
               </BentoBox3D>
             </div>
             
-            {/* Box 2: Analytics */}
+            {/* Box 2: Analytics - Reduced Height (min-h-[160px] mobile) */}
             <div className="w-full md:w-auto md:col-span-2 h-full">
-              <BentoBox3D className="h-full min-h-[250px] flex flex-col" title="Analytics">
+              <BentoBox3D className="h-full min-h-[160px] flex flex-col" title="Analytics">
                 <div className="flex items-end justify-between flex-1 relative z-10">
                   <div>
-                    <h3 className="text-2xl font-bold">Real-time Insights</h3>
+                    <h3 className="text-xl md:text-2xl font-bold">Real-time Insights</h3>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Track every penny.</p>
                   </div>
-                  <TrendingUp size={40} style={{ color: 'var(--text-muted)' }} />
+                  <TrendingUp size={32} style={{ color: 'var(--text-muted)' }} />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-16 opacity-20">
                   <svg viewBox="0 0 100 20" className="w-full h-full fill-none" preserveAspectRatio="none">
@@ -611,24 +612,24 @@ const LandingPage = ({ onLoginClick }) => {
               </BentoBox3D>
             </div>
 
-            {/* Box 3: Global */}
+            {/* Box 3: Global - Reduced Height (min-h-[160px] mobile) */}
             <div className="w-full md:w-auto md:col-span-1 h-full">
-              <BentoBox3D className="h-full min-h-[250px]" title="Global">
+              <BentoBox3D className="h-full min-h-[160px]" title="Global">
                 <Globe size={32} className="mb-4" style={{ color: 'var(--text-muted)' }} />
                 <h3 className="text-xl font-bold">Worldwide</h3>
                 <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Shipping to 195 nations.</p>
               </BentoBox3D>
             </div>
 
-            {/* Box 4: Start CTA */}
+            {/* Box 4: Start CTA - Reduced Height (min-h-[160px] mobile) */}
             <div className="w-full md:w-auto md:col-span-1 h-full">
-              <BentoBox3D className="h-full min-h-[250px]" title="Start" style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}>
+              <BentoBox3D className="h-full min-h-[160px]" title="Start" style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}>
                 <div className="flex flex-col h-full justify-between">
                   <div className="w-10 h-10 flex items-center justify-center rounded-full shadow-xl" style={{ backgroundColor: 'var(--button-text)', color: 'var(--button-bg)' }}>
                     <Zap size={20} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold leading-tight tracking-tight">Launch in<br/>Seconds</h3>
+                    <h3 className="text-xl font-bold leading-tight tracking-tight">Launch in<br/>Seconds</h3>
                   </div>
                 </div>
               </BentoBox3D>
