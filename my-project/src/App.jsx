@@ -4,7 +4,6 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Link,
   useNavigate,
   useLocation,
   Navigate,
@@ -16,14 +15,13 @@ import {
   X,
   ArrowRight,
   Trash2,
-  User,
   RefreshCcw,
   Palette,
   AlertCircle,
   CheckCircle,
   Home,
   Heart,
-  Box,
+  User,
   Image as ImageIcon // Added for the loader icon
 } from 'lucide-react';
 import io from 'socket.io-client';
@@ -34,6 +32,7 @@ const ENDPOINT = import.meta.env.VITE_API_URL;
 var socket;
 
 // --- IMPORTS ---
+import Navbar from './Navbar'; // IMPORTING THE NEW NAVBAR
 import LandingPage from './LandingPage';
 import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
@@ -44,8 +43,6 @@ import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
 import ProfileView from './ProfileView'; 
 import WishlistView from './WishlistView'; 
-
-// --- NEW IMPORT ---
 import ProductDetail from './ProductDetail';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -84,7 +81,7 @@ const GlobalStyles = () => (
 
 // --- PREMIUM UI COMPONENTS ---
 
-// 1. NEW: Premium Image Loader Component (EXPORTED)
+// 1. Premium Image Loader Component (EXPORTED)
 export const PremiumImage = ({ src, alt, className = "", objectFit = "cover" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -108,7 +105,7 @@ export const PremiumImage = ({ src, alt, className = "", objectFit = "cover" }) 
           isLoaded 
             ? 'opacity-100 scale-100 grayscale-0 blur-0' 
             : 'opacity-0 scale-110 grayscale blur-sm'
-        } ${className}`} // Apply custom classes here to preserve hover effects
+        } ${className}`} 
         style={{ objectFit }}
       />
     </div>
@@ -158,14 +155,14 @@ export const Button = ({
   );
 };
 
-// --- UPDATED BADGE COMPONENT (Now supports amber/orange for alerts) (EXPORTED) ---
+// (EXPORTED)
 export const Badge = ({ children, color = 'slate', className = '' }) => {
   const colors = {
     indigo: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-700/10',
     green: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
     red: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/10',
     slate: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/10',
-    amber: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20', // Added for Low Stock
+    amber: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20', 
   };
   return (
     <span
@@ -205,12 +202,6 @@ const ToastContainer = ({ toasts, removeToast }) => (
     ))}
   </div>
 );
-
-// ==========================================
-// 2. FEATURE COMPONENTS
-// ==========================================
-
-// --- LiveCustomizer moved to ProductDetail.jsx ---
 
 // --- FIXED CART DRAWER (With Size Display) ---
 const CartDrawer = ({
@@ -275,7 +266,6 @@ const CartDrawer = ({
                 className="flex gap-4 p-3 border border-slate-100 rounded-2xl bg-white shadow-sm hover:border-indigo-100 transition-colors group"
               >
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                  {/* Premium Image Loader in Cart */}
                   <PremiumImage
                     src={item.image || item.coverImage}
                     alt=""
@@ -358,8 +348,6 @@ const CartDrawer = ({
     </>
   );
 };
-
-// --- ProductDetail moved to ProductDetail.jsx ---
 
 // --- UPDATED MOBILE NAVIGATION BAR ---
 const MobileNav = ({ cartCount }) => {
@@ -714,106 +702,12 @@ const CraftifyContent = () => {
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      {showNavbar && (
-        <nav
-          className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-xl border-b border-white/50`}
-        >
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <Link
-              to="/shop"
-              className="flex items-center gap-2 cursor-pointer group"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all group-hover:scale-105">
-                <Box className="text-white w-5 h-5" />
-              </div>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">
-                Giftomize<span className="text-indigo-600">.</span>
-              </span>
-            </Link>
-
-            <div className="hidden md:flex items-center gap-8 font-bold text-sm text-slate-500">
-              <Link
-                to="/shop"
-                className="hover:text-slate-900 transition-colors"
-              >
-                Marketplace
-              </Link>
-              <Link 
-                to="/wishlist" 
-                className="hover:text-slate-900 transition-colors flex items-center gap-1"
-              >
-                Wishlist {wishlist.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">{wishlist.length}</span>}
-              </Link>
-              <Link
-                to={currentUser ? '/profile' : '/login'}
-                className="hover:text-slate-900 transition-colors"
-              >
-                My Orders
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="p-2.5 rounded-full hover:bg-slate-100 relative text-slate-600 transition-colors"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                {cart.length > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                )}
-              </button>
-              <button
-                onClick={() =>
-                  currentUser ? navigate('/profile') : navigate('/login')
-                }
-                className="flex items-center gap-2 pl-1 pr-1 py-1 rounded-full hover:bg-slate-100 transition-colors"
-              >
-                {currentUser ? (
-                  <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white shadow-md overflow-hidden">
-                    {currentUser.avatar && currentUser.avatar.includes('http') ? (
-                      <img
-                        src={currentUser.avatar}
-                        className="w-full h-full object-cover"
-                        alt={currentUser.name}
-                      />
-                    ) : (
-                      <span className="text-sm font-bold">
-                        {currentUser.name?.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-2 bg-slate-900 text-white rounded-full shadow-lg shadow-slate-900/20">
-                    <User className="w-4 h-4" />
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-        </nav>
-      )}
-
-      {showNavbar && (
-        <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 h-16 flex items-center justify-between px-6">
-          <Link to="/shop" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center shadow-md">
-              <Box className="text-white w-4 h-4" />
-            </div>
-            <span className="text-lg font-bold text-slate-900">
-              Giftomize<span className="text-indigo-600">.</span>
-            </span>
-          </Link>
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="p-2 relative text-slate-900"
-          >
-            <ShoppingBag className="w-6 h-6" />
-            {cart.length > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-            )}
-          </button>
-        </div>
-      )}
+      <Navbar 
+        cart={cart}
+        wishlist={wishlist}
+        currentUser={currentUser}
+        setIsCartOpen={setIsCartOpen}
+      />
 
       <main className={`min-h-screen ${showNavbar ? 'pt-16 md:pt-0' : ''}`}>
         <Routes>
@@ -873,8 +767,6 @@ const CraftifyContent = () => {
             }
           />
           
-          
-          {/* --- NEW WISHLIST ROUTE --- */}
           <Route 
             path="/wishlist" 
             element={
