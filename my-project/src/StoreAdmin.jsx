@@ -6,7 +6,7 @@ import {
     MessageSquare, Send, User, Edit, Trash2, LogOut,
     ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2,
-    ChevronDown, Filter, Calendar, Sparkles, ExternalLink
+    ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -83,7 +83,6 @@ const CssBarChart = ({ data }) => (
 export default function StoreAdmin({ currentUser }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     
     // Data States
     const [shop, setShop] = useState(null); 
@@ -462,7 +461,7 @@ export default function StoreAdmin({ currentUser }) {
 
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
         <button 
-            onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
+            onClick={() => setActiveTab(id)} 
             className={`group relative w-full flex items-center gap-4 px-6 py-4 rounded-2xl mb-2 transition-all duration-300 overflow-hidden 
             ${activeTab === id 
                 ? 'bg-gradient-to-r from-rose-600/90 to-pink-600/90 text-white shadow-[0_8px_30px_rgb(225,29,72,0.3)] ring-1 ring-white/20' 
@@ -630,7 +629,7 @@ export default function StoreAdmin({ currentUser }) {
                                     <Button onClick={() => handleOpenModal(null)} className="shadow-lg shadow-rose-500/20"><Plus className="w-5 h-5"/> Add Product</Button>
                                 </div>
 
-                                {/* Product Search Bar - NEW */}
+                                {/* Product Search Bar */}
                                 <div className="relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"/>
                                     <input 
@@ -679,13 +678,13 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- ORDERS TAB (MOBILE OPTIMIZED & TABBED) --- */}
+                        {/* --- ORDERS TAB --- */}
                         {activeTab === 'orders' && (
                             <div className="animate-in slide-in-from-right-4 duration-300">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                                     <h2 className="text-2xl font-black text-white tracking-tight">Orders</h2>
                                     
-                                    {/* Order Tabs - NEW */}
+                                    {/* Order Tabs */}
                                     <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
                                         {['All', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
                                             <button 
@@ -816,7 +815,7 @@ export default function StoreAdmin({ currentUser }) {
 
                         {/* --- SETTINGS TAB --- */}
                         {activeTab === 'settings' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300 pb-24">
                                 <div>
                                     <h2 className="text-2xl font-black text-white mb-6 tracking-tight">Configuration</h2>
                                     <Card className="p-6 md:p-8">
@@ -845,6 +844,14 @@ export default function StoreAdmin({ currentUser }) {
                                             <div className="pt-2 flex justify-end"><Button type="submit" size="lg" loading={isSubmitting} className="w-full sm:w-auto shadow-xl shadow-rose-900/20">Save Changes</Button></div>
                                         </form>
                                     </Card>
+
+                                    {/* Mobile Logout - Visible only on Mobile in Settings Tab */}
+                                    <div className="mt-8 md:hidden">
+                                        <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 px-2">Danger Zone</h3>
+                                        <button onClick={handleLogout} className="w-full p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all active:scale-95">
+                                            <LogOut className="w-5 h-5"/> Sign Out from Admin
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -884,7 +891,7 @@ export default function StoreAdmin({ currentUser }) {
                         </div>
                         
                         {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar pb-32">
                             <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
                                 {/* Image Upload */}
                                 <div className="space-y-3">
@@ -913,20 +920,23 @@ export default function StoreAdmin({ currentUser }) {
                                     <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
                                 </div>
 
-                                <div className="space-y-1">
+                                {/* CATEGORY SECTION - IMPROVED POSITIONING */}
+                                <div className="space-y-1 relative group z-30">
                                     <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Category</label>
                                     <div className="relative">
                                         <input type="text" value={categoryInput} onChange={(e) => { setCategoryInput(e.target.value); setShowCategoryDropdown(true); }} onFocus={() => setShowCategoryDropdown(true)} onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white pr-10 placeholder:text-slate-600" placeholder="Select or type..." required />
                                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        
+                                        {/* DROPDOWN - ABSOLUTE POSITIONED BELOW INPUT */}
+                                        {showCategoryDropdown && (
+                                            <div className="absolute top-full left-0 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar z-50 animate-in fade-in zoom-in-95">
+                                                {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).map((c, idx) => (
+                                                    <div key={idx} onMouseDown={() => { setCategoryInput(c); setShowCategoryDropdown(false); }} className="px-4 py-3 hover:bg-slate-700 cursor-pointer text-sm font-bold text-slate-300 hover:text-white border-b border-white/5 last:border-0 transition-colors">{c}</div>
+                                                ))}
+                                                {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && <div className="px-4 py-3 text-sm text-slate-500 italic">Type to add new</div>}
+                                            </div>
+                                        )}
                                     </div>
-                                    {showCategoryDropdown && (
-                                        <div className="absolute z-20 w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
-                                            {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).map((c, idx) => (
-                                                <div key={idx} onMouseDown={() => { setCategoryInput(c); setShowCategoryDropdown(false); }} className="px-4 py-3 hover:bg-slate-700 cursor-pointer text-sm font-bold text-slate-300 hover:text-white border-b border-white/5 last:border-0">{c}</div>
-                                            ))}
-                                            {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && <div className="px-4 py-3 text-sm text-slate-500 italic">Type to add new</div>}
-                                        </div>
-                                    )}
                                 </div>
 
                                 <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Sizes (Optional)</label><input name="sizes" defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="S, M, L, XL" /></div>
@@ -935,7 +945,7 @@ export default function StoreAdmin({ currentUser }) {
                         </div>
                         
                         {/* Sticky Footer for Mobile */}
-                        <div className="p-6 border-t border-white/5 bg-slate-900 md:rounded-b-[2rem] sticky bottom-0 z-10 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.5)]">
+                        <div className="p-6 border-t border-white/5 bg-slate-900 md:rounded-b-[2rem] sticky bottom-0 z-40 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.5)]">
                             <Button type="submit" form="productForm" size="lg" loading={isSubmitting} className="w-full shadow-xl shadow-rose-900/40">Save Product</Button>
                         </div>
                     </div>
@@ -985,7 +995,7 @@ export default function StoreAdmin({ currentUser }) {
                                 )}
                             </div>
 
-                            {/* Payout Status Section - NEW ADDITION */}
+                            {/* Payout Status Section */}
                             <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-inner mt-6">
                                 <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
                                     <DollarSign className="w-4 h-4 text-emerald-500"/> Payout Status
