@@ -6,8 +6,6 @@ const cookieParser = require('cookie-parser');
 const http = require('http'); 
 const { Server } = require('socket.io'); 
 const connectDB = require('./config/db');
-
-// Import Routes
 const userRoutes = require('./routes/userRoutes');
 const shopRoutes = require('./routes/shopRoutes');
 const productRoutes = require('./routes/productRoutes');

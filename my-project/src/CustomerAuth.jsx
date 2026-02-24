@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, Loader2, Sparkles,
-  ShoppingBag, Star, Key
+  ShoppingBag, Star, Key, MessageCircle // Added MessageCircle for WhatsApp icon
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,8 +35,7 @@ const BackgroundAurora = () => (
   </div>
 );
 
-// --- CHANGES MADE: Added 'prefix' prop and styling for the +91 visual ---
-const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength, prefix }) => (
+const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength, prefix, helpText }) => (
   <div className="relative w-full mb-6 group">
     {prefix && (
       <span className="absolute left-0 top-3 text-zinc-800 dark:text-zinc-200 font-medium z-10">
@@ -53,14 +52,21 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
       autoFocus={autoFocus}
       maxLength={maxLength}
       className={`inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 ${prefix ? 'pl-9' : 'pl-2'} outline-none 
-                 focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
+                  focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
     />
     <span className={`absolute ${prefix ? 'left-9' : 'left-0'} top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                     peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
-                     peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:left-0 peer-[:not(:placeholder-shown)]:text-zinc-500`}>
+                      peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
+                      peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:left-0 peer-[:not(:placeholder-shown)]:text-zinc-500`}>
       {label}
     </span>
     <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
+    
+    {/* Helper text for things like WhatsApp hints */}
+    {helpText && (
+       <p className="absolute -bottom-5 left-0 text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+         {helpText}
+       </p>
+    )}
   </div>
 );
 
@@ -92,7 +98,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
   // Form State
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '' });
   
-  // --- CHANGES MADE: Added OTP state ---
   const [otp, setOtp] = useState('');
   const [showOtpScreen, setShowOtpScreen] = useState(false);
 
@@ -103,7 +108,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
   useEffect(() => {
     setIsLogin(location.pathname === '/login');
     setError('');
-    // --- CHANGES MADE: Reset OTP screen when switching routes ---
     setShowOtpScreen(false); 
     setOtp('');
   }, [location.pathname]);
@@ -152,9 +156,8 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           
           if (!res.ok) throw new Error(data.message || "Failed to send OTP");
           
-          // --- CHANGES MADE: Handle OTP bypass for direct registration ---
-          // This naturally handles the new backend behavior where an SMS failure returns bypassOtp: true
           if (data.bypassOtp) {
+              // Direct registration if OTP service is down/disabled
               const registerRes = await fetch(`${API_URL}/api/users/register`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -164,7 +167,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                       email: formData.email,
                       password: formData.password,
                       phone: formData.phone,
-                      otp: 'bypass' // Backend ignores this when OTP_SERVICE is false or OTP is SKIPPED
+                      otp: 'bypass'
                   })
               });
               const registerData = await registerRes.json();
@@ -184,7 +187,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
     }
   };
 
-  // --- CHANGES MADE: Added logic for Step 2 (Verify OTP & Register) ---
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -235,7 +237,6 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 dark:border-zinc-800 shadow-sm">
             <button
               onClick={() => {
-                  // --- CHANGES MADE: Handle back button behavior for OTP screen ---
                   if(showOtpScreen) setShowOtpScreen(false);
                   else navigate('/');
               }}
@@ -262,16 +263,25 @@ const CustomerAuth = ({ onLoginSuccess }) => {
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
-              {/* --- CHANGES MADE: Dynamic heading based on OTP screen --- */}
               {isLogin ? 'Welcome Back' : showOtpScreen ? 'Verify OTP' : 'Join The Club'}
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-              {isLogin 
-                ? "Sign in to track orders and view your wishlist." 
-                : showOtpScreen 
-                  ? `We've sent a 6-digit code to +91 ${formData.phone}` // Added +91 text here too
-                  : "Discover unique products tailored for you."}
-            </p>
+            
+            {/* Dynamic Subtext with WhatsApp Indicator */}
+            <div className="text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+              {isLogin ? (
+                 "Sign in to track orders and view your wishlist."
+              ) : showOtpScreen ? (
+                 <div className="flex flex-col items-start gap-1">
+                    <span>We sent a 6-digit code to your WhatsApp:</span>
+                    <span className="inline-flex items-center gap-2 text-green-600 dark:text-green-500 font-bold bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm mt-1">
+                        <MessageCircle size={16} fill="currentColor" className="text-green-600 dark:text-green-500" /> 
+                        +91 {formData.phone}
+                    </span>
+                 </div>
+              ) : (
+                 "Discover unique products tailored for you."
+              )}
+            </div>
           </motion.div>
 
           {/* Error Toast */}
@@ -308,14 +318,28 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Full Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
                         
-                        {/* --- CHANGES MADE: Added prefix="+91" --- */}
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} prefix="+91" />
+                        {/* WhatsApp Hint Added Here */}
+                        <InputGroup 
+                            icon={Phone} 
+                            name="phone" 
+                            value={formData.phone} 
+                            onChange={handleChange} 
+                            type="tel" 
+                            label="WhatsApp Number" // Label changed slightly for clarity
+                            maxLength={10} 
+                            prefix="+91" 
+                            helpText={
+                                <span className="flex items-center gap-1">
+                                    <MessageCircle size={10} /> OTP will be sent via WhatsApp
+                                </span>
+                            }
+                        />
                         
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
                         <div className="pt-4">
                             <ShimmerButton isLoading={loading} className="w-full text-base">
-                                Send OTP <ArrowRight size={18} />
+                                Send OTP on WhatsApp <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
                     </motion.form>
@@ -332,7 +356,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                                 if (/^\d*$/.test(e.target.value)) setOtp(e.target.value);
                             }} 
                             type="text" 
-                            label="Enter 6-digit OTP" 
+                            label="Enter 6-digit WhatsApp Code" 
                             maxLength={6} 
                             autoFocus 
                         />
@@ -346,9 +370,9 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                                 type="button" 
                                 disabled={loading}
                                 onClick={handleSubmit} // Resends the OTP
-                                className="w-full text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors py-2"
+                                className="w-full text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors py-2 flex items-center justify-center gap-2"
                             >
-                                Didn't receive code? Resend
+                                <MessageCircle size={14} /> Resend code on WhatsApp
                             </button>
                         </div>
                     </motion.form>

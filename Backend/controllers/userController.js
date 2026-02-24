@@ -3,8 +3,6 @@ const Shop = require('../models/Shop');
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
 const Otp = require('../models/Otp');
-
-// --- CHANGES: Imported sendWhatsApp instead of sendSms ---
 const sendWhatsApp = require('../utils/sendWhatsApp');
 
 // @desc    Send OTP for new user registration (Via WhatsApp)

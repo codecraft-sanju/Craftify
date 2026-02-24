@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, ShoppingBag, 
-  Sparkles, Loader2, Eye, EyeOff, Key
+  Sparkles, Loader2, Eye, EyeOff, Key, MessageCircle
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,8 +35,7 @@ const BackgroundAurora = () => (
   </div>
 );
 
-// --- CHANGES MADE: Added 'prefix' prop and styling for +91 visual ---
-const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength, prefix }) => {
+const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required = true, placeholder = " ", autoFocus = false, maxLength, prefix, helpText }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (showPassword ? "text" : "password") : type;
@@ -78,6 +77,13 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
         >
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
+      )}
+
+      {/* Helper Text (e.g. for WhatsApp) */}
+      {helpText && (
+        <p className="absolute -bottom-5 left-0 text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+            {helpText}
+        </p>
       )}
     </div>
   );
@@ -158,7 +164,6 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // --- CHANGES MADE: Added OTP state ---
   const [otp, setOtp] = useState("");
   
   const [formData, setFormData] = useState({
@@ -249,7 +254,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
-            // --- CHANGES MADE: Handle OTP bypass for direct registration ---
+            // Handle OTP bypass for direct registration
             if (data.bypassOtp) {
                 const registerRes = await fetch(`${API_URL}/api/users/register`, {
                     method: 'POST',
@@ -357,23 +362,32 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
         <motion.div
           variants={staggerContainer}
           className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
-                      [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                       [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
             <h1 className="text-5xl lg:text-6xl font-light uppercase tracking-tighter text-zinc-900 dark:text-white mb-4">
               {isLoginView ? 'Welcome Back' : step === 3 ? 'Verify Identity' : 'Create Empire'}
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-                {/* --- CHANGES MADE: Added +91 to the success message --- */}
-                {isLoginView 
-                    ? "Manage your inventory, analytics, and orders." 
-                    : step === 3 
-                        ? `We've sent a 6-digit code to +91 ${formData.phone}`
-                        : "Join the fastest-growing creator marketplace."}
-            </p>
+            
+            {/* Dynamic Subtext */}
+            <div className="text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+               {isLoginView ? (
+                  "Manage your inventory, analytics, and orders."
+               ) : step === 3 ? (
+                  <div className="flex flex-col items-start gap-1">
+                    <span>We sent a 6-digit code to your WhatsApp:</span>
+                    <span className="inline-flex items-center gap-2 text-green-600 dark:text-green-500 font-bold bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm mt-1">
+                        <MessageCircle size={16} fill="currentColor" className="text-green-600 dark:text-green-500" /> 
+                        +91 {formData.phone}
+                    </span>
+                 </div>
+               ) : (
+                  "Join the fastest-growing creator marketplace."
+               )}
+            </div>
           </motion.div>
 
-          {/* Error Toast Inline */}
+          {/* Error Toast */}
           {error && (
             <motion.div 
                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -406,8 +420,22 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
                         
-                        {/* --- CHANGES MADE: Added prefix="+91" --- */}
-                        <InputGroup icon={Phone} name="phone" value={formData.phone} onChange={handleChange} type="tel" label="Phone Number" maxLength={10} prefix="+91" />
+                        {/* WhatsApp Hint Applied */}
+                        <InputGroup 
+                            icon={Phone} 
+                            name="phone" 
+                            value={formData.phone} 
+                            onChange={handleChange} 
+                            type="tel" 
+                            label="WhatsApp Number" 
+                            maxLength={10} 
+                            prefix="+91" 
+                            helpText={
+                                <span className="flex items-center gap-1">
+                                    <MessageCircle size={10} /> OTP will be sent via WhatsApp
+                                </span>
+                            }
+                        />
                         
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
                         
@@ -447,7 +475,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 <ArrowLeft size={20} className="text-zinc-500" />
                             </button>
                             <ShimmerButton isLoading={loading} className="flex-1 text-base">
-                                Send OTP <ArrowRight size={18} />
+                                Send OTP on WhatsApp <ArrowRight size={18} />
                             </ShimmerButton>
                         </div>
                     </motion.form>
@@ -464,7 +492,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                 if (/^\d*$/.test(e.target.value)) setOtp(e.target.value);
                             }} 
                             type="text" 
-                            label="Enter 6-digit OTP" 
+                            label="Enter 6-digit WhatsApp Code" 
                             maxLength={6} 
                             autoFocus 
                         />
@@ -482,9 +510,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                                     type="button" 
                                     disabled={loading}
                                     onClick={handleSubmit} // Resends the OTP
-                                    className="w-full text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors py-2"
+                                    className="w-full text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors py-2 flex items-center justify-center gap-2"
                                 >
-                                    Didn't receive code? Resend
+                                    <MessageCircle size={14} /> Resend code on WhatsApp
                                 </button>
                             </div>
                         </div>
