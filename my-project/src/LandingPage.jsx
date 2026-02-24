@@ -13,7 +13,7 @@ import {
   TrendingUp, Zap, MapPin, 
   ArrowUpRight, Package, LogIn, 
   Sun, Moon, ShoppingBag, Truck, IndianRupee,
-  Phone, Mail, ChevronRight
+  Phone, Mail, ChevronRight, Users
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -64,6 +64,7 @@ const styleInjection = `
     margin: 0;
     padding: 0;
     cursor: none;
+    scroll-behavior: smooth;
     transition: background-color 0.7s ease, color 0.7s ease;
   }
 
@@ -252,7 +253,7 @@ const ProcessPipeline = () => {
   ];
 
   return (
-    <section ref={containerRef} className="px-6 md:px-12 py-24 md:py-32 relative max-w-7xl mx-auto">
+    <section id="how-it-works" ref={containerRef} className="px-6 md:px-12 py-24 md:py-32 relative max-w-7xl mx-auto">
       <div className="text-center mb-24 relative z-10">
         <h2 className="text-3xl md:text-5xl font-bold mb-4">How it works</h2>
         <p className="max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>From pixel to parcel in 3 simple steps.</p>
@@ -391,10 +392,17 @@ const LandingPage = ({ onLoginClick }) => {
              />
            </div>
         </div>
-        <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
-          <a href="#work" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Catalog</a>
-          <a href="#about" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Pricing</a>
+        
+        {/* FIX: Centered Vertical Navigation */}
+        <div className="flex-1 flex items-center justify-center w-full">
+            <div className="flex gap-10 -rotate-90 whitespace-nowrap origin-center">
+                {/* Links ordered reverse because rotation pushes last item to top */}
+                <a href="#about" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>About</a>
+                <a href="#pricing" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Pricing</a>
+                <a href="#features" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Catalog</a>
+            </div>
         </div>
+
         <div className="flex flex-col gap-6 items-center">
             <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 transition-all">
                 {theme === 'dark' ? <Sun size={20} color="var(--text-muted)" /> : <Moon size={20} color="var(--text-muted)" />}
@@ -445,12 +453,12 @@ const LandingPage = ({ onLoginClick }) => {
             <div className="absolute inset-0 backdrop-blur-3xl pointer-events-none z-[-1]" />
             
             <div className="flex flex-col h-full justify-between pb-8">
-              {/* Navigation Links */}
+              {/* Navigation Links (UPDATED) */}
               <div className="flex flex-col gap-6">
                 {[
-                  { name: 'Catalog', href: '#platform' },
-                  { name: 'Pricing', href: '#solutions' },
-                  { name: 'About Us', href: '#work' }
+                  { name: 'Catalog', href: '#features' },
+                  { name: 'Pricing', href: '#pricing' },
+                  { name: 'About Us', href: '#about' }
                 ].map((link, i) => (
                   <motion.a 
                     key={i}
@@ -607,8 +615,53 @@ const LandingPage = ({ onLoginClick }) => {
           </motion.div>
         </section>
 
-        {/* BENTO GRID SECTION (E-Commerce Focused) */}
-        <section className="py-12 border-t perspective-[2000px] overflow-hidden theme-transition" style={{ borderColor: 'var(--border-color)' }}>
+        {/* ========================================================================= */}
+        {/* NEW ABOUT US SECTION (LINKED TO #about)                                   */}
+        {/* ========================================================================= */}
+        <section id="about" className="px-6 md:px-12 py-16 md:py-24 border-t theme-transition" style={{ borderColor: 'var(--border-color)' }}>
+           <motion.div 
+             initial={{ opacity: 0, y: 30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             className="max-w-4xl mx-auto glass-panel p-8 md:p-12 rounded-3xl"
+             style={{ backgroundColor: 'var(--panel-bg)' }}
+           >
+              <div className="flex flex-col gap-6">
+                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border w-fit" style={{ borderColor: 'var(--border-color)' }}>
+                    <Users size={14} style={{ color: 'var(--accent-glow)' }}/>
+                    <span className="text-xs font-bold tracking-widest uppercase">About Us</span>
+                 </div>
+                 
+                 <h2 className="text-3xl md:text-5xl font-bold">The Minds Behind Giftomize</h2>
+                 
+                 <p className="text-lg md:text-xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                    Welcome to <strong>Giftomize</strong>, your premier destination for high-quality, customized gifts and personalized products. 
+                    Whether you are a creator looking to launch your brand or a customer seeking unique gifts, we provide the platform to make it happen.
+                 </p>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                    <div className="p-6 rounded-2xl border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-main)' }}>
+                       <h3 className="text-xl font-bold mb-1">Sanjay Choudhary</h3>
+                       <p className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent-glow)' }}>Founder</p>
+                       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                          Visionary leader driving the mission to empower Indian creators with zero-inventory e-commerce solutions.
+                       </p>
+                    </div>
+                    
+                    <div className="p-6 rounded-2xl border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-main)' }}>
+                       <h3 className="text-xl font-bold mb-1">Vishesh Patel</h3>
+                       <p className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent-glow)' }}>Co-Founder</p>
+                       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                          The strategic force ensuring seamless operations and building a robust platform for our community.
+                       </p>
+                    </div>
+                 </div>
+              </div>
+           </motion.div>
+        </section>
+
+        {/* BENTO GRID SECTION (E-Commerce Focused) LINKED TO #features */}
+        <section id="features" className="py-12 border-t perspective-[2000px] overflow-hidden theme-transition" style={{ borderColor: 'var(--border-color)' }}>
           
           <div className="px-6 md:px-12 mb-6 md:hidden">
             <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Why Giftomize?</h3>
@@ -703,8 +756,8 @@ const LandingPage = ({ onLoginClick }) => {
             </div>
         </div>
 
-        {/* FEATURES */}
-        <section className="px-6 md:px-12 py-16 md:py-20 max-w-7xl mx-auto">
+        {/* FEATURES LINKED TO #pricing */}
+        <section id="pricing" className="px-6 md:px-12 py-16 md:py-20 max-w-7xl mx-auto">
           <div className="mb-16 max-w-2xl">
               <motion.h2 
                 initial={{ opacity: 0, y: 30 }} 
@@ -773,8 +826,8 @@ const LandingPage = ({ onLoginClick }) => {
 
                 <div className="flex flex-col gap-4">
                   <h4 className="font-bold text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Shop</h4>
-                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Catalog</a>
-                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Pricing</a>
+                  <a href="#features" className="hover:opacity-100 opacity-60 interactive">Catalog</a>
+                  <a href="#pricing" className="hover:opacity-100 opacity-60 interactive">Pricing</a>
                 </div>
 
                 <div className="flex flex-col gap-4">
