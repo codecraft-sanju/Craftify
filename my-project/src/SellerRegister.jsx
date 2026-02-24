@@ -79,7 +79,7 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
         </button>
       )}
 
-      {/* Helper Text (e.g. for WhatsApp) */}
+      {/* Helper Text */}
       {helpText && (
         <p className="absolute -bottom-5 left-0 text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
             {helpText}
@@ -247,7 +247,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     email: formData.email,
                     password: formData.password,
                     phone: formData.phone,
-                    shopName: formData.shopName // Validates shop name duplication early
+                    shopName: formData.shopName
                 })
             });
 
@@ -420,21 +420,16 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Founder Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
                         
-                        {/* WhatsApp Hint Applied */}
+                        {/* CLEAN PHONE INPUT (No WhatsApp hint here) */}
                         <InputGroup 
                             icon={Phone} 
                             name="phone" 
                             value={formData.phone} 
                             onChange={handleChange} 
                             type="tel" 
-                            label="WhatsApp Number" 
+                            label="Phone Number" 
                             maxLength={10} 
                             prefix="+91" 
-                            helpText={
-                                <span className="flex items-center gap-1">
-                                    <MessageCircle size={10} /> OTP will be sent via WhatsApp
-                                </span>
-                            }
                         />
                         
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />

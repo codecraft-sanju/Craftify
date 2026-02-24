@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, Loader2, Sparkles,
-  ShoppingBag, Star, Key, MessageCircle // Added MessageCircle for WhatsApp icon
+  ShoppingBag, Star, Key, MessageCircle
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -61,7 +61,7 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
     </span>
     <Icon className="absolute right-2 top-3 text-zinc-300 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" size={18} />
     
-    {/* Helper text for things like WhatsApp hints */}
+    {/* Helper text */}
     {helpText && (
        <p className="absolute -bottom-5 left-0 text-[10px] font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
          {helpText}
@@ -318,21 +318,16 @@ const CustomerAuth = ({ onLoginSuccess }) => {
                         <InputGroup icon={User} name="name" value={formData.name} onChange={handleChange} type="text" label="Full Name" autoFocus />
                         <InputGroup icon={Mail} name="email" value={formData.email} onChange={handleChange} type="email" label="Email Address" />
                         
-                        {/* WhatsApp Hint Added Here */}
+                        {/* CLEAN PHONE INPUT - Hint removed as requested */}
                         <InputGroup 
                             icon={Phone} 
                             name="phone" 
                             value={formData.phone} 
                             onChange={handleChange} 
                             type="tel" 
-                            label="WhatsApp Number" // Label changed slightly for clarity
+                            label="Phone Number" 
                             maxLength={10} 
                             prefix="+91" 
-                            helpText={
-                                <span className="flex items-center gap-1">
-                                    <MessageCircle size={10} /> OTP will be sent via WhatsApp
-                                </span>
-                            }
                         />
                         
                         <InputGroup icon={Lock} name="password" value={formData.password} onChange={handleChange} type="password" label="Create Password" />
