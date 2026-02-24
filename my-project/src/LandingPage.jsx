@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   motion, 
@@ -10,13 +10,13 @@ import {
 } from 'framer-motion';
 import { 
   ArrowRight, Menu, X, 
-  TrendingUp, Zap, Globe,
-  ArrowUpRight, Cpu, LogIn,
-  Sun, Moon
+  TrendingUp, Zap, MapPin, 
+  ArrowUpRight, Package, LogIn, 
+  Sun, Moon, ShoppingBag, Truck, IndianRupee 
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
-/* 1. ULTRA-MODERN CSS & GLOBAL STYLES (Dynamic Theming)                      */
+/* 1. E-COMMERCE STYLES & THEMING (INDIA EDITION)                             */
 /* -------------------------------------------------------------------------- */
 const styleInjection = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap');
@@ -25,32 +25,33 @@ const styleInjection = `
     --grid-color: rgba(255, 255, 255, 0.05); 
     --bg-main: #050505;
     --text-main: #e5e5e5;
-    --text-muted: #71717a; /* zinc-500 */
+    --text-muted: #a1a1aa;
     --border-color: rgba(255, 255, 255, 0.1);
-    --panel-bg: rgba(10, 10, 10, 0.6);
-    --accent-glow: #22c55e; /* Green */
-    --blob-1: rgba(88, 28, 135, 0.3); /* Purple */
-    --blob-2: rgba(20, 83, 45, 0.2); /* Green */
+    --panel-bg: rgba(20, 20, 20, 0.6);
+    /* Saffron/Orange tint for Indian E-com Warmth */
+    --accent-glow: #f97316; 
+    --blob-1: rgba(249, 115, 22, 0.2); 
+    --blob-2: rgba(168, 85, 247, 0.2); 
     --button-bg: #ffffff;
     --button-text: #000000;
     --logo-fill: #ffffff;
+    --card-highlight: rgba(255, 255, 255, 0.03);
   }
 
   [data-theme='light'] {
-    --grid-color: rgba(0, 0, 0, 0.04);
-    /* Premium Cream/Porcelain Background */
-    --bg-main: #FDFBF7; 
-    --text-main: #1c1917; /* Warm Black */
-    --text-muted: #57534e; /* Warm Grey */
-    --border-color: rgba(0, 0, 0, 0.08);
-    /* Frosted Glass Effect for Light Mode */
-    --panel-bg: rgba(255, 255, 255, 0.4); 
-    --accent-glow: #e11d48; /* Rose/Pink Accent */
-    --blob-1: rgba(244, 63, 94, 0.15); /* Rose Blob */
-    --blob-2: rgba(251, 146, 60, 0.15); /* Orange/Peach Blob */
-    --button-bg: #1c1917;
+    --grid-color: rgba(0, 0, 0, 0.03);
+    --bg-main: #ffffff; 
+    --text-main: #0f172a; 
+    --text-muted: #64748b; 
+    --border-color: rgba(0, 0, 0, 0.06);
+    --panel-bg: rgba(255, 255, 255, 0.8); 
+    --accent-glow: #ea580c; 
+    --blob-1: rgba(255, 237, 213, 0.8); 
+    --blob-2: rgba(230, 230, 255, 0.8); 
+    --button-bg: #0f172a;
     --button-text: #ffffff;
-    --logo-fill: #1c1917;
+    --logo-fill: #0f172a;
+    --card-highlight: rgba(0, 0, 0, 0.02);
   }
 
   html, body {
@@ -71,11 +72,10 @@ const styleInjection = `
   }
 
   /* --- CUSTOM CURSOR --- */
-  /* Updated to ensure visibility in both Light & Dark modes using difference blend */
   .custom-cursor {
     position: fixed; top: 0; left: 0;
     width: 20px; height: 20px;
-    border: 1.5px solid #ffffff; /* Always white to difference correctly against bg */
+    border: 1.5px solid #ffffff; 
     border-radius: 50%;
     pointer-events: none; z-index: 9999;
     transform: translate(-50%, -50%);
@@ -92,13 +92,14 @@ const styleInjection = `
   /* --- TEXTURE & GRID BACKGROUND --- */
   .grain-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
     pointer-events: none; z-index: 90; opacity: 0.4;
   }
   .tech-grid {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-image: linear-gradient(to right, var(--grid-color) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-    background-size: 40px 40px; z-index: -1;
+    background-size: 60px 60px; 
+    z-index: -1;
     mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
   }
 
@@ -111,7 +112,7 @@ const styleInjection = `
     color: var(--text-main);
   }
   .stroked-text { 
-    -webkit-text-stroke: 1px var(--text-muted); 
+    -webkit-text-stroke: 1.5px var(--text-muted); 
     color: transparent; 
     transition: all 0.5s ease; 
   }
@@ -124,7 +125,7 @@ const styleInjection = `
   /* --- UTILS --- */
   .glass-panel {
     background: var(--panel-bg);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--border-color);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
   }
@@ -139,7 +140,6 @@ const styleInjection = `
     animation: neonPulse 2s infinite;
   }
   
-  /* Theme Transition Utilities */
   .theme-transition {
     transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -151,26 +151,17 @@ const styleInjection = `
 const HeroBackground = () => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {/* 1. Subtle Grid Overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--grid-color)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-color)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--grid-color)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-color)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
 
-      {/* 2. Animated Blob (Top Right) */}
       <motion.div 
-        animate={{ 
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         className="absolute -top-[10%] -right-[10%] w-[400px] md:w-[800px] h-[400px] md:h-[800px] blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen theme-transition"
         style={{ backgroundColor: 'var(--blob-1)' }}
       />
 
-      {/* 3. Animated Blob (Bottom Left) */}
       <motion.div 
-        animate={{ 
-          scale: [1, 1.1, 1],
-          opacity: [0.2, 0.4, 0.2],
-        }}
+        animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.4, 0.2] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         className="absolute top-[20%] -left-[10%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen theme-transition"
         style={{ backgroundColor: 'var(--blob-2)' }}
@@ -190,10 +181,8 @@ const CustomCursor = () => {
   useEffect(() => {
     const updateMouse = (e) => setMousePosition({ x: e.clientX, y: e.clientY });
     const handleOver = (e) => setIsHovered(!!e.target.closest('.interactive'));
-    
     window.addEventListener('mousemove', updateMouse);
     window.addEventListener('mouseover', handleOver);
-    
     return () => {
       window.removeEventListener('mousemove', updateMouse);
       window.removeEventListener('mouseover', handleOver);
@@ -203,37 +192,12 @@ const CustomCursor = () => {
   return <div className={`custom-cursor hidden md:block ${isHovered ? 'hovered' : ''}`} style={{ left: mousePosition.x, top: mousePosition.y }} />;
 };
 
-const HackerText = ({ text, className }) => {
-  const [display, setDisplay] = useState(text);
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&";
-
-  const scramble = () => {
-    let iterations = 0;
-    const interval = setInterval(() => {
-      setDisplay(
-        text.split("").map((letter, index) => {
-          if (index < iterations) return text[index];
-          return chars[Math.floor(Math.random() * chars.length)];
-        }).join("")
-      );
-      if (iterations >= text.length) clearInterval(interval);
-      iterations += 1 / 3;
-    }, 30);
-  };
-
-  return (
-    <span onMouseEnter={scramble} className={`cursor-default ${className}`}>
-      {display}
-    </span>
-  );
-};
-
 // --- 3D Tilt Card ---
 const BentoBox3D = ({ children, className = "", title }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-0.5, 0.5], ["5deg", "-5deg"]);
-  const rotateY = useTransform(x, [-0.5, 0.5], ["-5deg", "5deg"]);
+  const rotateX = useTransform(y, [-0.5, 0.5], ["3deg", "-3deg"]); 
+  const rotateY = useTransform(x, [-0.5, 0.5], ["-3deg", "3deg"]);
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -243,10 +207,7 @@ const BentoBox3D = ({ children, className = "", title }) => {
     y.set(yPct);
   };
 
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
+  const handleMouseLeave = () => { x.set(0); y.set(0); };
 
   return (
     <motion.div
@@ -263,15 +224,14 @@ const BentoBox3D = ({ children, className = "", title }) => {
          <div className="absolute top-0 right-0 p-0 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
             <ArrowUpRight size={16} />
          </div>
-         {title && <h4 className="text-[10px] font-mono mb-2 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>[{title}]</h4>}
+         {title && <h4 className="text-[10px] font-bold mb-2 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{title}</h4>}
          {children}
       </div>
       
-      {/* Dynamic Glow Gradient */}
       <motion.div
         className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-300 z-0"
         style={{
-          background: useMotionTemplate`radial-gradient(400px circle at ${useTransform(x, v => (v + 0.5) * 100)}% ${useTransform(y, v => (v + 0.5) * 100)}%, var(--border-color), transparent 80%)`
+          background: useMotionTemplate`radial-gradient(400px circle at ${useTransform(x, v => (v + 0.5) * 100)}% ${useTransform(y, v => (v + 0.5) * 100)}%, var(--card-highlight), transparent 80%)`
         }}
       />
     </motion.div>
@@ -281,27 +241,22 @@ const BentoBox3D = ({ children, className = "", title }) => {
 /* --- SCROLL PIPELINE COMPONENT --- */
 const ProcessPipeline = () => {
   const containerRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start center", "end center"]
-  });
-  
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start center", "end center"] });
   const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
   const steps = [
-    { title: "Upload Design", desc: "Drag & drop your artwork. We generate 50+ mockups instantly using our AI engine." },
-    { title: "Store Sync", desc: "Connect with Shopify, WooCommerce, or use our custom store builder in one click." },
-    { title: "Auto-Fulfillment", desc: "When an order comes in, we print, pack, and ship blindly. You track the profit." }
+    { title: "Upload Design", desc: "Drag & drop your artwork. We handle manufacturing in Delhi, Mumbai & Bangalore." },
+    { title: "Sync Store", desc: "Integrate with your Indian Shopify/WooCommerce store in one click." },
+    { title: "Fast Shipping", desc: "We ship via BlueDart & Delhivery. You keep the profit." }
   ];
 
   return (
     <section ref={containerRef} className="px-6 md:px-12 py-24 md:py-32 relative max-w-7xl mx-auto">
       <div className="text-center mb-24 relative z-10">
         <h2 className="text-3xl md:text-5xl font-bold mb-4">How it works</h2>
-        <p className="max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>From pixel to parcel in 3 simple steps. No code required.</p>
+        <p className="max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>From pixel to parcel in 3 simple steps.</p>
       </div>
 
-      {/* Lines */}
       <div className="absolute left-8 md:left-1/2 top-40 bottom-20 w-px -translate-x-1/2" style={{ backgroundColor: 'var(--border-color)' }} />
       <motion.div 
         style={{ scaleY, transformOrigin: 'top', backgroundColor: 'var(--accent-glow)' }} 
@@ -326,7 +281,7 @@ const ProcessPipeline = () => {
             </motion.div>
             
             <div className="absolute left-8 md:left-1/2 -translate-x-1/2 flex items-center justify-center">
-               <div className="w-4 h-4 rounded-full border shadow-[0_0_20px_rgba(0,0,0,0.2)] z-30 flex items-center justify-center theme-transition" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
+               <div className="w-4 h-4 rounded-full border shadow-sm z-30 flex items-center justify-center theme-transition" style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}>
                  <motion.div 
                    initial={{ scale: 0 }}
                    whileInView={{ scale: 1 }}
@@ -334,13 +289,6 @@ const ProcessPipeline = () => {
                    style={{ backgroundColor: 'var(--accent-glow)' }}
                  />
                </div>
-               <motion.div 
-                 initial={{ opacity: 0, scale: 1 }}
-                 whileInView={{ opacity: [0, 0.5, 0], scale: [1, 2, 3] }}
-                 transition={{ duration: 2, repeat: Infinity }}
-                 className="absolute w-4 h-4 rounded-full z-0"
-                 style={{ backgroundColor: 'var(--accent-glow)' }}
-               />
             </div>
             <div className="flex-1 hidden md:block" /> 
           </div>
@@ -357,30 +305,38 @@ const ProcessPipeline = () => {
 const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState('light'); // Set default to 'light'
+  const [theme, setTheme] = useState('light'); 
 
-  // Toggle Theme Function
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Ensure default is light on mount
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
   }, []);
   
-  // --- Live Terminal Simulation ---
-  const [logs, setLogs] = useState(["> system_init: OK", "> neural_net: ACTIVE"]);
+  // --- Live SALES Simulation (India Context) ---
+  const [sales, setSales] = useState([
+    { type: 'order', text: "Order #8211 - Mumbai, MH", time: '2m ago' },
+    { type: 'ship', text: "Shipment #332 - Out for Delivery", time: '5m ago' }
+  ]);
+
   useEffect(() => {
-    const commands = ["routing order #821 -> Berlin", "optimizing mesh...", "seller_joined: ID_92", "printing: batch_21", "shipping_label: OK"];
+    const events = [
+        { type: 'order', text: "Order #8245 - New Delhi, DL" },
+        { type: 'payout', text: "Payout: ₹4,240.00" },
+        { type: 'ship', text: "Delivered - Bangalore, KA" },
+        { type: 'order', text: "Order #8246 - Jaipur, RJ" },
+        { type: 'order', text: "Order #8247 - Pune, MH" }
+    ];
     const interval = setInterval(() => {
-      setLogs(p => {
-        const n = [...p, `> ${commands[Math.floor(Math.random()*commands.length)]}`];
-        if (n.length>5) n.shift(); return n;
+      setSales(p => {
+        const n = [...p, { ...events[Math.floor(Math.random()*events.length)], time: 'Just now' }];
+        if (n.length > 3) n.shift(); return n;
       });
-    }, 1500);
+    }, 2500);
     return () => clearInterval(interval);
   }, []);
 
@@ -391,14 +347,13 @@ const LandingPage = ({ onLoginClick }) => {
       <div className="grain-overlay" />
       <div className="tech-grid" />
       
-      {/* Ambient Color Orbs (Color controlled via CSS vars) */}
+      {/* Ambient Color Orbs */}
       <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--blob-1)' }} />
       <div className="fixed bottom-[-20%] right-[-10%] w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--blob-2)' }} />
 
-      {/* --- SIDEBAR NAVIGATION (Desktop) --- */}
+      {/* --- SIDEBAR (Desktop) --- */}
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r backdrop-blur-md z-50 py-8 items-center theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="hover:scale-110 transition-transform duration-300 cursor-pointer interactive">
-           {/* Logo SVG */}
            <div className="w-10 h-10 relative flex items-center justify-center">
              <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none">
                <path d="M8 8H32V12H12V28H24V20H20V16H28V32H8V8Z" style={{ fill: 'var(--logo-fill)' }} />
@@ -406,15 +361,12 @@ const LandingPage = ({ onLoginClick }) => {
              </svg>
            </div>
         </div>
-        
         <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
-          <a href="#work" className="text-xs font-mono transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Work</a>
-          <a href="#about" className="text-xs font-mono transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Agency</a>
+          <a href="#work" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Catalog</a>
+          <a href="#about" className="text-xs font-bold transition-colors tracking-widest uppercase interactive" style={{ color: 'var(--text-muted)' }}>Pricing</a>
         </div>
-        
-        {/* Desktop Theme Toggle */}
         <div className="flex flex-col gap-6 items-center">
-            <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-white/10 transition-all">
+            <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 transition-all">
                 {theme === 'dark' ? <Sun size={20} color="var(--text-muted)" /> : <Moon size={20} color="var(--text-muted)" />}
             </button>
             <Menu className="cursor-pointer interactive" size={20} style={{ color: 'var(--text-muted)' }} />
@@ -427,7 +379,6 @@ const LandingPage = ({ onLoginClick }) => {
           <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
         </div>
         <div className="flex items-center gap-4">
-            {/* Mobile Theme Toggle */}
             <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 transition-all">
                 {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
             </button>
@@ -437,7 +388,7 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </div>
 
-      {/* --- MOBILE MENU OVERLAY --- */}
+      {/* --- MOBILE MENU --- */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
@@ -448,9 +399,9 @@ const LandingPage = ({ onLoginClick }) => {
             style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
           >
             <div className="flex flex-col gap-6 text-3xl font-bold">
-              <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Platform</a>
-              <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Solutions</a>
-              <a href="#work" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Work</a>
+              <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Catalog</a>
+              <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Pricing</a>
+              <a href="#work" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>About</a>
             </div>
           </motion.div>
         )}
@@ -471,8 +422,8 @@ const LandingPage = ({ onLoginClick }) => {
             className="hidden md:flex justify-between items-start z-10"
           >
             <div>
-              <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>EST. 2025</p>
-              <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>INFRASTRUCTURE V2.1</p>
+              <p className="text-xs font-bold tracking-widest" style={{ color: 'var(--text-muted)' }}>EST. 2026</p>
+              <p className="text-xs font-bold tracking-widest" style={{ color: 'var(--text-muted)' }}>INDIA'S CREATOR PLATFORM</p>
             </div>
             <div className="flex gap-4">
               <button onClick={() => onLoginClick('customer')} className="text-sm font-medium hover:underline interactive">Log In</button>
@@ -491,7 +442,7 @@ const LandingPage = ({ onLoginClick }) => {
             <h1 className="massive-text leading-[0.9] tracking-tighter break-words">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mb-2 md:mb-0">
                 <motion.span initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="block pointer-events-auto">
-                  <HackerText text="DESIGN" />
+                  <span className="cursor-default">DESIGN</span>
                 </motion.span>
               </div>
               <motion.span initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="stroked-text block pointer-events-auto mb-2 md:mb-0">
@@ -508,12 +459,11 @@ const LandingPage = ({ onLoginClick }) => {
               </motion.span>
             </h1>
 
-            {/* === MOBILE ONLY ACTION BUTTONS === */}
+            {/* === MOBILE ACTION BUTTONS === */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.9 }}
-              // mt-16 for increased vertical gap
               className="md:hidden mt-16 flex flex-col gap-3 pointer-events-auto w-full max-w-sm"
             >
               <button 
@@ -532,8 +482,6 @@ const LandingPage = ({ onLoginClick }) => {
                 LOG IN <LogIn size={16} className="opacity-70"/>
               </button>
             </motion.div>
-            {/* ================================== */}
-
           </div>
 
           <motion.div 
@@ -545,14 +493,14 @@ const LandingPage = ({ onLoginClick }) => {
           >
             <div className="col-span-1">
               <p className="text-base md:text-lg leading-relaxed max-w-sm" style={{ color: 'var(--text-muted)' }}>
-                We built the backbone for the next 10,000 brands. Zero inventory. Global scale. Pure aesthetics.
+                Building India's largest print-on-demand network. Zero inventory. Pan-India reach.
               </p>
             </div>
             <div className="col-span-2 flex flex-col md:flex-row md:items-center gap-6 md:justify-end">
               <button onClick={() => navigate('/shop')} className="interactive group w-full md:w-auto flex items-center justify-between md:justify-start gap-4 pl-6 pr-2 py-3 border rounded-full transition-all duration-300 active:scale-95" 
                 style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--panel-bg)' }}
               >
-                <span className="text-sm font-bold uppercase tracking-wider">Explore Platform</span>
+                <span className="text-sm font-bold uppercase tracking-wider">Explore Catalog</span>
                 <div className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-main)' }}>
                   <ArrowRight size={14} />
                 </div>
@@ -561,75 +509,76 @@ const LandingPage = ({ onLoginClick }) => {
           </motion.div>
         </section>
 
-        {/* BENTO GRID SECTION (COMPACT HEIGHT ADJUSTMENTS) */}
+        {/* BENTO GRID SECTION (E-Commerce Focused) */}
         <section className="py-12 border-t perspective-[2000px] overflow-hidden theme-transition" style={{ borderColor: 'var(--border-color)' }}>
           
           <div className="px-6 md:px-12 mb-6 md:hidden">
-            <h3 className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>System Modules <span className="animate-pulse" style={{ color: 'var(--accent-glow)' }}>●</span></h3>
-            <p className="text-lg font-bold">Explore Modules</p>
+            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Why Giftomize?</h3>
+            <p className="text-lg font-bold">Features</p>
           </div>
 
-          {/* Grid Layout: Reduced Gap (gap-3 mobile) and Reduced Grid Height (md:h-[600px] desktop) */}
           <div className="flex flex-col gap-3 px-6 pb-8 md:grid md:grid-cols-4 md:grid-rows-2 md:gap-4 md:px-12 md:h-[600px] md:pb-0 md:overflow-visible">
             
-            {/* Box 1: Core Engine - Reduced Height (min-h-[280px] mobile) */}
+            {/* Box 1: Smart Fulfillment */}
             <div className="w-full md:w-auto md:col-span-2 md:row-span-2 h-full">
-              <BentoBox3D className="h-full flex flex-col justify-between min-h-[280px]" style={{ backgroundColor: 'var(--bg-main)' }} title="Core Engine">
+              <BentoBox3D className="h-full flex flex-col justify-between min-h-[280px]" style={{ backgroundColor: 'var(--bg-main)' }} title="Smart Fulfillment">
                 <div className="z-10 mt-2 md:mt-10">
-                  <Cpu size={32} className="mb-4" style={{ color: 'var(--text-main)' }} />
-                  <h3 className="text-2xl md:text-3xl font-bold mb-2">Neural Production.</h3>
+                  <Package size={32} className="mb-4" style={{ color: 'var(--accent-glow)' }} />
+                  <h3 className="text-2xl md:text-3xl font-bold mb-2">Pan-India Shipping.</h3>
                   <p className="text-sm md:text-base max-w-md leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                    Our API automatically routes your order to the print facility closest to the customer.
+                    We route orders to hubs in Delhi, Mumbai & Bangalore for fastest delivery to 29,000+ pincodes.
                   </p>
                 </div>
-                <div className="w-full h-32 md:h-40 border mt-4 md:mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-mono text-[10px] md:text-xs shadow-inner" 
-                     style={{ backgroundColor: 'rgba(0,0,0,0.8)', borderColor: 'var(--border-color)', color: 'var(--accent-glow)' }}>
-                    {logs.map((log, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-                        {log}
+                {/* Sales Ticker */}
+                <div className="w-full h-32 md:h-40 border mt-4 md:mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-sans text-[10px] md:text-xs shadow-inner" 
+                     style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
+                    {sales.map((sale, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 mb-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${sale.type === 'payout' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
+                        <span style={{ color: 'var(--text-main)' }} className="font-semibold">{sale.text}</span>
+                        <span style={{ color: 'var(--text-muted)' }} className="ml-auto">{sale.time}</span>
                       </motion.div>
                     ))}
-                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-glow)' }}></div>
                 </div>
               </BentoBox3D>
             </div>
             
-            {/* Box 2: Analytics - Reduced Height (min-h-[160px] mobile) */}
+            {/* Box 2: Analytics */}
             <div className="w-full md:w-auto md:col-span-2 h-full">
               <BentoBox3D className="h-full min-h-[160px] flex flex-col" title="Analytics">
                 <div className="flex items-end justify-between flex-1 relative z-10">
                   <div>
-                    <h3 className="text-xl md:text-2xl font-bold">Real-time Insights</h3>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Track every penny.</p>
+                    <h3 className="text-xl md:text-2xl font-bold">Track Profit (₹)</h3>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Real-time earnings dashboard.</p>
                   </div>
-                  <TrendingUp size={32} style={{ color: 'var(--text-muted)' }} />
+                  <IndianRupee size={32} style={{ color: 'var(--accent-glow)' }} />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-16 opacity-20">
                   <svg viewBox="0 0 100 20" className="w-full h-full fill-none" preserveAspectRatio="none">
-                    <path d="M0 20 Q 20 5 40 10 T 80 5 T 100 15" strokeWidth="0.5" stroke="var(--text-main)" />
+                    <path d="M0 20 Q 20 5 40 10 T 80 5 T 100 15" strokeWidth="1" stroke="var(--text-main)" />
                   </svg>
                 </div>
               </BentoBox3D>
             </div>
 
-            {/* Box 3: Global - Reduced Height (min-h-[160px] mobile) */}
+            {/* Box 3: Reach */}
             <div className="w-full md:w-auto md:col-span-1 h-full">
-              <BentoBox3D className="h-full min-h-[160px]" title="Global">
-                <Globe size={32} className="mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-xl font-bold">Worldwide</h3>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Shipping to 195 nations.</p>
+              <BentoBox3D className="h-full min-h-[160px]" title="Reach">
+                <MapPin size={32} className="mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-xl font-bold">29k+ Pincodes</h3>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Delivering to Tier 1, 2 & 3.</p>
               </BentoBox3D>
             </div>
 
-            {/* Box 4: Start CTA - Reduced Height (min-h-[160px] mobile) */}
+            {/* Box 4: Start CTA */}
             <div className="w-full md:w-auto md:col-span-1 h-full">
               <BentoBox3D className="h-full min-h-[160px]" title="Start" style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}>
                 <div className="flex flex-col h-full justify-between">
                   <div className="w-10 h-10 flex items-center justify-center rounded-full shadow-xl" style={{ backgroundColor: 'var(--button-text)', color: 'var(--button-bg)' }}>
-                    <Zap size={20} />
+                    <ShoppingBag size={20} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold leading-tight tracking-tight">Launch in<br/>Seconds</h3>
+                    <h3 className="text-xl font-bold leading-tight tracking-tight">Open Your<br/>Store</h3>
                   </div>
                 </div>
               </BentoBox3D>
@@ -649,7 +598,7 @@ const LandingPage = ({ onLoginClick }) => {
               >
                   {[...Array(10)].map((_, i) => (
                     <span key={i} className="text-4xl md:text-6xl font-black italic tracking-tighter">
-                      CREATE • SELL • SCALE • 
+                      DESIGN • SELL • EARN ₹ • 
                     </span>
                   ))}
               </motion.div>
@@ -665,7 +614,7 @@ const LandingPage = ({ onLoginClick }) => {
                 viewport={{ once: true }} 
                 className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
               >
-                Not just a platform.<br/><span style={{ color: 'var(--text-muted)' }}>A power plant.</span>
+                Zero Risk.<br/><span style={{ color: 'var(--text-muted)' }}>Maximum Profit.</span>
               </motion.h2>
           </div>
 
@@ -674,16 +623,16 @@ const LandingPage = ({ onLoginClick }) => {
                <div className="absolute inset-0 z-10 transition-all duration-700 ease-out" style={{ backgroundColor: 'var(--panel-bg)', opacity: 0.1 }} />
                <img 
                  src="/giftomize.png" 
-                 alt="Giftomize Mockup" 
+                 alt="App Dashboard" 
                  className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-1000 ease-out opacity-100 md:opacity-80 md:group-hover:opacity-100" 
                />
             </BentoBox3D>
             
             <div className="space-y-4">
               {[
-                { title: 'Zero Inventory', desc: 'Never pay for stock.' }, 
-                { title: 'White Label', desc: 'Your brand on the box.' }, 
-                { title: 'Auto Taxes', desc: 'Global VAT handling.' }
+                { title: 'No Inventory', desc: 'Never pay for stock upfront.' }, 
+                { title: 'White Label', desc: 'Your brand name on the packaging.' }, 
+                { title: 'GST Compliant', desc: 'Automated GST invoices for every order.' }
               ].map((item, i) => (
                 <motion.div 
                   key={i} 
@@ -695,7 +644,7 @@ const LandingPage = ({ onLoginClick }) => {
                   style={{ borderColor: 'var(--border-color)' }}
                 >
                   <h3 className="text-2xl md:text-3xl font-bold mb-3 flex items-center gap-4">
-                    <span className="text-xs font-mono border px-2 py-1 rounded" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-color)' }}>0{i+1}</span> 
+                    <span className="text-xs font-bold border px-2 py-1 rounded" style={{ color: 'var(--text-muted)', borderColor: 'var(--border-color)' }}>0{i+1}</span> 
                     {item.title}
                   </h3>
                   <p className="text-base md:text-lg transition-colors pl-12" style={{ color: 'var(--text-muted)' }}>{item.desc}</p>
@@ -705,29 +654,53 @@ const LandingPage = ({ onLoginClick }) => {
           </div>
         </section>
 
-        {/* FOOTER */}
+        {/* FOOTER - FIXED LAYOUT (VERTICAL STACK) */}
         <footer className="border-t pt-16 md:pt-20 pb-10 px-6 md:px-12 mb-0 theme-transition" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-main)' }}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16 md:mb-20">
-            <div className="col-span-1 md:col-span-2">
-              <h2 className="text-[15vw] md:text-[8vw] font-bold leading-none tracking-tighter select-none" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
+          <div className="flex flex-col gap-12 mb-16 md:mb-20">
+            
+            {/* 1. BRAND NAME (Full width) */}
+            <div className="w-full border-b pb-8" style={{ borderColor: 'var(--border-color)' }}>
+              <h2 className="text-[12vw] font-bold leading-none tracking-tighter select-none" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
                 GIFTOMIZE
               </h2>
             </div>
-            <div className="flex flex-col gap-4">
-              <h4 className="font-mono text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Sitemap</h4>
-              <a href="#" className="hover:opacity-100 opacity-60 interactive">Home</a>
-              <a href="#" className="hover:opacity-100 opacity-60 interactive">Marketplace</a>
+
+            {/* 2. LINKS GRID (Below brand name to avoid overlap) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+                <div className="col-span-2 md:col-span-1">
+                    <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                        The operating system for modern Indian D2C brands. Zero inventory, infinite scale.
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <h4 className="font-bold text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Shop</h4>
+                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Catalog</a>
+                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Pricing</a>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <h4 className="font-bold text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Company</h4>
+                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Terms</a>
+                  <a href="#" className="hover:opacity-100 opacity-60 interactive">Privacy</a>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <h4 className="font-bold text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Support</h4>
+                  <a href="mailto:giftomizeofficial@gmail.com" className="hover:opacity-100 opacity-60 interactive break-words text-sm">giftomizeofficial@gmail.com</a>
+                  <div className="flex flex-col gap-1 text-sm">
+                      <a href="tel:+917298317177" className="hover:opacity-100 opacity-60 interactive">+91 72983 17177</a>
+                      <a href="tel:+917568045830" className="hover:opacity-100 opacity-60 interactive">+91 75680 45830</a>
+                  </div>
+                </div>
             </div>
-            <div className="flex flex-col gap-4">
-              <h4 className="font-mono text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Legal</h4>
-              <a href="#" className="hover:opacity-100 opacity-60 interactive">Privacy</a>
-            </div>
+
           </div>
           
           <div className="flex flex-col md:flex-row justify-between border-t pt-8 gap-4" style={{ borderColor: 'var(--border-color)' }}>
-             <div className="text-xs font-mono flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+             <div className="text-xs font-bold flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-glow)' }}></span>
-               SYSTEM STATUS: OPERATIONAL
+               ALL SYSTEMS GO
              </div>
              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>© 2026 GIFTOMIZE INC.</p>
           </div>
