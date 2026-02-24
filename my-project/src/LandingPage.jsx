@@ -355,10 +355,12 @@ const LandingPage = ({ onLoginClick }) => {
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r backdrop-blur-md z-50 py-8 items-center theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="hover:scale-110 transition-transform duration-300 cursor-pointer interactive">
            <div className="w-10 h-10 relative flex items-center justify-center">
-             <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none">
-               <path d="M8 8H32V12H12V28H24V20H20V16H28V32H8V8Z" style={{ fill: 'var(--logo-fill)' }} />
-               <rect x="20" y="20" width="4" height="4" style={{ fill: 'var(--accent-glow)' }} className="animate-pulse"/>
-             </svg>
+             {/* UPDATED: Desktop Logo Image */}
+             <img 
+               src="/gifticon.jpg" 
+               alt="Giftomize Logo" 
+               className="w-full h-full rounded-md object-cover shadow-sm"
+             />
            </div>
         </div>
         <div className="flex flex-col gap-8 [writing-mode:vertical-lr] rotate-180 items-center">
@@ -691,9 +693,10 @@ const LandingPage = ({ onLoginClick }) => {
                   <a href="#" className="hover:opacity-100 opacity-60 interactive">Privacy</a>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                {/* UPDATED: col-span-2 ensures full width on mobile so email fits on one line */}
+                <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
                   <h4 className="font-bold text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Support</h4>
-                  <a href="mailto:giftomizeofficial@gmail.com" className="hover:opacity-100 opacity-60 interactive break-words text-sm">giftomizeofficial@gmail.com</a>
+                  <a href="mailto:giftomizeofficial@gmail.com" className="hover:opacity-100 opacity-60 interactive whitespace-nowrap text-sm">giftomizeofficial@gmail.com</a>
                   <div className="flex flex-col gap-1 text-sm">
                       <a href="tel:+917298317177" className="hover:opacity-100 opacity-60 interactive">+91 72983 17177</a>
                       <a href="tel:+917568045830" className="hover:opacity-100 opacity-60 interactive">+91 75680 45830</a>
