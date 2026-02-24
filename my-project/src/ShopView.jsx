@@ -252,7 +252,8 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        <div className="flex gap-6 overflow-x-auto px-4 pb-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
+        {/* FIX: Added 'py-4' instead of 'pb-4' so the top border is not clipped */}
+        <div className="flex gap-6 overflow-x-auto px-4 py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
@@ -441,6 +442,58 @@ const ShopView = ({
                     ))}
                 </div>
             </div>
+
+            {/* --- SAME TO SAME LIGHT THEME FOOTER --- */}
+            <footer className="border-t pt-16 md:pt-20 pb-10 px-6 md:px-12 mb-0 bg-white border-slate-200">
+                <div className="flex flex-col gap-12 mb-16 md:mb-20">
+                    
+                    {/* 1. BRAND NAME (Full width) */}
+                    <div className="w-full border-b pb-8 border-slate-200">
+                        <h2 className="text-[12vw] font-bold leading-none tracking-tighter select-none text-slate-300 opacity-50">
+                            GIFTOMIZE
+                        </h2>
+                    </div>
+
+                    {/* 2. LINKS GRID */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+                        <div className="col-span-2 md:col-span-1">
+                            <p className="text-sm font-medium leading-relaxed text-slate-500">
+                                The operating system for modern Indian D2C brands. Zero inventory, infinite scale.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <h4 className="font-bold text-xs uppercase text-slate-500">Shop</h4>
+                            <Link to="/" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Catalog</Link>
+                            <Link to="/" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Pricing</Link>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <h4 className="font-bold text-xs uppercase text-slate-500">Company</h4>
+                            <a href="#" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Terms</a>
+                            <a href="#" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Privacy</a>
+                        </div>
+
+                        <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+                            <h4 className="font-bold text-xs uppercase text-slate-500">Support</h4>
+                            <a href="mailto:giftomizeofficial@gmail.com" className="hover:opacity-100 opacity-60 text-slate-900 font-medium whitespace-nowrap text-sm">giftomizeofficial@gmail.com</a>
+                            <div className="flex flex-col gap-1 text-sm">
+                                <a href="tel:+917298317177" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">+91 72983 17177</a>
+                                <a href="tel:+917568045830" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">+91 75680 45830</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div className="flex flex-col md:flex-row justify-between border-t pt-8 gap-4 border-slate-200">
+                    <div className="text-xs font-bold flex items-center gap-2 text-slate-500">
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-orange-600"></span>
+                        ALL SYSTEMS GO
+                    </div>
+                    <p className="text-xs text-slate-500">© 2026 GIFTOMIZE INC.</p>
+                </div>
+            </footer>
       </div>
   );
 };
