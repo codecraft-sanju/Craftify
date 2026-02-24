@@ -376,7 +376,12 @@ const LandingPage = ({ onLoginClick }) => {
       {/* --- MOBILE HEADER --- */}
       <div className="md:hidden fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center p-5 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center gap-3">
-          <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
+          {/* UPDATED: Removed text, added rectangle logo */}
+          <img 
+            src="/giftomizelogo.jpg" 
+            alt="Giftomize Logo" 
+            className="h-8 w-auto object-contain"
+          />
         </div>
         <div className="flex items-center gap-4">
             <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 transition-all">
@@ -531,7 +536,7 @@ const LandingPage = ({ onLoginClick }) => {
                 </div>
                 {/* Sales Ticker */}
                 <div className="w-full h-32 md:h-40 border mt-4 md:mt-8 rounded-lg relative overflow-hidden flex flex-col justify-end p-4 font-sans text-[10px] md:text-xs shadow-inner" 
-                     style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
+                      style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
                     {sales.map((sale, i) => (
                       <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2 mb-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${sale.type === 'payout' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
