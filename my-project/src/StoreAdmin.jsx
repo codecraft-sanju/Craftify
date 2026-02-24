@@ -562,6 +562,10 @@ export default function StoreAdmin({ currentUser }) {
                                 <Bell className="w-5 h-5" />
                                 {orders.some(o => o.orderStatus === 'Processing') && <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
                             </button>
+                            {/* NEW: LOGOUT BUTTON IN HEADER */}
+                            <button onClick={handleLogout} className="p-2.5 bg-slate-900 border border-slate-800 rounded-full relative active:scale-95 transition-all shadow-sm text-slate-400 hover:text-red-400 hover:border-red-500/30" title="Logout">
+                                <LogOut className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 </header>
@@ -844,14 +848,6 @@ export default function StoreAdmin({ currentUser }) {
                                             <div className="pt-2 flex justify-end"><Button type="submit" size="lg" loading={isSubmitting} className="w-full sm:w-auto shadow-xl shadow-rose-900/20">Save Changes</Button></div>
                                         </form>
                                     </Card>
-
-                                    {/* Mobile Logout - Visible only on Mobile in Settings Tab */}
-                                    <div className="mt-8 md:hidden">
-                                        <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 px-2">Danger Zone</h3>
-                                        <button onClick={handleLogout} className="w-full p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all active:scale-95">
-                                            <LogOut className="w-5 h-5"/> Sign Out from Admin
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         )}
