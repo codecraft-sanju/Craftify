@@ -2,12 +2,12 @@ const User = require('../models/User');
 const Shop = require('../models/Shop'); 
 const GlobalSettings = require('../models/GlobalSettings'); 
 const generateToken = require('../utils/generateToken'); 
-
-// --- CHANGES MADE: Removed axios, imported sendSms utility instead ---
 const Otp = require('../models/Otp');
-const sendSms = require('../utils/sendSms');
 
-// @desc    Send OTP for new user registration
+// --- CHANGES: Imported sendWhatsApp instead of sendSms ---
+const sendWhatsApp = require('../utils/sendWhatsApp');
+
+// @desc    Send OTP for new user registration (Via WhatsApp)
 // @route   POST /api/users/send-otp
 // @access  Public
 const sendRegistrationOtp = async (req, res) => {
@@ -57,6 +57,7 @@ const sendRegistrationOtp = async (req, res) => {
             }
         }
 
+        // --- BYPASS LOGIC (If .env sets OTP_SERVICE to false) ---
         if (process.env.OTP_SERVICE !== 'true') {
             return res.status(200).json({ 
                 message: 'Validation successful. Proceed to register.', 
@@ -64,29 +65,31 @@ const sendRegistrationOtp = async (req, res) => {
             });
         }
 
-        // --- OTP Generation and SMS API logic added ---
+        // --- OTP Generation ---
         const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
         const otpMessages = [
-            `Welcome to Giftomize! Your registration OTP is ${generatedOtp}. Please do not share this with anyone.`,
-            `${generatedOtp} is your verification code to set up your Giftomize account. Happy shopping!`,
-            `Giftomize Alert: Please use OTP ${generatedOtp} to verify your phone number and complete registration.`
+            `*Welcome to Giftomize!* 🎉\nYour registration OTP is *${generatedOtp}*.\nPlease do not share this code.`,
+            `Your Giftomize verification code is *${generatedOtp}*.\nHappy Shopping! 🛍️`,
+            `*Giftomize Alert:*\nUse OTP *${generatedOtp}* to verify your account.`
         ];
         
         const randomMsg = otpMessages[Math.floor(Math.random() * otpMessages.length)];
 
+        // Save OTP to DB
         await Otp.findOneAndDelete({ phone: formattedPhone }); 
         await Otp.create({ phone: formattedPhone, otp: generatedOtp });
 
-        // --- CHANGES MADE: Wrapped in try-catch to allow bypass if SMS fails ---
+        // --- SEND VIA WHATSAPP ---
         try {
-            await sendSms(formattedPhone, randomMsg);
-            res.status(200).json({ message: 'OTP sent successfully to your phone.' });
-        } catch (smsError) {
-            console.error("SMS Failed, falling back to bypass:", smsError.message);
+            await sendWhatsApp(formattedPhone, randomMsg);
+            res.status(200).json({ message: 'OTP sent via WhatsApp successfully.' });
+        } catch (waError) {
+            console.error("WhatsApp Failed, falling back to bypass:", waError.message);
+            // Fallback: Agar WhatsApp fail ho jaye, toh user ko atakne nahi denge
             await Otp.findOneAndUpdate({ phone: formattedPhone }, { otp: 'SKIPPED' });
             return res.status(200).json({ 
-                message: 'SMS service unavailable. Proceed to register.', 
+                message: 'WhatsApp service unavailable. Proceed to register.', 
                 bypassOtp: true 
             });
         }
@@ -115,7 +118,6 @@ const verifyOtpAndRegister = async (req, res) => {
         // --- OTP validation ---
         let validOtp = null;
         if (process.env.OTP_SERVICE === 'true') {
-            // --- CHANGES MADE: Check if SMS failed previously and marked as SKIPPED ---
             const skippedOtp = await Otp.findOne({ phone: formattedPhone, otp: 'SKIPPED' });
 
             if (skippedOtp) {
