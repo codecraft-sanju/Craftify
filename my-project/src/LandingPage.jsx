@@ -13,7 +13,7 @@ import {
   TrendingUp, Zap, MapPin, 
   ArrowUpRight, Package, LogIn, 
   Sun, Moon, ShoppingBag, Truck, IndianRupee,
-  Phone, Mail, ChevronRight, Users
+  Phone, Mail, ChevronRight, Users, Target, Layers
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -616,48 +616,69 @@ const LandingPage = ({ onLoginClick }) => {
         </section>
 
         {/* ========================================================================= */}
-        {/* NEW ABOUT US SECTION (LINKED TO #about)                                   */}
+        {/* NEW ABOUT US SECTION (Problem vs Solution)                                */}
         {/* ========================================================================= */}
-        <section id="about" className="px-6 md:px-12 py-16 md:py-24 border-t theme-transition" style={{ borderColor: 'var(--border-color)' }}>
-           <motion.div 
-             initial={{ opacity: 0, y: 30 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true }}
-             className="max-w-4xl mx-auto glass-panel p-8 md:p-12 rounded-3xl"
-             style={{ backgroundColor: 'var(--panel-bg)' }}
-           >
-              <div className="flex flex-col gap-6">
-                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border w-fit" style={{ borderColor: 'var(--border-color)' }}>
-                    <Users size={14} style={{ color: 'var(--accent-glow)' }}/>
-                    <span className="text-xs font-bold tracking-widest uppercase">About Us</span>
-                 </div>
-                 
-                 <h2 className="text-3xl md:text-5xl font-bold">The Minds Behind Giftomize</h2>
-                 
-                 <p className="text-lg md:text-xl leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                    Welcome to <strong>Giftomize</strong>, your premier destination for high-quality, customized gifts and personalized products. 
-                    Whether you are a creator looking to launch your brand or a customer seeking unique gifts, we provide the platform to make it happen.
+        <section id="about" className="px-6 md:px-12 py-24 border-t relative overflow-hidden theme-transition" style={{ borderColor: 'var(--border-color)' }}>
+          {/* Background decoration */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20 pointer-events-none" style={{ backgroundColor: 'var(--accent-glow)' }}></div>
+
+          <div className="max-w-5xl mx-auto relative z-10">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-12"
+            >
+               <span className="text-xs font-bold tracking-[0.2em] uppercase mb-4 block" style={{ color: 'var(--accent-glow)' }}>Our Mission</span>
+               <h2 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
+                 One Platform.<br />
+                 <span style={{ color: 'var(--text-muted)' }}>Endless Customization.</span>
+               </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+               <motion.div 
+                 initial={{ opacity: 0, x: -30 }}
+                 whileInView={{ opacity: 1, x: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ delay: 0.2 }}
+                 className="text-lg md:text-xl leading-relaxed"
+                 style={{ color: 'var(--text-muted)' }}
+               >
+                 <p className="mb-6">
+                   <strong style={{ color: 'var(--text-main)' }}>The Problem:</strong> The market for personalized goods is fragmented. Customers have to visit countless separate websites to find specific custom items, often compromising on quality or trust.
                  </p>
-                 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                    <div className="p-6 rounded-2xl border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-main)' }}>
-                       <h3 className="text-xl font-bold mb-1">Sanjay Choudhary</h3>
-                       <p className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent-glow)' }}>Founder</p>
-                       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          Visionary leader driving the mission to empower Indian creators with zero-inventory e-commerce solutions.
-                       </p>
-                    </div>
-                    
-                    <div className="p-6 rounded-2xl border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-main)' }}>
-                       <h3 className="text-xl font-bold mb-1">Vishesh Patel</h3>
-                       <p className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--accent-glow)' }}>Co-Founder</p>
-                       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          The strategic force ensuring seamless operations and building a robust platform for our community.
-                       </p>
-                    </div>
-                 </div>
-              </div>
-           </motion.div>
+                 <p>
+                   <strong style={{ color: 'var(--text-main)' }}>The Solution:</strong> Giftomize is bridging this gap. We are building the definitive <strong>centralized ecosystem</strong> where India comes to design, discover, and buy customized products. No more searching—just creating.
+                 </p>
+               </motion.div>
+
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.9 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+                 transition={{ delay: 0.4 }}
+               >
+                  <div className="glass-panel p-8 rounded-2xl border-l-4" style={{ borderColor: 'var(--accent-glow)' }}>
+                     <h3 className="text-2xl font-bold mb-4">Why we exist</h3>
+                     <ul className="space-y-4">
+                        <li className="flex items-start gap-3">
+                           <div className="mt-1"><Zap size={18} style={{ color: 'var(--accent-glow)' }} /></div>
+                           <span style={{ color: 'var(--text-muted)' }}>To unify scattered creators under one trusted roof.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                           <div className="mt-1"><Package size={18} style={{ color: 'var(--accent-glow)' }} /></div>
+                           <span style={{ color: 'var(--text-muted)' }}>To provide a single standard for quality & delivery.</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                           <div className="mt-1"><TrendingUp size={18} style={{ color: 'var(--accent-glow)' }} /></div>
+                           <span style={{ color: 'var(--text-muted)' }}>To make customization accessible to every Indian pincode.</span>
+                        </li>
+                     </ul>
+                  </div>
+               </motion.div>
+            </div>
+          </div>
         </section>
 
         {/* BENTO GRID SECTION (E-Commerce Focused) LINKED TO #features */}
