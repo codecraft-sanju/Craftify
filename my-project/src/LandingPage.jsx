@@ -12,7 +12,8 @@ import {
   ArrowRight, Menu, X, 
   TrendingUp, Zap, MapPin, 
   ArrowUpRight, Package, LogIn, 
-  Sun, Moon, ShoppingBag, Truck, IndianRupee 
+  Sun, Moon, ShoppingBag, Truck, IndianRupee,
+  Phone, Mail, ChevronRight
 } from 'lucide-react';
 
 /* -------------------------------------------------------------------------- */
@@ -193,7 +194,7 @@ const CustomCursor = () => {
 };
 
 // --- 3D Tilt Card ---
-const BentoBox3D = ({ children, className = "", title }) => {
+const BentoBox3D = ({ children, className = "", title, style }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotateX = useTransform(y, [-0.5, 0.5], ["3deg", "-3deg"]); 
@@ -211,7 +212,7 @@ const BentoBox3D = ({ children, className = "", title }) => {
 
   return (
     <motion.div
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+      style={{ rotateX, rotateY, transformStyle: "preserve-3d", ...style }}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -307,6 +308,15 @@ const LandingPage = ({ onLoginClick }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState('light'); 
 
+  // Lock scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileMenuOpen]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
@@ -340,6 +350,25 @@ const LandingPage = ({ onLoginClick }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Animation variants for Mobile Menu
+  const menuVariants = {
+    closed: { 
+      opacity: 0, 
+      y: "-100%",
+      transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
+    },
+    open: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    closed: { opacity: 0, x: -20 },
+    open: { opacity: 1, x: 0 }
+  };
+
   return (
     <div className="min-h-screen w-full relative overflow-x-hidden theme-transition" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       <style>{styleInjection}</style>
@@ -355,7 +384,6 @@ const LandingPage = ({ onLoginClick }) => {
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r backdrop-blur-md z-50 py-8 items-center theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="hover:scale-110 transition-transform duration-300 cursor-pointer interactive">
            <div className="w-10 h-10 relative flex items-center justify-center">
-             {/* UPDATED: Desktop Logo Image */}
              <img 
                src="/gifticon.jpg" 
                alt="Giftomize Logo" 
@@ -375,10 +403,9 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </nav>
 
-      {/* --- MOBILE HEADER --- */}
-      <div className="md:hidden fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center p-5 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
+      {/* --- MOBILE HEADER (Improved) --- */}
+      <div className="md:hidden fixed top-0 left-0 right-0 w-full z-[60] flex justify-between items-center p-4 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center gap-3">
-          {/* LOGO ICON ADDED HERE AS REQUESTED */}
           <img 
             src="/gifticon.jpg" 
             alt="Giftomize Logo" 
@@ -386,30 +413,93 @@ const LandingPage = ({ onLoginClick }) => {
           />
           <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
         </div>
-        <div className="flex items-center gap-4">
-            <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 transition-all">
-                {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+        <div className="flex items-center gap-2">
+            <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all border border-transparent hover:border-[var(--border-color)]">
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+              className="p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all interactive"
+            >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
         </div>
       </div>
 
-      {/* --- MOBILE MENU --- */}
+      {/* --- IMPROVED MOBILE MENU OVERLAY --- */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 pt-24 px-6 md:hidden flex flex-col h-screen w-screen"
-            style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
+            variants={menuVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            className="fixed inset-0 z-50 md:hidden flex flex-col w-full h-full pt-24 px-6 overflow-y-auto"
+            style={{ 
+              backgroundColor: 'var(--bg-main)',
+              // Fallback for blurred background
+              backgroundImage: 'radial-gradient(at top right, var(--blob-1) 0%, transparent 40%), radial-gradient(at bottom left, var(--blob-2) 0%, transparent 40%)' 
+            }}
           >
-            <div className="flex flex-col gap-6 text-3xl font-bold">
-              <a href="#platform" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Catalog</a>
-              <a href="#solutions" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>Pricing</a>
-              <a href="#work" onClick={() => setIsMobileMenuOpen(false)} className="border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>About</a>
+            {/* Background blur for glass effect on top of gradient */}
+            <div className="absolute inset-0 backdrop-blur-3xl pointer-events-none z-[-1]" />
+            
+            <div className="flex flex-col h-full justify-between pb-8">
+              {/* Navigation Links */}
+              <div className="flex flex-col gap-6">
+                {[
+                  { name: 'Catalog', href: '#platform' },
+                  { name: 'Pricing', href: '#solutions' },
+                  { name: 'About Us', href: '#work' }
+                ].map((link, i) => (
+                  <motion.a 
+                    key={i}
+                    variants={itemVariants}
+                    href={link.href} 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className="flex items-center justify-between group border-b pb-4" 
+                    style={{ borderColor: 'var(--border-color)' }}
+                  >
+                    <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-main)' }}>{link.name}</span>
+                    <span className="w-10 h-10 rounded-full flex items-center justify-center border transition-all group-active:scale-95 group-active:bg-[var(--text-main)] group-active:text-[var(--bg-main)]" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}>
+                      <ArrowRight size={20} />
+                    </span>
+                  </motion.a>
+                ))}
+              </div>
+
+              {/* Action Buttons & Contact (Staggered) */}
+              <motion.div variants={itemVariants} className="mt-8 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                   <button 
+                     onClick={() => { setIsMobileMenuOpen(false); onLoginClick('customer'); }}
+                     className="py-4 rounded-xl border font-bold text-sm flex flex-col items-center justify-center gap-2 active:scale-95 transition-all"
+                     style={{ borderColor: 'var(--border-color)', backgroundColor: 'rgba(255,255,255,0.03)' }}
+                   >
+                     <LogIn size={20} style={{ color: 'var(--accent-glow)' }}/>
+                     Log In
+                   </button>
+                   <button 
+                     onClick={() => { setIsMobileMenuOpen(false); onLoginClick('seller'); }}
+                     className="py-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-2 active:scale-95 transition-all"
+                     style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}
+                   >
+                     <TrendingUp size={20} />
+                     Start Selling
+                   </button>
+                </div>
+
+                {/* Contact Details Quick View */}
+                <div className="mt-6 pt-6 border-t flex flex-col gap-3" style={{ borderColor: 'var(--border-color)' }}>
+                   <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Contact Support</p>
+                   <a href="tel:+917298317177" className="flex items-center gap-3 text-sm font-medium p-2 rounded-lg hover:bg-white/5 transition-colors">
+                      <Phone size={16} style={{ color: 'var(--accent-glow)' }} /> +91 72983 17177
+                   </a>
+                   <a href="mailto:giftomizeofficial@gmail.com" className="flex items-center gap-3 text-sm font-medium p-2 rounded-lg hover:bg-white/5 transition-colors">
+                      <Mail size={16} style={{ color: 'var(--accent-glow)' }} /> giftomizeofficial@gmail.com
+                   </a>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
@@ -467,7 +557,7 @@ const LandingPage = ({ onLoginClick }) => {
               </motion.span>
             </h1>
 
-            {/* === MOBILE ACTION BUTTONS === */}
+            {/* === MOBILE ACTION BUTTONS (Inline for quick access) === */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
