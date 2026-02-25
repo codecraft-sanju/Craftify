@@ -1,4 +1,3 @@
-// src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -8,13 +7,10 @@ import {
   Quote, BadgeCheck 
 } from 'lucide-react'; 
 
-// --- IMPORT THE NEW PRODUCT CARD ---
 import ProductCard from './ProductCard'; 
 
-// --- CONFIGURATION ---
 const API_URL = import.meta.env.VITE_API_URL;
 
-// --- HELPER: SKELETON LOADER (Premium Loading State) ---
 const ProductSkeleton = () => (
     <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
         <div className="aspect-[4/5] bg-slate-100 animate-pulse relative">
@@ -33,8 +29,6 @@ const ProductSkeleton = () => (
 
 // --- COMPONENT: MARQUEE STRIP ---
 const MarqueeStrip = () => {
-  
-    
     const items = [
         { text: "Welcome to Giftomize", icon: <Gift className="w-4 h-4" /> },
         { text: "100% Customized Products", icon: <Sparkles className="w-4 h-4" /> },
@@ -203,7 +197,10 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
   return (
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
-        <div className="flex gap-6 overflow-x-auto px-4 py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
+        
+        {/* --- FULL WIDTH SCROLL FIX --- */}
+        {/* Added -mx-4 and px-4 to break out of container padding while keeping alignment */}
+        <div className="flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
@@ -474,32 +471,13 @@ const ShopView = ({
   });
 
   return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F8FAFC] md:pt-20 flex flex-col">
             
-            {/* 1. STICKY HEADER & FILTERS */}
-            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200 pt-4 pb-4 px-4 shadow-sm transition-all">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="hidden md:block">
-                       <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">Marketplace</h2>
-                       <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
-                    </div>
-                    <div className="relative group w-full md:w-96">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                        </div>
-                        <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full pl-10 pr-10 py-3 bg-slate-100/50 border border-slate-200 text-slate-900 text-sm placeholder-slate-400 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none font-bold"/>
-                         {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600"><XCircle className="h-4 w-4" /></button>
-                         )}
-                    </div>
-                </div>
-            </div>
-
             {/* MARQUEE STRIP */}
             <MarqueeStrip />
 
             {/* 2. MAIN CONTENT AREA */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
                 <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
 
@@ -533,7 +511,7 @@ const ShopView = ({
 
             {/* FOOTER - Updated to Match #65280E Theme */}
             <footer 
-              className="border-t pt-16 md:pt-20 pb-10 px-6 md:px-12 mb-0 text-white/80" 
+              className="border-t pt-16 md:pt-20 pb-28 md:pb-10 px-6 md:px-12 mb-0 text-white/80" 
               style={{ backgroundColor: '#65280E', borderColor: 'rgba(255,255,255,0.1)' }}
             >
                 <div className="flex flex-col gap-12 mb-16 md:mb-20">

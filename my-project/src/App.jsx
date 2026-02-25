@@ -32,11 +32,12 @@ const ENDPOINT = import.meta.env.VITE_API_URL;
 var socket;
 
 // --- IMPORTS ---
-import Navbar from './Navbar'; // IMPORTING THE NEW NAVBAR
+import Navbar from './Navbar'; 
 import LandingPage from './LandingPage';
 import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView';
+import SearchPage from './SearchPage'; // <--- NEW IMPORT
 import SellerRegister from './SellerRegister';
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
@@ -364,6 +365,7 @@ const MobileNav = ({ cartCount }) => {
       '/admin-login',
       '/founder',
       '/my-shop',
+      '/search', // Hide on search page too to keep it clean (Optional)
       '/',
     ].includes(location.pathname)
   )
@@ -455,6 +457,9 @@ const CraftifyContent = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatProduct, setActiveChatProduct] = useState(null);
+  
+  // State for search/category in ShopView (can be kept or removed if fully moving to new search)
+  // Hum inhe rakh sakte hain agar hume category filtering ShopView me hi chahiye
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -690,6 +695,7 @@ const CraftifyContent = () => {
     '/admin-login',
     '/login',
     '/register',
+    '/search', // Also hide main navbar on search page to focus on search
   ].includes(location.pathname);
 
   const handleLandingLoginClick = (type) => {
@@ -698,7 +704,8 @@ const CraftifyContent = () => {
   };
 
   return (
-    <div className={`bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200 ${showNavbar ? 'pb-24 md:pb-0' : ''}`}>
+    // FIX IS HERE: Removed pb-24 for showNavbar
+    <div className={`bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200`}>
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
@@ -765,6 +772,19 @@ const CraftifyContent = () => {
                 />
               </BuyerOnlyRoute>
             }
+          />
+
+          {/* --- NEW SEARCH ROUTE --- */}
+          <Route 
+             path="/search" 
+             element={
+                 <SearchPage 
+                    products={products}
+                    addToCart={addToCart}
+                    wishlist={wishlist}
+                    toggleWishlist={toggleWishlist}
+                 />
+             } 
           />
           
           <Route 
