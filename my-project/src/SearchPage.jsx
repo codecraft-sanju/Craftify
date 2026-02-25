@@ -37,11 +37,13 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
     ];
 
     return (
-        <div className="min-h-screen bg-white flex flex-col">
+        // --- CHANGE 1: Main Container Fixed (To remove top space on mobile) ---
+        // 'fixed inset-0' ensures it covers the whole screen, ignoring parent padding
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-y-auto">
             
-            {/* --- HEADER (Search Input) with Theme Background --- */}
+            {/* --- HEADER (Search Input) --- */}
             <div 
-                className="sticky top-0 z-50 px-4 py-3 flex items-center gap-3 shadow-lg"
+                className="sticky top-0 z-50 px-4 py-3 flex items-center gap-3 shadow-lg shrink-0"
                 style={{ backgroundColor: '#65280E' }}
             >
                 <button 
@@ -52,7 +54,7 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
                 </button>
                 
                 <div className="flex-1 relative">
-                    {/* Input Field adjusted for Dark Theme */}
+                    {/* Input Field */}
                     <input 
                         ref={inputRef}
                         type="text" 
@@ -72,12 +74,12 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
                 </div>
             </div>
 
-            {/* --- CONTENT AREA --- */}
+            {/* --- CONTENT AREA (Flex-1 to take remaining height) --- */}
             <div className="p-4 flex-1">
                 
                 {/* CASE 1: Query is Empty (Show Suggestions) */}
                 {!query && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-7xl mx-auto">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-7xl mx-auto pt-2">
                         {/* Trending Section */}
                         <div>
                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
