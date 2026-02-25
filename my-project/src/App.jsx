@@ -107,37 +107,6 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}>{children}</span>;
 };
 
-// --- MOBILE NAVIGATION ---
-const MobileNav = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const hidePaths = ['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login', '/founder', '/my-shop'];
-  
-  if (hidePaths.includes(location.pathname)) return null;
-
-  const navItems = [
-    { icon: Home, label: 'Home', path: '/shop' },
-    { icon: Heart, label: 'Wishlist', path: '/wishlist' },
-    { icon: User, label: 'Profile', path: '/profile' },
-  ];
-
-  return (
-    <div className="fixed bottom-6 left-6 right-6 z-[100] md:hidden">
-      <div className="bg-slate-900/90 backdrop-blur-xl rounded-full p-2 shadow-2xl flex justify-between items-center border border-white/10 px-6">
-        {navItems.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => navigate(item.path)}
-            className={`p-3 rounded-full transition-all ${location.pathname === item.path ? 'bg-white/10 text-white' : 'text-slate-400'}`}
-          >
-            <item.icon className={`w-6 h-6 ${location.pathname === item.path ? 'fill-current' : ''}`} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // --- CART DRAWER ---
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
@@ -404,7 +373,7 @@ const CraftifyContent = () => {
         </Routes>
       </main>
 
-      <MobileNav />
+      {/* MobileNav removed from here */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
       {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} socket={socket} API_URL={API_URL} />}

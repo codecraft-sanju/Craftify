@@ -10,6 +10,18 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
   // Logic to determine if Navbar should be shown
   const showNavbar = ![
     '/search', 
+    '/admin-login', // Removed common paths from hide list if you want them to show, but kept as per your previous logic
+    '/seller-register',
+    '/seller-login',
+    '/login',
+    '/register',
+    // Note: '/' and '/my-shop' etc were in your list, ensure this list is exactly how you want it.
+    // Assuming standard hiding for auth pages:
+  ].includes(location.pathname);
+
+  // If you want to hide on specific paths exactly as before:
+  const exactHidePaths = [
+    '/search', 
     '/',
     '/my-shop',
     '/founder',
@@ -18,9 +30,9 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
     '/admin-login',
     '/login',
     '/register',
-  ].includes(location.pathname);
-
-  if (!showNavbar) return null;
+  ];
+  
+  if (exactHidePaths.includes(location.pathname)) return null;
 
   // Theme Color Constant
   const THEME_BG = '#65280E';
@@ -112,7 +124,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
               <Search className="w-5 h-5" />
             </button>
 
-            {/* CART ICON WITH LIVE COUNT (UPDATED) */}
+            {/* CART ICON WITH LIVE COUNT */}
             <button
               onClick={() => setIsCartOpen(true)}
               className="p-2.5 rounded-full relative transition-colors hover:bg-white/10 text-white hover:text-yellow-400 group"
@@ -186,6 +198,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
               <Search className="w-6 h-6" />
             </button>
 
+             {/* WISHLIST ICON MOBILE */}
              <button
               onClick={() => navigate('/wishlist')}
               className="p-2 relative text-white hover:bg-white/10 hover:text-yellow-400 rounded-full transition-colors"
@@ -196,7 +209,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
               )}
             </button>
 
-            {/* MOBILE CART ICON WITH LIVE COUNT (UPDATED) */}
+            {/* CART ICON MOBILE */}
             <button
               onClick={() => setIsCartOpen(true)}
               className="p-2 relative text-white hover:bg-white/10 hover:text-yellow-400 rounded-full transition-colors"
@@ -208,6 +221,32 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
                 <span className="absolute top-0 right-0 min-w-[16px] h-[16px] bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-[#65280E] px-0.5">
                   {cart.length > 9 ? '9+' : cart.length}
                 </span>
+              )}
+            </button>
+
+            {/* PROFILE ICON MOBILE (ADDED) */}
+            <button
+              onClick={() => currentUser ? navigate('/profile') : navigate('/login')}
+              className="p-1.5 relative text-white hover:bg-white/10 hover:text-yellow-400 rounded-full transition-colors ml-1"
+            >
+               {currentUser ? (
+                // Logged in: Show Avatar
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-[#65280E] bg-yellow-400 border border-white/20 overflow-hidden">
+                  {currentUser.avatar && currentUser.avatar.includes('http') ? (
+                    <img
+                      src={currentUser.avatar}
+                      className="w-full h-full object-cover"
+                      alt={currentUser.name}
+                    />
+                  ) : (
+                    <span>
+                      {currentUser.name?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                // Logged out: Show User Icon
+                <User className="w-6 h-6" />
               )}
             </button>
         </div>
