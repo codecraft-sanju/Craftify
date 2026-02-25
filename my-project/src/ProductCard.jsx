@@ -2,9 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Store, 
   Heart, 
-  Star, 
   ShoppingBag, 
   Palette, 
   Check 
@@ -22,8 +20,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
     // Check if wishlist array exists and verify item
     const isWishlisted = Array.isArray(wishlist) && wishlist.some((item) => item._id === productId);
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-    const shopName = product.shop?.name || 'Verified Seller';
-
+    
     // 2. REAL IMAGE LOGIC (Priority: coverImage -> images[0] -> image)
     const displayImage = product.coverImage || 
                          (product.images && product.images.length > 0 ? product.images[0].url : null) || 
@@ -45,11 +42,10 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
 
     const finalImageSrc = getImageUrl(displayImage);
 
-    // 4. Price & Rating Logic
+    // 4. Price Logic
     const currentPrice = product.price || 0;
     // Auto-generate 20% higher "Compare Price" if not provided, to show discount
     const oldPrice = product.oldPrice || Math.round(currentPrice * 1.2); 
-    const ratingValue = product.rating || 4.5; // Default rating
 
     return (
       <MotionLink 
@@ -118,57 +114,42 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
              </button>
          </div>
   
-         {/* --- CONTENT CONTAINER --- */}
+         {/* --- CONTENT CONTAINER (Balanced Layout) --- */}
          <div className="p-4 flex flex-col flex-1">
-             {/* Shop Name & Category */}
-             <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{product.category || "General"}</span>
-                <div className="flex items-center gap-1 text-slate-400">
-                    <Store className="w-3 h-3" />
-                    <span className="text-[10px] font-medium truncate max-w-[80px]">{shopName}</span>
-                </div>
+             
+             {/* 1. Category (Small Top Label) */}
+             <div className="mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">
+                    {product.category || "General"}
+                </span>
              </div>
              
-             {/* Title & Rating */}
-             <div className="mb-2">
-                <h3 className="font-bold text-slate-900 line-clamp-1 text-base group-hover:text-indigo-600 transition-colors mb-1 leading-tight">
+             {/* 2. Product Title (Clear & Readable) */}
+             <div className="mb-2 min-h-[2.5rem]"> {/* min-h ensures alignment if titles vary in length */}
+                <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
                     {product.name}
                 </h3>
-                
-                {/* Rating Badge */}
-                <div className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 w-fit">
-                   <Star className="w-3 h-3 fill-current" /> 
-                   <span>{ratingValue.toFixed(1)}</span>
-                   <span className="text-amber-400/60 font-medium ml-0.5">({Math.floor(Math.random() * 50) + 5})</span>
-                </div>
              </div>
 
-             {/* Description (Truncated) */}
-             <p className="text-sm text-slate-500 line-clamp-1 mb-4">
-                {product.description}
-             </p>
-             
-             {/* Price Section */}
-             <div className="mt-auto flex items-end justify-between mb-4 border-b border-slate-50 pb-4">
-                <div className="flex flex-col">
-                    <span className="text-xs text-slate-400 font-medium line-through">
-                        ₹{oldPrice}
-                    </span>
-                    <span className="text-lg font-black text-slate-900">
-                        ₹{currentPrice}
-                    </span>
-                </div>
+             {/* 3. Price Row (All in one line to save height) */}
+             <div className="flex items-center gap-2 mb-4">
+                <span className="text-lg font-black text-slate-900">
+                    ₹{currentPrice}
+                </span>
                 
-                {/* Discount % Badge */}
                 {oldPrice > currentPrice && (
-                     <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
-                     </div>
+                    <>
+                        <span className="text-xs text-slate-400 font-medium line-through decoration-slate-300">
+                            ₹{oldPrice}
+                        </span>
+                        <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center">
+                            {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
+                        </div>
+                    </>
                 )}
              </div>
   
-             {/* PERMANENT ADD TO CART BUTTON (Stop Propagation) */}
+             {/* 4. Add to Cart Button (Bottom pinned) */}
              <button 
                onClick={(e) => {
                    e.preventDefault();
@@ -176,7 +157,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
                    if(!isOutOfStock) addToCart(product);
                }}
                disabled={isOutOfStock}
-               className={`w-full py-3 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
+               className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
                    isOutOfStock 
                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
                    : 'bg-slate-900 text-white shadow-slate-900/10 hover:bg-indigo-600 hover:shadow-indigo-600/20 active:scale-95'
