@@ -1,116 +1,192 @@
-// src/ProductCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Star, Store, ArrowRight, ShoppingBag } from 'lucide-react';
-import { PremiumImage, Badge } from './App'; // App.jsx se reusable components import kar rahe hain
+import { motion } from 'framer-motion';
+import { 
+  Store, 
+  Heart, 
+  Star, 
+  ShoppingBag, 
+  Palette, 
+  Check 
+} from 'lucide-react'; 
 
-const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
-    // 1. Safe data extraction
+// API URL definition
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Create a Motion Link component for animation + navigation
+const MotionLink = motion(Link);
+
+const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToCart }) => {
+    // 1. Safe Data Extraction
     const productId = product._id || product.id;
-    const displayImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image) || "https://via.placeholder.com/300";
-    const shopName = product.shop?.name || 'Verified Seller';
-    
-    // 2. Logic checks
+    // Check if wishlist array exists and verify item
+    const isWishlisted = Array.isArray(wishlist) && wishlist.some((item) => item._id === productId);
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-    const isInWishlist = wishlist && wishlist.some(item => item._id === productId);
+    const shopName = product.shop?.name || 'Verified Seller';
+
+    // 2. REAL IMAGE LOGIC (Priority: coverImage -> images[0] -> image)
+    const displayImage = product.coverImage || 
+                         (product.images && product.images.length > 0 ? product.images[0].url : null) || 
+                         product.image;
+
+    // 3. Helper to ensure URL is valid (Smart Image Fix)
+    const getImageUrl = (path) => {
+        if (!path) return "https://placehold.co/400x500?text=No+Image";
+        
+        // If external link (Cloudinary/S3/Firebase)
+        if (path.startsWith('http') || path.startsWith('https') || path.startsWith('data:')) {
+            return path;
+        }
+        
+        // If local path, append API URL
+        const cleanPath = path.replace(/^\//, '');
+        return `${API_URL}/${cleanPath}`;
+    };
+
+    const finalImageSrc = getImageUrl(displayImage);
+
+    // 4. Price & Rating Logic
+    const currentPrice = product.price || 0;
+    // Auto-generate 20% higher "Compare Price" if not provided, to show discount
+    const oldPrice = product.oldPrice || Math.round(currentPrice * 1.2); 
+    const ratingValue = product.rating || 4.5; // Default rating
 
     return (
-        <Link 
-            to={`/product/${productId}`} 
-            className="group bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 relative flex flex-col h-full transform hover:-translate-y-1"
-        >
-            {/* --- IMAGE CONTAINER --- */}
-            <div className="relative aspect-[4/5] bg-slate-100 overflow-hidden">
-                <PremiumImage 
-                    src={displayImage} 
-                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`} 
-                    alt={product.name} 
-                    loading="lazy"
-                />
-                
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
-                
-                {/* Badges (Custom & Stock) */}
-                <div className="absolute top-3 left-3 md:top-4 md:left-4 flex flex-col gap-2 items-start max-w-[70%]">
-                    {product.customizationAvailable && (
-                        <Badge color="purple" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px]">
-                            Custom
-                        </Badge>
-                    )}
-                    
-                    {/* Low Stock / Out of Stock Alert */}
-                    {isOutOfStock ? (
-                        <Badge color="red" className="shadow-sm">Sold Out</Badge>
-                    ) : product.stock <= (product.lowStockThreshold || 10) ? (
-                        <Badge color="amber" className="shadow-sm bg-white/90 backdrop-blur-md text-[9px] md:text-[10px] text-amber-700 animate-pulse">
-                            🔥 Only {product.stock} Left
-                        </Badge>
-                    ) : null}
+      <MotionLink 
+        to={`/product/${productId}`} 
+        // --- MAKHAN ANIMATION LOGIC (Staggered Entry) ---
+        initial={{ opacity: 0, y: 50 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ 
+            duration: 0.5, 
+            delay: index * 0.05, // Stagger effect based on index
+            ease: "easeOut" 
+        }}
+        className="group bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 block"
+      >
+         
+         {/* --- IMAGE CONTAINER --- */}
+         <div className="relative aspect-[4/5] bg-slate-50 overflow-hidden">
+             <img 
+                src={finalImageSrc} 
+                alt={product.name}
+                loading="lazy"
+                onError={(e) => { 
+                    e.target.onerror = null; 
+                    e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
+                }} 
+                className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
+             />
+             
+             {/* Hover Overlay */}
+             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+
+             {/* --- BADGES (Top Left) --- */}
+             <div className="absolute top-3 left-3 flex flex-col gap-2 items-start z-10">
+                 {/* Custom Badge */}
+                 {product.customizationAvailable && (
+                     <div className="bg-purple-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                         <Palette className="w-3 h-3" /> Custom
+                     </div>
+                 )}
+                 
+                 {/* Low Stock Alert */}
+                 {!isOutOfStock && product.stock <= 10 && (
+                     <div className="bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm animate-pulse">
+                         🔥 Only {product.stock} Left
+                     </div>
+                 )}
+             </div>
+
+             {/* Sold Out Badge (Top Right) */}
+             {isOutOfStock && (
+                 <div className="absolute top-3 right-12 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm z-10">
+                     Sold Out
+                 </div>
+             )}
+
+             {/* Wishlist Button (Stop Propagation prevents navigation) */}
+             <button 
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleWishlist(product);
+                }} 
+                className={`absolute top-3 right-3 p-2.5 rounded-full shadow-sm backdrop-blur-md transition-all duration-300 z-20 active:scale-90 ${isWishlisted ? 'bg-white text-red-500' : 'bg-white/90 text-slate-400 hover:text-red-500 hover:bg-white'}`}
+             >
+                 <Heart className={`w-4 h-4 ${isWishlisted ? "fill-red-500" : ""}`} />
+             </button>
+         </div>
+  
+         {/* --- CONTENT CONTAINER --- */}
+         <div className="p-4 flex flex-col flex-1">
+             {/* Shop Name & Category */}
+             <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{product.category || "General"}</span>
+                <div className="flex items-center gap-1 text-slate-400">
+                    <Store className="w-3 h-3" />
+                    <span className="text-[10px] font-medium truncate max-w-[80px]">{shopName}</span>
                 </div>
+             </div>
+             
+             {/* Title & Rating */}
+             <div className="mb-2">
+                <h3 className="font-bold text-slate-900 line-clamp-1 text-base group-hover:text-indigo-600 transition-colors mb-1 leading-tight">
+                    {product.name}
+                </h3>
+                
+                {/* Rating Badge */}
+                <div className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 w-fit">
+                   <Star className="w-3 h-3 fill-current" /> 
+                   <span>{ratingValue.toFixed(1)}</span>
+                   <span className="text-amber-400/60 font-medium ml-0.5">({Math.floor(Math.random() * 50) + 5})</span>
+                </div>
+             </div>
 
-                {/* Wishlist Button */}
-                <button 
-                    onClick={(e) => {
-                        e.preventDefault(); 
-                        e.stopPropagation(); // Link click hone se rokega
-                        if (toggleWishlist) toggleWishlist(product);
-                    }}
-                    className={`absolute top-3 right-3 md:top-4 md:right-4 p-2 md:p-2.5 rounded-full backdrop-blur-md shadow-sm transition-all duration-200 active:scale-90 ${isInWishlist ? 'bg-white text-red-500' : 'bg-white/70 text-slate-400 hover:bg-white hover:text-red-500'}`}
-                >
-                    <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isInWishlist ? 'fill-current' : ''}`} />
-                </button>
-
-                {/* Quick Add To Cart Button (Sirf tab dikhega agar addToCart function pass kiya ho) */}
-                {addToCart && (
-                    <button 
-                        onClick={(e) => { 
-                            e.preventDefault(); 
-                            e.stopPropagation(); 
-                            if(!isOutOfStock) addToCart(product); 
-                        }} 
-                        disabled={isOutOfStock}
-                        className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 py-3.5 rounded-xl font-bold shadow-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-slate-900 hover:text-white disabled:hidden"
-                    >
-                        <ShoppingBag className="w-4 h-4" /> Quick Add
-                    </button>
+             {/* Description (Truncated) */}
+             <p className="text-sm text-slate-500 line-clamp-1 mb-4">
+                {product.description}
+             </p>
+             
+             {/* Price Section */}
+             <div className="mt-auto flex items-end justify-between mb-4 border-b border-slate-50 pb-4">
+                <div className="flex flex-col">
+                    <span className="text-xs text-slate-400 font-medium line-through">
+                        ₹{oldPrice}
+                    </span>
+                    <span className="text-lg font-black text-slate-900">
+                        ₹{currentPrice}
+                    </span>
+                </div>
+                
+                {/* Discount % Badge */}
+                {oldPrice > currentPrice && (
+                     <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
+                     </div>
                 )}
-            </div>
-
-            {/* --- DETAILS CONTAINER --- */}
-            <div className="p-3 md:p-5 flex-1 flex flex-col">
-                <div className="mb-2">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-2">
-                        <h3 className="font-bold text-slate-900 line-clamp-2 text-sm md:text-lg group-hover:text-indigo-600 transition-colors leading-tight">
-                            {product.name}
-                        </h3>
-                        {product.rating > 0 && (
-                            <div className="flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 shrink-0 self-start">
-                                <Star className="w-3 h-3 fill-current" /> {product.rating.toFixed(1)}
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1.5 md:mt-1 text-slate-500">
-                        <Store className="w-3 h-3" />
-                        <span className="text-[10px] md:text-xs font-medium truncate">{shopName}</span>
-                    </div>
-                </div>
-                
-                <div className="mt-auto pt-3 md:pt-4 border-t border-slate-50 flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] md:text-xs text-slate-400 font-medium line-through">
-                            ₹{Math.round(product.price * 1.2)}
-                        </p>
-                        <p className="text-base md:text-xl font-black text-slate-900">
-                            ₹{product.price}
-                        </p>
-                    </div>
-                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                        <ArrowRight className="w-3 h-3 md:w-4 md:h-4 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                    </div>
-                </div>
-            </div>
-        </Link>
+             </div>
+  
+             {/* PERMANENT ADD TO CART BUTTON (Stop Propagation) */}
+             <button 
+               onClick={(e) => {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   if(!isOutOfStock) addToCart(product);
+               }}
+               disabled={isOutOfStock}
+               className={`w-full py-3 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
+                   isOutOfStock 
+                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
+                   : 'bg-slate-900 text-white shadow-slate-900/10 hover:bg-indigo-600 hover:shadow-indigo-600/20 active:scale-95'
+               }`}
+             >
+                <ShoppingBag className={`w-4 h-4 ${isOutOfStock ? 'text-slate-400' : 'text-white/70 group-hover/btn:text-white'} transition-colors`} />
+                {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+             </button>
+         </div>
+      </MotionLink>
     );
 };
 
