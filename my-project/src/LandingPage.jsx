@@ -10,10 +10,9 @@ import {
 } from 'framer-motion';
 import { 
   ArrowRight, Menu, X, 
-  TrendingUp, Zap, MapPin, 
-  ArrowUpRight, Package, LogIn, 
+  MapPin, ArrowUpRight, Package, 
   Sun, Moon, ShoppingBag, IndianRupee,
-  Phone, Mail
+  Phone, Mail, ChevronRight, LogIn
 } from 'lucide-react';
 
 // Make sure this path is correct based on your folder structure
@@ -82,29 +81,24 @@ const styleInjection = `
   .theme-transition { transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
 
   /* --- PREMIUM TEXT GRADIENTS --- */
-  /* These gradients work on both dark and light modes due to careful contrast selection */
   .gradient-freedom {
     background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0px 0px 20px rgba(255, 107, 107, 0.3));
   }
   .gradient-inventory {
     background: linear-gradient(135deg, #C084FC 0%, #A855F7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0px 0px 20px rgba(192, 132, 252, 0.3));
   }
   .gradient-boundaries {
     background: linear-gradient(135deg, #38BDF8 0%, #3B82F6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0px 0px 20px rgba(56, 189, 248, 0.3));
   }
   .gradient-brand {
     background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0px 0px 20px rgba(252, 211, 77, 0.3));
   }
 `;
@@ -153,7 +147,7 @@ const BentoBox3D = ({ children, className = "", title, style }) => {
   );
 };
 
-/* --- PROCESS PIPELINE --- */
+/* --- PROCESS PIPELINE (FIXED DESKTOP ALIGNMENT) --- */
 const ProcessPipeline = () => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start center", "end center"] });
@@ -169,8 +163,11 @@ const ProcessPipeline = () => {
         <h2 className="text-3xl md:text-5xl font-bold mb-4">How it works</h2>
         <p className="max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>From pixel to parcel in 3 simple steps.</p>
       </div>
-      <div className="absolute left-8 md:left-1/2 top-40 bottom-20 w-px -translate-x-1/2" style={{ backgroundColor: 'var(--border-color)' }} />
-      <motion.div style={{ scaleY, transformOrigin: 'top', backgroundColor: 'var(--accent-glow)' }} className="absolute left-8 md:left-1/2 top-40 bottom-20 w-px -translate-x-1/2 z-10" />
+      
+      {/* FIXED: 'md:top-80' ensures line starts below text on desktop */}
+      <div className="absolute left-8 md:left-1/2 top-40 md:top-80 bottom-20 w-px -translate-x-1/2" style={{ backgroundColor: 'var(--border-color)' }} />
+      <motion.div style={{ scaleY, transformOrigin: 'top', backgroundColor: 'var(--accent-glow)' }} className="absolute left-8 md:left-1/2 top-40 md:top-80 bottom-20 w-px -translate-x-1/2 z-10" />
+      
       <div className="space-y-16 md:space-y-32 relative z-20">
         {steps.map((step, i) => (
           <div key={i} className={`flex flex-col md:flex-row items-center gap-8 md:gap-0 ${i % 2 === 0 ? 'md:flex-row-reverse' : ''}`}>
@@ -194,14 +191,173 @@ const ProcessPipeline = () => {
   );
 };
 
+/* --- NEW: ADVANCED MOBILE SHEET MENU (Best Responsive) --- */
+const MobileMenuSheet = ({ isOpen, onClose, onLoginClick }) => {
+  // iOS-like slide animation
+  const sheetVariants = {
+    initial: { y: "100%" },
+    animate: { 
+      y: 0,
+      transition: { ease: [0.32, 0.72, 0, 1], duration: 0.6 } // High-quality bezier curve
+    },
+    exit: { 
+      y: "100%",
+      transition: { ease: [0.32, 0.72, 0, 1], duration: 0.4 } 
+    }
+  };
+
+  const staggerVars = {
+    animate: { transition: { staggerChildren: 0.05, delayChildren: 0.2 } },
+    exit: { transition: { staggerChildren: 0.02, staggerDirection: -1 } }
+  };
+
+  const itemVars = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+    exit: { opacity: 0, transition: { duration: 0.1 } }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px] cursor-pointer"
+          />
+          
+          {/* Draggable Sheet */}
+          <motion.div
+            variants={sheetVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0.05, bottom: 0.5 }}
+            onDragEnd={(_, { offset, velocity }) => {
+              if (offset.y > 100 || velocity.y > 150) {
+                onClose();
+              }
+            }}
+            className="fixed bottom-0 left-0 right-0 h-[85vh] z-[60] rounded-t-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-t"
+            style={{ backgroundColor: 'var(--bg-main)', borderColor: 'var(--border-color)' }}
+          >
+            {/* Handle Bar */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing z-20">
+              <div className="w-12 h-1.5 rounded-full opacity-30" style={{ backgroundColor: 'var(--text-muted)' }} />
+            </div>
+
+            {/* Performance Gradients (Instead of heavy blur) */}
+            <div className="absolute top-[-20%] left-[-20%] w-[100%] h-[500px] rounded-full pointer-events-none opacity-20"
+               style={{ background: 'radial-gradient(circle, var(--blob-1) 0%, transparent 70%)' }} />
+            
+            <div className="flex flex-col h-full p-8 pt-12 relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <span className="text-2xl font-bold tracking-tight">Menu</span>
+                <button onClick={onClose} className="p-2 rounded-full border transition-all active:scale-95" style={{ borderColor: 'var(--border-color)' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <motion.div 
+                variants={staggerVars}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex flex-col gap-2 flex-1 overflow-y-auto"
+              >
+                 {[{ name: 'Catalog', href: '#features', sub: "View Products" }, { name: 'Pricing', href: '#pricing', sub: "Zero cost start" }, { name: 'About Us', href: '#about', sub: "Our Story" }].map((link, i) => (
+                   <motion.a 
+                     key={i}
+                     href={link.href}
+                     variants={itemVars}
+                     onClick={onClose}
+                     className="group flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95"
+                     style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'var(--border-color)' }}
+                   >
+                     <div>
+                       <span className="text-xl font-bold block mb-1">{link.name}</span>
+                       <span className="text-xs font-medium opacity-60 uppercase tracking-widest">{link.sub}</span>
+                     </div>
+                     <div className="w-10 h-10 rounded-full flex items-center justify-center transition-colors group-hover:bg-[var(--text-main)] group-hover:text-[var(--bg-main)]" style={{ backgroundColor: 'var(--panel-bg)' }}>
+                       <ChevronRight size={18} />
+                     </div>
+                   </motion.a>
+                 ))}
+
+                 {/* Action Buttons inside Sheet - PREMIUM TEXT ONLY (Icons Removed) */}
+                 <motion.div variants={itemVars} className="mt-8 grid grid-cols-2 gap-3">
+                    <button onClick={() => { onClose(); onLoginClick('customer'); }} 
+                      className="py-5 rounded-xl border font-black text-sm uppercase tracking-wider flex items-center justify-center active:scale-95 transition-all hover:bg-white/5" 
+                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-main)' }}>
+                      Log In
+                    </button>
+                    <button onClick={() => { onClose(); onLoginClick('seller'); }} 
+                      className="py-5 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center active:scale-95 transition-all shadow-lg" 
+                      style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}>
+                      Start Selling
+                    </button>
+                 </motion.div>
+                 
+                 <motion.div variants={itemVars} className="mt-6 flex flex-col gap-3 opacity-60">
+                   <a href="tel:+917298317177" className="flex items-center gap-3 text-sm font-medium"><Phone size={14}/> +91 72983 17177</a>
+                   <a href="mailto:giftomizeofficial@gmail.com" className="flex items-center gap-3 text-sm font-medium"><Mail size={14}/> Support</a>
+                 </motion.div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 /* --- MAIN LANDING PAGE --- */
 const LandingPage = ({ onLoginClick }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState('light'); 
-  const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; setTheme(t); document.documentElement.setAttribute('data-theme', t); };
-  useEffect(() => { document.documentElement.setAttribute('data-theme', 'light'); }, []);
-  useEffect(() => { document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset'; }, [isMobileMenuOpen]);
+
+  // --- THEME PERSISTENCE LOGIC ---
+  useEffect(() => {
+    // Check localStorage on mount
+    const savedTheme = localStorage.getItem('giftomize-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      // Default to light if nothing saved
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('giftomize-theme', newTheme); // Save to storage
+  };
+  
+  // Lock body scroll when menu is open
+  useEffect(() => { 
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      // Prevent pull-to-refresh on mobile when menu is open
+      document.body.style.overscrollBehaviorY = 'none';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.style.overscrollBehaviorY = 'auto';
+    }
+    return () => { 
+      document.body.style.overflow = 'unset'; 
+      document.body.style.overscrollBehaviorY = 'auto';
+    };
+  }, [isMobileMenuOpen]);
 
   const [sales, setSales] = useState([{ type: 'order', text: "Order #8211 - Mumbai, MH", time: '2m ago' }, { type: 'ship', text: "Shipment #332 - Out for Delivery", time: '5m ago' }]);
   useEffect(() => {
@@ -210,12 +366,11 @@ const LandingPage = ({ onLoginClick }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // --- Highlights Configuration for ScrollReveal (COLOR STRATEGY) ---
   const highlightWords = [
-    { word: "freedom", class: "gradient-freedom font-black" },      // Orange/Sunset -> Energy
-    { word: "inventory", class: "gradient-inventory font-black" },  // Purple/Neon -> Tech/Abstract
-    { word: "boundaries", class: "gradient-boundaries font-black" },// Blue/Cyan -> Expansion/Global
-    { word: "brand", class: "gradient-brand font-black" }           // Gold/Amber -> Premium/Success
+    { word: "freedom", class: "gradient-freedom font-black" },      
+    { word: "inventory", class: "gradient-inventory font-black" },  
+    { word: "boundaries", class: "gradient-boundaries font-black" },
+    { word: "brand", class: "gradient-brand font-black" }           
   ];
 
   return (
@@ -229,7 +384,7 @@ const LandingPage = ({ onLoginClick }) => {
       <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--blob-1)' }} />
       <div className="fixed bottom-[-20%] right-[-10%] w-[500px] h-[500px] blur-[120px] rounded-full pointer-events-none transition-colors duration-700" style={{ backgroundColor: 'var(--blob-2)' }} />
 
-      {/* --- SIDEBAR --- */}
+      {/* --- SIDEBAR (DESKTOP) --- */}
       <nav className="hidden md:flex flex-col justify-between fixed left-0 top-0 h-full w-20 border-r backdrop-blur-md z-50 py-8 items-center theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="hover:scale-110 transition-transform duration-300 cursor-pointer interactive">
             <div className="w-10 h-10 relative flex items-center justify-center">
@@ -249,47 +404,26 @@ const LandingPage = ({ onLoginClick }) => {
         </div>
       </nav>
 
-      {/* --- MOBILE HEADER --- */}
-      <div className="md:hidden fixed top-0 left-0 right-0 w-full z-[60] flex justify-between items-center p-4 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
+      {/* --- MOBILE HEADER & TRIGGER --- */}
+      <div className="md:hidden fixed top-0 left-0 right-0 w-full z-[40] flex justify-between items-center p-4 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center gap-3">
           <img src="/gifticon.jpg" alt="Giftomize Logo" className="w-10 h-10 rounded-md object-cover shadow-sm" />
           <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
         </div>
         <div className="flex items-center gap-2">
             <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all border border-transparent hover:border-[var(--border-color)]">{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all interactive">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all interactive">
+              <Menu size={24} />
+            </button>
         </div>
       </div>
 
-      {/* --- MOBILE MENU --- */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div initial={{ opacity: 0, y: "-100%" }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: "-100%" }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="fixed inset-0 z-50 md:hidden flex flex-col w-full h-full pt-24 px-6 overflow-y-auto" style={{ backgroundColor: 'var(--bg-main)', backgroundImage: 'radial-gradient(at top right, var(--blob-1) 0%, transparent 40%), radial-gradient(at bottom left, var(--blob-2) 0%, transparent 40%)' }}>
-            <div className="absolute inset-0 backdrop-blur-3xl pointer-events-none z-[-1]" />
-            <div className="flex flex-col h-full justify-between pb-8">
-              <div className="flex flex-col gap-6">
-                {[{ name: 'Catalog', href: '#features' }, { name: 'Pricing', href: '#pricing' }, { name: 'About Us', href: '#about' }].map((link, i) => (
-                  <motion.a key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between group border-b pb-4" style={{ borderColor: 'var(--border-color)' }}>
-                    <span className="text-4xl font-bold tracking-tighter" style={{ color: 'var(--text-main)' }}>{link.name}</span>
-                    <span className="w-10 h-10 rounded-full flex items-center justify-center border transition-all group-active:scale-95 group-active:bg-[var(--text-main)] group-active:text-[var(--bg-main)]" style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}><ArrowRight size={20} /></span>
-                  </motion.a>
-                ))}
-              </div>
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mt-8 flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-3">
-                   <button onClick={() => { setIsMobileMenuOpen(false); onLoginClick('customer'); }} className="py-4 rounded-xl border font-bold text-sm flex flex-col items-center justify-center gap-2 active:scale-95 transition-all" style={{ borderColor: 'var(--border-color)', backgroundColor: 'rgba(255,255,255,0.03)' }}><LogIn size={20} style={{ color: 'var(--accent-glow)' }}/> Log In</button>
-                   <button onClick={() => { setIsMobileMenuOpen(false); onLoginClick('seller'); }} className="py-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-2 active:scale-95 transition-all" style={{ backgroundColor: 'var(--button-bg)', color: 'var(--button-text)' }}><TrendingUp size={20} /> Start Selling</button>
-                </div>
-                <div className="mt-6 pt-6 border-t flex flex-col gap-3" style={{ borderColor: 'var(--border-color)' }}>
-                   <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Contact Support</p>
-                   <a href="tel:+917298317177" className="flex items-center gap-3 text-sm font-medium p-2 rounded-lg hover:bg-white/5 transition-colors"><Phone size={16} style={{ color: 'var(--accent-glow)' }} /> +91 72983 17177</a>
-                   <a href="mailto:giftomizeofficial@gmail.com" className="flex items-center gap-3 text-sm font-medium p-2 rounded-lg hover:bg-white/5 transition-colors"><Mail size={16} style={{ color: 'var(--accent-glow)' }} /> giftomizeofficial@gmail.com</a>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* --- NEW MOBILE SHEET COMPONENT --- */}
+      <MobileMenuSheet 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)} 
+        onLoginClick={onLoginClick} 
+      />
 
       <main className="md:pl-20 relative z-10 pt-20 md:pt-0 w-full max-w-[100vw]">
         
