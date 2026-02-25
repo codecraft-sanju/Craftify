@@ -101,6 +101,27 @@ const styleInjection = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0px 0px 20px rgba(252, 211, 77, 0.3));
   }
+
+  /* --- SHIMMER GOLD TEXT EFFECT --- */
+  @keyframes textShimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+  .shimmer-text {
+    background: linear-gradient(
+      to right,
+      #FCD34D 20%, 
+      #FFF7ED 40%, 
+      #FCD34D 60%, 
+      #F59E0B 80%
+    );
+    background-size: 200% auto;
+    color: #FCD34D;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: textShimmer 3s linear infinite;
+  }
 `;
 
 /* --- BACKGROUNDS --- */
@@ -408,7 +429,9 @@ const LandingPage = ({ onLoginClick }) => {
       <div className="md:hidden fixed top-0 left-0 right-0 w-full z-[40] flex justify-between items-center p-4 backdrop-blur-xl border-b theme-transition" style={{ backgroundColor: 'var(--panel-bg)', borderColor: 'var(--border-color)' }}>
         <div className="flex items-center gap-3">
           <img src="/gifticon.jpg" alt="Giftomize Logo" className="w-10 h-10 rounded-md object-cover shadow-sm" />
-          <span className="font-bold tracking-tight text-lg">GIFTOMIZE</span>
+          <span className="text-xl font-black tracking-tighter shimmer-text uppercase" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            GIFTOMIZE
+          </span>
         </div>
         <div className="flex items-center gap-2">
             <button onClick={toggleTheme} className="interactive p-2 rounded-full hover:bg-black/5 active:scale-95 transition-all border border-transparent hover:border-[var(--border-color)]">{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button>
