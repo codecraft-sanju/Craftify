@@ -1,3 +1,4 @@
+// src/Navbar.jsx
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, User, Heart, Search } from 'lucide-react';
@@ -111,14 +112,18 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
               <Search className="w-5 h-5" />
             </button>
 
-            {/* Cart Icon */}
+            {/* CART ICON WITH LIVE COUNT (UPDATED) */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="p-2.5 rounded-full relative transition-colors hover:bg-white/10 text-white hover:text-yellow-400"
+              className="p-2.5 rounded-full relative transition-colors hover:bg-white/10 text-white hover:text-yellow-400 group"
             >
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-5 h-5 group-hover:animate-bounce-short" />
+              
+              {/* LIVE COUNT BADGE */}
               {cart.length > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#65280E]"></span>
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#65280E] px-1">
+                  {cart.length > 9 ? '9+' : cart.length}
+                </span>
               )}
             </button>
 
@@ -191,13 +196,18 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
               )}
             </button>
 
+            {/* MOBILE CART ICON WITH LIVE COUNT (UPDATED) */}
             <button
               onClick={() => setIsCartOpen(true)}
               className="p-2 relative text-white hover:bg-white/10 hover:text-yellow-400 rounded-full transition-colors"
             >
               <ShoppingBag className="w-6 h-6" />
+              
+              {/* LIVE COUNT BADGE MOBILE */}
               {cart.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#65280E]"></span>
+                <span className="absolute top-0 right-0 min-w-[16px] h-[16px] bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-[#65280E] px-0.5">
+                  {cart.length > 9 ? '9+' : cart.length}
+                </span>
               )}
             </button>
         </div>
