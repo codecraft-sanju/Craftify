@@ -22,13 +22,15 @@ import {
   Home,
   Heart,
   User,
-  Image as ImageIcon // Added for the loader icon
+  Image as ImageIcon,
+  Plus,
+  Minus
 } from 'lucide-react';
 import io from 'socket.io-client';
 
 // --- CONFIGURATION ---
-const API_URL = import.meta.env.VITE_API_URL;
-const ENDPOINT = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 var socket;
 
 // --- IMPORTS ---
@@ -37,7 +39,7 @@ import LandingPage from './LandingPage';
 import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView';
-import SearchPage from './SearchPage'; // <--- NEW IMPORT
+import SearchPage from './SearchPage';
 import SellerRegister from './SellerRegister';
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
@@ -46,330 +48,72 @@ import ProfileView from './ProfileView';
 import WishlistView from './WishlistView'; 
 import ProductDetail from './ProductDetail';
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
-const formatDate = (date) =>
-  new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(date));
-
-
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      -webkit-font-smoothing: antialiased;
-      background-color: #F8FAFC;
-    }
-
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; border: 2px solid #F8FAFC; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; background-color: #F8FAFC; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
     .animate-in { animation: fadeIn 0.3s ease-out forwards; }
-    .slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    
     .pb-safe-area { padding-bottom: env(safe-area-inset-bottom, 20px); }
   `}</style>
 );
 
 // --- PREMIUM UI COMPONENTS ---
 
-// 1. Premium Image Loader Component (EXPORTED)
 export const PremiumImage = ({ src, alt, className = "", objectFit = "cover" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-
   return (
     <div className={`relative overflow-hidden bg-slate-100 ${className}`}>
-      {/* Skeleton / Shimmer Loader */}
       {!isLoaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
-           <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse" />
-           <ImageIcon className="w-6 h-6 text-slate-300 relative z-20 opacity-50" />
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100 animate-pulse">
+           <ImageIcon className="w-6 h-6 text-slate-300 opacity-50" />
         </div>
       )}
-
-      {/* Actual Image with Transition */}
       <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        onLoad={() => setIsLoaded(true)}
-        className={`w-full h-full transition-all duration-700 ease-out ${
-          isLoaded 
-            ? 'opacity-100 scale-100 grayscale-0 blur-0' 
-            : 'opacity-0 scale-110 grayscale blur-sm'
-        } ${className}`} 
+        src={src} alt={alt} loading="lazy" onLoad={() => setIsLoaded(true)}
+        className={`w-full h-full transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`} 
         style={{ objectFit }}
       />
     </div>
   );
 };
 
-// (EXPORTED)
-export const Button = ({
-  children,
-  variant = 'primary',
-  className = '',
-  icon: Icon,
-  loading,
-  ...props
-}) => {
-  const base =
-    'relative overflow-hidden transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed select-none';
+export const Button = ({ children, variant = 'primary', className = '', icon: Icon, loading, ...props }) => {
   const variants = {
-    primary:
-      'bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10 hover:shadow-slate-900/20 border border-transparent',
-    secondary:
-      'bg-white text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm',
-    danger:
-      'bg-white text-red-600 border border-red-100 hover:bg-red-50 hover:border-red-200',
-    ghost:
-      'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-    indigo:
-      'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/30 border border-transparent',
+    primary: 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10 border border-transparent',
+    secondary: 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm',
+    danger: 'bg-white text-red-600 border border-red-100 hover:bg-red-50',
+    ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
+    indigo: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20',
   };
-  const sizes =
-    props.size === 'sm'
-      ? 'px-3 py-1.5 text-xs'
-      : props.size === 'lg'
-        ? 'px-8 py-4 text-base'
-        : 'px-6 py-3 text-sm';
-
   return (
-    <button
-      disabled={loading || props.disabled}
-      className={`${base} ${variants[variant]} ${sizes} ${className}`}
-      {...props}
-    >
-      {loading && <RefreshCcw className="w-4 h-4 animate-spin" />}
-      {!loading && Icon && <Icon className="w-4 h-4" />}
+    <button disabled={loading || props.disabled} className={`relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants[variant]} ${className}`} {...props}>
+      {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : Icon && <Icon className="w-4 h-4" />}
       {children}
     </button>
   );
 };
 
-// (EXPORTED)
 export const Badge = ({ children, color = 'slate', className = '' }) => {
   const colors = {
-    indigo: 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-700/10',
-    green: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
-    red: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/10',
-    slate: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/10',
-    amber: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20', 
+    indigo: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-700/10',
+    green: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20',
+    red: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/10',
+    slate: 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/10',
+    amber: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', 
   };
-  return (
-    <span
-      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}
-    >
-      {children}
-    </span>
-  );
+  return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}>{children}</span>;
 };
 
-const ToastContainer = ({ toasts, removeToast }) => (
-  <div className="fixed top-4 left-4 right-4 md:top-24 md:right-6 md:left-auto z-[130] flex flex-col gap-3 pointer-events-none">
-    {toasts.map((toast) => (
-      <div
-        key={toast.id}
-        className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-slate-200/50 rounded-2xl p-4 flex items-start gap-3 w-full md:w-80 animate-in slide-in-from-top-2"
-      >
-        {toast.type === 'success' ? (
-          <div className="p-1 bg-green-100 rounded-full">
-            <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-          </div>
-        ) : (
-          <div className="p-1 bg-red-100 rounded-full">
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-          </div>
-        )}
-        <div className="flex-1">
-          <h4 className="font-bold text-sm text-slate-900">{toast.title}</h4>
-          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            {toast.message}
-          </p>
-        </div>
-        <button onClick={() => removeToast(toast.id)}>
-          <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-        </button>
-      </div>
-    ))}
-  </div>
-);
-
-// --- FIXED CART DRAWER (With Size Display) ---
-const CartDrawer = ({
-  isOpen,
-  onClose,
-  cart,
-  setCart,
-  onCheckout,
-  currentUser,
-}) => {
-  const total = cart.reduce((acc, item) => acc + item.price, 0);
-  const removeItem = (cartId) =>
-    setCart(cart.filter((item) => item.cartId !== cartId));
-
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = 'unset';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  return (
-    <>
-      <div
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={onClose}
-      />
-      <div
-        className={`fixed top-0 right-0 h-[100dvh] w-full md:max-w-md bg-white z-[150] shadow-2xl flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
-      >
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10 shrink-0">
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            My Cart{' '}
-            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
-              {cart.length}
-            </span>
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
-          {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-2">
-                <ShoppingBag className="w-8 h-8 opacity-20" />
-              </div>
-              <p className="font-medium">Your cart is feeling light.</p>
-              <Button variant="secondary" size="sm" onClick={onClose}>
-                Start Shopping
-              </Button>
-            </div>
-          ) : (
-            cart.map((item) => (
-              <div
-                key={item.cartId}
-                className="flex gap-4 p-3 border border-slate-100 rounded-2xl bg-white shadow-sm hover:border-indigo-100 transition-colors group"
-              >
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                  <PremiumImage
-                    src={item.image || item.coverImage}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 flex flex-col justify-between py-1">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-sm text-slate-900 line-clamp-1 pr-2">
-                        {item.name}
-                      </h4>
-                      <button
-                        onClick={() => removeItem(item.cartId)}
-                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* --- DISPLAY SELECTED SIZE --- */}
-                    {item.selectedSize && (
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-                            Size: {item.selectedSize}
-                          </span>
-                        </div>
-                    )}
-
-                    {item.customization && (
-                      <div className="mt-1 flex items-center gap-1">
-                        <Palette className="w-3 h-3 text-indigo-500" />
-                        <span className="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
-                          "{item.customization.text}"
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-end">
-                    <span className="text-xs text-slate-400">Qty: 1</span>
-                    <span className="font-bold text-slate-900">
-                      ₹{item.price}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-        
-        {cart.length > 0 && (
-          <div className="p-6 border-t border-slate-100 bg-slate-50/50 pb-safe-area shrink-0 z-20">
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Subtotal</span>
-                <span className="text-slate-900 font-bold">₹{total}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Shipping</span>
-                <span className="text-green-600 font-bold">Free</span>
-              </div>
-              <div className="h-px bg-slate-200 my-2"></div>
-              <div className="flex justify-between text-lg font-black">
-                <span className="text-slate-900">Total</span>
-                <span className="text-indigo-600">₹{total}</span>
-              </div>
-            </div>
-            <Button
-              onClick={onCheckout}
-              className="w-full shadow-indigo-500/20"
-              size="lg"
-              variant="primary"
-            >
-              {currentUser ? 'Checkout Now' : 'Login to Checkout'}{' '}
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
-
-// --- UPDATED MOBILE NAVIGATION BAR ---
-const MobileNav = ({ cartCount }) => {
+// --- MOBILE NAVIGATION ---
+const MobileNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isActive = (path) => location.pathname === path;
-
-  if (
-    [
-      '/login',
-      '/register',
-      '/seller-register',
-      '/seller-login',
-      '/admin-login',
-      '/founder',
-      '/my-shop',
-      '/search', // Hide on search page too to keep it clean (Optional)
-      '/',
-    ].includes(location.pathname)
-  )
-    return null;
+  const hidePaths = ['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login', '/founder', '/my-shop'];
+  
+  if (hidePaths.includes(location.pathname)) return null;
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/shop' },
@@ -384,15 +128,9 @@ const MobileNav = ({ cartCount }) => {
           <button
             key={item.label}
             onClick={() => navigate(item.path)}
-            className={`relative p-3 rounded-full transition-all duration-300 ${isActive(item.path) ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`}
+            className={`p-3 rounded-full transition-all ${location.pathname === item.path ? 'bg-white/10 text-white' : 'text-slate-400'}`}
           >
-            <item.icon
-              className={`w-6 h-6 ${isActive(item.path) ? 'fill-current' : ''}`}
-              strokeWidth={2}
-            />
-            {isActive(item.path) && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-400 rounded-full"></span>
-            )}
+            <item.icon className={`w-6 h-6 ${location.pathname === item.path ? 'fill-current' : ''}`} />
           </button>
         ))}
       </div>
@@ -400,491 +138,280 @@ const MobileNav = ({ cartCount }) => {
   );
 };
 
-// --- UTILS ---
-const getCookie = (name) => {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
+// --- CART DRAWER ---
+const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
+  const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const itemCount = cart.reduce((acc, item) => acc + item.qty, 0);
+
+  return (
+    <>
+      <div className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose} />
+      <div className={`fixed top-0 right-0 h-full w-full md:max-w-md bg-white z-[150] shadow-2xl flex flex-col transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-6 border-b flex items-center justify-between">
+          <h2 className="text-xl font-black flex items-center gap-2">My Cart <Badge color="slate">{itemCount}</Badge></h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <ShoppingBag className="w-12 h-12 opacity-10 mb-4" />
+              <p>Your cart is empty.</p>
+            </div>
+          ) : (
+            cart.map((item) => (
+              <div key={item._id} className="flex gap-4 p-3 border rounded-2xl bg-white shadow-sm">
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+                  <PremiumImage src={item.image} alt={item.name} />
+                </div>
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
+                    <button onClick={() => onRemove(item._id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1 border">
+                       <button onClick={() => onUpdateQty(item._id, 'dec')} className="p-1 hover:text-indigo-600 disabled:opacity-30" disabled={item.qty <= 1}><Minus size={14}/></button>
+                       <span className="text-xs font-bold w-4 text-center">{item.qty}</span>
+                       <button onClick={() => onUpdateQty(item._id, 'inc')} className="p-1 hover:text-indigo-600"><Plus size={14}/></button>
+                    </div>
+                    <span className="font-bold">₹{item.price * item.qty}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {cart.length > 0 && (
+          <div className="p-6 border-t bg-slate-50 pb-safe-area">
+            <div className="flex justify-between text-lg font-black mb-6"><span>Total</span><span className="text-indigo-600">₹{total}</span></div>
+            <Button onClick={onCheckout} className="w-full" size="lg">{currentUser ? 'Checkout Now' : 'Login to Checkout'} <ArrowRight className="w-4 h-4" /></Button>
+          </div>
+        )}
+      </div>
+    </>
+  );
 };
 
 // --- SECURITY ROUTES ---
-const ProtectedRoute = ({
-  user,
-  allowedRoles,
-  children,
-  redirectPath = '/',
-}) => {
-  if (!user) return <Navigate to={redirectPath} replace />;
-  const cookieRole = getCookie('role') || getCookie('token');
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    if (user.role === 'founder') return <Navigate to="/founder" replace />;
-    if (user.role === 'seller') return <Navigate to="/my-shop" replace />;
-    return <Navigate to="/shop" replace />;
-  }
+const ProtectedRoute = ({ user, allowedRoles, children }) => {
+  if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/shop" replace />;
   return children ? children : <Outlet />;
 };
 
 const BuyerOnlyRoute = ({ children }) => {
-  const cookieRole = getCookie('role');
   const savedUser = localStorage.getItem('userInfo');
-  const localRole = savedUser ? JSON.parse(savedUser).role : null;
-  const currentRole = cookieRole || localRole;
-  if (currentRole === 'seller') {
-    return <Navigate to="/my-shop" replace />;
-  }
+  const user = savedUser ? JSON.parse(savedUser) : null;
+  if (user?.role === 'seller') return <Navigate to="/my-shop" replace />;
   return children;
 };
 
-
+// --- MAIN CONTENT ---
 const CraftifyContent = () => {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = localStorage.getItem('userInfo');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('userInfo')) || null);
   const [cart, setCart] = useState([]);
-  const [orders, setOrders] = useState([]);
-  
-  // --- WISHLIST STATE ---
   const [wishlist, setWishlist] = useState([]);
-  
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
-
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
-
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [orders, setOrders] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatProduct, setActiveChatProduct] = useState(null);
-  
-  // State for search/category in ShopView (can be kept or removed if fully moving to new search)
-  // Hum inhe rakh sakte hain agar hume category filtering ShopView me hi chahiye
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
 
   const navigate = useNavigate();
   const location = useLocation();
 
+  const fetchCart = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`${API_URL}/api/cart`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCart(data.items || []);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const addToCart = async (product, options = {}) => {
+    if (!currentUser) { navigate('/login'); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/cart`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product._id, qty: 1, ...options }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCart(data.items);
+        addToast('Success', 'Added to cart');
+        setIsCartOpen(true);
+      }
+    } catch (e) { addToast('Error', 'Failed to add', 'error'); }
+  };
+
+  const updateQuantity = async (itemId, action) => {
+    try {
+      const res = await fetch(`${API_URL}/api/cart/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, action }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCart(data.items);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const removeFromCart = async (itemId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/cart/${itemId}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCart(data.items);
+        addToast('Removed', 'Item removed', 'info');
+      }
+    } catch (e) { console.error(e); }
+  };
+
   useEffect(() => {
     socket = io(ENDPOINT, { withCredentials: true });
     if (currentUser) {
+      fetchCart();
+      fetchWishlist();
       fetchOrders();
-      fetchWishlist(); // Fetch Wishlist
       socket.emit('setup', currentUser);
-    } else {
-      setWishlist([]); // Clear wishlist if logged out
     }
     fetchProducts();
-    socket.on('product_updated', (updatedProduct) => {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p._id === updatedProduct._id ? { ...p, ...updatedProduct } : p,
-        ),
-      );
-    });
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, [currentUser]);
 
   const fetchProducts = async () => {
     try {
       setProductsLoading(true);
       const res = await fetch(`${API_URL}/api/products`);
-      const data = await res.json();
-      setProducts(data);
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-    } finally {
-      setProductsLoading(false);
-    }
+      setProducts(await res.json());
+    } finally { setProductsLoading(false); }
+  };
+
+  const fetchWishlist = async () => {
+    const res = await fetch(`${API_URL}/api/users/wishlist`, { credentials: 'include' });
+    if (res.ok) setWishlist(await res.json());
   };
 
   const fetchOrders = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/orders/myorders`, {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (res.status === 401) {
-        handleLogout();
-        return;
-      }
-      const data = await res.json();
-      if (Array.isArray(data)) setOrders(data);
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-    }
+    const res = await fetch(`${API_URL}/api/orders/myorders`, { credentials: 'include' });
+    if (res.ok) setOrders(await res.json());
   };
 
-  // --- NEW: FETCH WISHLIST ---
-  const fetchWishlist = async () => {
-    try {
-        const res = await fetch(`${API_URL}/api/users/wishlist`, { credentials: 'include' });
-        if(res.ok) {
-            const data = await res.json();
-            setWishlist(data);
-        }
-    } catch (error) {
-        console.error("Wishlist error", error);
-    }
-  };
-
-  // --- NEW: TOGGLE WISHLIST ---
   const toggleWishlist = async (product) => {
-    if(!currentUser) {
-        navigate('/login');
-        return;
-    }
-
-    const isInWishlist = wishlist.some(item => item._id === product._id);
-    
-    // Optimistic Update
-    if (isInWishlist) {
-        setWishlist(prev => prev.filter(item => item._id !== product._id));
-        addToast("Removed", "Removed from wishlist", "info");
-        // API Call (Delete)
-        try {
-            await fetch(`${API_URL}/api/users/wishlist/${product._id}`, { method: 'DELETE', credentials: 'include' });
-        } catch(e) { fetchWishlist(); } // Revert on error
-    } else {
-        setWishlist(prev => [...prev, product]);
-        addToast("Saved", "Added to your wishlist");
-        // API Call (Add)
-        try {
-            await fetch(`${API_URL}/api/users/wishlist`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ productId: product._id }),
-                credentials: 'include' 
-            });
-        } catch(e) { fetchWishlist(); }
-    }
+    if (!currentUser) { navigate('/login'); return; }
+    const isIn = wishlist.some(item => item._id === product._id);
+    const method = isIn ? 'DELETE' : 'POST';
+    const url = isIn ? `${API_URL}/api/users/wishlist/${product._id}` : `${API_URL}/api/users/wishlist`;
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: isIn ? null : JSON.stringify({ productId: product._id }),
+      credentials: 'include'
+    });
+    if (res.ok) setWishlist(await res.json());
   };
-
-  // Helper for WishlistView specifically
-  const removeFromWishlist = (id) => {
-    const product = products.find(p => p._id === id) || { _id: id };
-    toggleWishlist(product);
-  }
 
   const addToast = (title, message, type = 'success') => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, title, message, type }]);
-    setTimeout(
-      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
-      3000,
-    );
+    setToasts(prev => [...prev, { id, title, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
-  const removeToast = (id) =>
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-
-  const addToCart = (product) => {
-    setCart([...cart, { ...product, cartId: generateId() }]);
-    addToast('Added to Cart', `${product.name} is now in your cart.`);
-    setIsCartOpen(true);
-  };
-
-  const openCustomizationChat = (product) => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    setActiveChatProduct(product);
-    setIsChatOpen(true);
-  };
+  const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem('userInfo', JSON.stringify(userData));
-    addToast('Access Granted', `Welcome back, ${userData.name}`);
-    if (userData.role === 'founder') navigate('/founder', { replace: true });
-    else if (userData.role === 'seller') navigate('/my-shop');
-    else navigate('/shop');
+    navigate(userData.role === 'founder' ? '/founder' : userData.role === 'seller' ? '/my-shop' : '/shop');
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch(`${API_URL}/api/users/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
+    await fetch(`${API_URL}/api/users/logout`, { method: 'POST', credentials: 'include' });
     localStorage.removeItem('userInfo');
     setCurrentUser(null);
-    setOrders([]);
-    setWishlist([]); // Clear Wishlist
-    socket.disconnect();
-    socket = io(ENDPOINT, { withCredentials: true });
+    setCart([]);
     navigate('/');
-  };
-
-  const handleCheckoutClick = () => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    setIsCartOpen(false);
-    setIsCheckoutOpen(true);
   };
 
   const confirmOrder = async (orderData) => {
     setOrderLoading(true);
-    const { shippingAddress, paymentInfo } = orderData;
-
     const orderPayload = {
-      orderItems: cart.map((item) => ({
-        product: item._id,
-        shop: item.shop._id || item.shop,
-        name: item.name,
-        image: item.image || item.coverImage,
-        price: item.price,
-        qty: 1,
-        customization: item.customization,
-        // --- PASS SELECTED SIZE TO BACKEND ---
-        selectedSize: item.selectedSize || null 
-      })),
-      shippingAddress: shippingAddress,
-      paymentInfo: paymentInfo,
-      itemsPrice: cart.reduce((acc, i) => acc + i.price, 0),
-      taxPrice: 0,
-      shippingPrice: 0,
-      totalPrice: cart.reduce((acc, i) => acc + i.price, 0),
+      orderItems: cart.map(i => ({ product: i.product, shop: i.shop, name: i.name, image: i.image, price: i.price, qty: i.qty, selectedSize: i.selectedSize })),
+      shippingAddress: orderData.shippingAddress,
+      paymentInfo: orderData.paymentInfo,
+      totalPrice: cart.reduce((acc, i) => acc + (i.price * i.qty), 0),
     };
-
     try {
-      const res = await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Order failed');
+      const res = await fetch(`${API_URL}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderPayload), credentials: 'include' });
+      if (res.ok) {
+        setCart([]);
+        setIsCheckoutOpen(false);
+        addToast('Success', 'Order Placed!');
+        navigate('/profile');
       }
-
-      const newOrder = await res.json();
-      setOrders((prev) => [newOrder, ...prev]);
-      setCart([]);
-      setIsCheckoutOpen(false);
-      addToast(
-        'Order Placed!',
-        'Thank you for your purchase. Please wait for verification.',
-      );
-      navigate('/profile');
-    } catch (error) {
-      console.error(error);
-      addToast('Error', error.message, 'error');
-    } finally {
-      setOrderLoading(false);
-    }
+    } catch (e) { addToast('Error', 'Failed to place order', 'error'); }
+    finally { setOrderLoading(false); }
   };
 
-  const showNavbar = ![
-    '/',
-    '/my-shop',
-    '/founder',
-    '/seller-register',
-    '/seller-login',
-    '/admin-login',
-    '/login',
-    '/register',
-    '/search', // Also hide main navbar on search page to focus on search
-  ].includes(location.pathname);
+  const showNavbar = !['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login'].includes(location.pathname);
 
-  const handleLandingLoginClick = (type) => {
-    if (type === 'seller') navigate('/seller-register');
-    else navigate('/login');
-  };
+  const ToastContainer = ({ toasts, removeToast }) => (
+    <div className="fixed top-4 right-4 md:top-24 z-[130] flex flex-col gap-3 pointer-events-none">
+      {toasts.map((toast) => (
+        <div key={toast.id} className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl p-4 flex items-start gap-3 w-80 animate-in">
+          {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
+          <div className="flex-1">
+            <h4 className="font-bold text-sm text-slate-900">{toast.title}</h4>
+            <p className="text-xs text-slate-500 mt-1">{toast.message}</p>
+          </div>
+          <button onClick={() => removeToast(toast.id)}><X className="w-4 h-4 text-slate-400" /></button>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    // FIX IS HERE: Removed pb-24 for showNavbar
-    <div className={`bg-[#F8FAFC] min-h-screen font-sans text-slate-900 selection:bg-indigo-200`}>
+    <div className="min-h-screen">
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-
-      <Navbar 
-        cart={cart}
-        wishlist={wishlist}
-        currentUser={currentUser}
-        setIsCartOpen={setIsCartOpen}
-      />
-
-      <main className={`min-h-screen ${showNavbar ? 'pt-16 md:pt-0' : ''}`}>
+      <Navbar cart={cart} wishlist={wishlist} currentUser={currentUser} setIsCartOpen={setIsCartOpen} />
+      
+      <main className={showNavbar ? 'pt-16 md:pt-0' : ''}>
         <Routes>
-          <Route
-            path="/"
-            element={<LandingPage onLoginClick={handleLandingLoginClick} />}
-          />
-          <Route
-            path="/login"
-            element={<CustomerAuth onLoginSuccess={handleLogin} />}
-          />
-          <Route
-            path="/register"
-            element={<CustomerAuth onLoginSuccess={handleLogin} />}
-          />
-
-          <Route
-            path="/seller-register"
-            element={
-              <SellerRegister
-                onLoginSuccess={handleLogin}
-                initialMode="register"
-              />
-            }
-          />
-          <Route
-            path="/seller-login"
-            element={
-              <SellerRegister
-                onLoginSuccess={handleLogin}
-                initialMode="login"
-              />
-            }
-          />
-          <Route
-            path="/admin-login"
-            element={<FounderAccess currentUser={currentUser} />}
-          />
-
-          <Route
-            path="/shop"
-            element={
-              <BuyerOnlyRoute>
-                <ShopView
-                  activeCategory={activeCategory}
-                  setActiveCategory={setActiveCategory}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                  addToCart={addToCart}
-                  products={products}
-                  shops={[]}
-                  isLoading={productsLoading}
-                  wishlist={wishlist}
-                  toggleWishlist={toggleWishlist}
-                />
-              </BuyerOnlyRoute>
-            }
-          />
-
-          {/* --- NEW SEARCH ROUTE --- */}
-          <Route 
-             path="/search" 
-             element={
-                 <SearchPage 
-                    products={products}
-                    addToCart={addToCart}
-                    wishlist={wishlist}
-                    toggleWishlist={toggleWishlist}
-                 />
-             } 
-          />
-          
-          <Route 
-            path="/wishlist" 
-            element={
-              <ProtectedRoute user={currentUser} redirectPath="/login">
-                <WishlistView 
-                  wishlist={wishlist} 
-                  addToCart={addToCart} 
-                  removeFromWishlist={removeFromWishlist} 
-                />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route
-            path="/product/:id"
-            element={
-              <BuyerOnlyRoute>
-                <ProductDetail
-                  addToCart={addToCart}
-                  openChat={openCustomizationChat}
-                  currentUser={currentUser}
-                  products={products}
-                  wishlist={wishlist}
-                  toggleWishlist={toggleWishlist}
-                />
-              </BuyerOnlyRoute>
-            }
-          />
-
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute user={currentUser} redirectPath="/login">
-                <ProfileView
-                  currentUser={currentUser}
-                  orders={orders}
-                  onLogout={handleLogout}
-                />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} />} />
+          <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+          <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+          <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery="" setSearchQuery={()=>{}} activeCategory="All" setActiveCategory={()=>{}} /></BuyerOnlyRoute>} />
+          <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
+          <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} openChat={(p)=>{setActiveChatProduct(p); setIsChatOpen(true);}} />} />
+          <Route path="/wishlist" element={<ProtectedRoute user={currentUser}><WishlistView wishlist={wishlist} addToCart={addToCart} removeFromWishlist={(id) => toggleWishlist({_id: id})} /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute user={currentUser}><ProfileView currentUser={currentUser} orders={orders} onLogout={handleLogout} /></ProtectedRoute>} />
+          <Route path="/founder" element={<ProtectedRoute user={currentUser} allowedRoles={['founder']}><FounderAccess currentUser={currentUser} /></ProtectedRoute>} />
+          <Route path="/my-shop" element={<ProtectedRoute user={currentUser} allowedRoles={['seller']}><StoreAdmin currentUser={currentUser} /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
-          <Route
-            path="/founder"
-            element={
-              <ProtectedRoute user={currentUser} allowedRoles={['founder']}>
-                <FounderAccess currentUser={currentUser} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-shop"
-            element={
-              <ProtectedRoute user={currentUser} allowedRoles={['seller']}>
-                <StoreAdmin currentUser={currentUser} />
-              </ProtectedRoute>
-            }
-          />
         </Routes>
       </main>
 
-      <MobileNav cartCount={cart.length} />
-
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        setCart={setCart}
-        onCheckout={handleCheckoutClick}
-        currentUser={currentUser}
-      />
-
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        cartTotal={cart.reduce((acc, i) => acc + i.price, 0)}
-        onConfirmOrder={confirmOrder}
-        loading={orderLoading}
-      />
-
-      {activeChatProduct && (
-        <CustomizationChat
-          isOpen={isChatOpen}
-          onClose={() => setIsChatOpen(false)}
-          product={activeChatProduct}
-          currentUser={currentUser}
-          socket={socket}
-          API_URL={API_URL}
-        />
-      )}
+      <MobileNav />
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
+      {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} socket={socket} API_URL={API_URL} />}
     </div>
   );
 };
 
 export default function App() {
-  return (
-    <Router>
-      <CraftifyContent />
-    </Router>
-  );
+  return <Router><CraftifyContent /></Router>;
 }

@@ -11,6 +11,7 @@ const shopRoutes = require('./routes/shopRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 
 // Config
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api/shops', shopRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/cart', cartRoutes);
 
 // --- NEW: HEALTH CHECK ROUTE (For Founder Dashboard) ---
 app.get('/api/health', (req, res) => {
