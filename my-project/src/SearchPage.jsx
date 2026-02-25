@@ -1,13 +1,14 @@
 // src/SearchPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Search, X, TrendingUp, Clock, 
-  ChevronRight, ShoppingBag 
+  ArrowLeft, Search, X, TrendingUp, 
+  ChevronRight 
 } from 'lucide-react';
 
-// ProductCard import karna mat bhoolna
+// ProductCard and Footer import
 import ProductCard from './ProductCard'; 
+import Footer from './Footer';
 
 const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist }) => {
     const navigate = useNavigate();
@@ -30,36 +31,40 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
           )
         : [];
 
-    // Dummy Suggestions (Baad mein dynamic kar sakte hain)
+    // Suggestions
     const suggestions = [
         "Custom Wallet", "Handmade Gift", "Perfume", "Couple T-shirt"
     ];
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white flex flex-col">
             
-            {/* --- HEADER (Search Input) --- */}
-            <div className="sticky top-0 z-50 bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3">
+            {/* --- HEADER (Search Input) with Theme Background --- */}
+            <div 
+                className="sticky top-0 z-50 px-4 py-3 flex items-center gap-3 shadow-lg"
+                style={{ backgroundColor: '#65280E' }}
+            >
                 <button 
                     onClick={() => navigate(-1)} 
-                    className="p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
+                    className="p-2 -ml-2 text-white/90 hover:bg-white/10 rounded-full transition-colors"
                 >
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 
                 <div className="flex-1 relative">
+                    {/* Input Field adjusted for Dark Theme */}
                     <input 
                         ref={inputRef}
                         type="text" 
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search for gifts, brands..." 
-                        className="w-full bg-slate-100 text-slate-900 placeholder:text-slate-400 rounded-xl py-3 pl-4 pr-10 outline-none focus:ring-2 focus:ring-[#65280E]/20 font-medium"
+                        className="w-full bg-white/10 text-white placeholder:text-white/50 rounded-xl py-3 pl-4 pr-10 outline-none focus:ring-2 focus:ring-white/20 font-medium border border-white/10"
                     />
                     {query && (
                         <button 
                             onClick={() => setQuery('')}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -68,11 +73,11 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
             </div>
 
             {/* --- CONTENT AREA --- */}
-            <div className="p-4">
+            <div className="p-4 flex-1">
                 
                 {/* CASE 1: Query is Empty (Show Suggestions) */}
                 {!query && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-7xl mx-auto">
                         {/* Trending Section */}
                         <div>
                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -91,7 +96,7 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
                             </div>
                         </div>
 
-                        {/* Popular Categories (Optional) */}
+                        {/* Popular Categories */}
                         <div>
                              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
                                 Popular Categories
@@ -114,7 +119,7 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
 
                 {/* CASE 2: No Results Found */}
                 {query && filteredProducts.length === 0 && (
-                    <div className="flex flex-col items-center justify-center pt-20 text-center">
+                    <div className="flex flex-col items-center justify-center pt-20 text-center animate-in fade-in duration-300">
                         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                             <Search className="w-8 h-8 text-slate-300" />
                         </div>
@@ -125,11 +130,11 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
 
                 {/* CASE 3: Show Products Grid */}
                 {query && filteredProducts.length > 0 && (
-                    <div>
-                        <p className="text-sm text-slate-500 mb-4 font-medium">
+                    <div className="max-w-7xl mx-auto">
+                        <p className="text-sm text-slate-500 mb-6 font-medium">
                             Found {filteredProducts.length} results for "<span className="text-slate-900 font-bold">{query}</span>"
                         </p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
                             {filteredProducts.map(product => (
                                 <ProductCard 
                                     key={product._id || product.id} 
@@ -143,6 +148,9 @@ const SearchPage = ({ products = [], addToCart, wishlist = [], toggleWishlist })
                     </div>
                 )}
             </div>
+
+            {/* --- REUSABLE FOOTER --- */}
+            <Footer />
         </div>
     );
 };
