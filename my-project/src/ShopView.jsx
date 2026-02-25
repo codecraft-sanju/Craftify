@@ -1,7 +1,12 @@
 // src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift } from 'lucide-react'; 
+import { motion } from 'framer-motion';
+import { 
+  Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
+  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, 
+  Quote, BadgeCheck 
+} from 'lucide-react'; 
 
 // --- IMPORT THE NEW PRODUCT CARD ---
 import ProductCard from './ProductCard'; 
@@ -26,8 +31,10 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- COMPONENT: MARQUEE STRIP (New Addition) ---
+// --- COMPONENT: MARQUEE STRIP ---
 const MarqueeStrip = () => {
+  
+    
     const items = [
         { text: "Welcome to Giftomize", icon: <Gift className="w-4 h-4" /> },
         { text: "100% Customized Products", icon: <Sparkles className="w-4 h-4" /> },
@@ -73,15 +80,10 @@ const MarqueeStrip = () => {
     );
 };
 
-// --- COMPONENT: OFFER CAROUSEL (Smart Logic: Hide vs Default vs Custom) ---
+// --- COMPONENT: OFFER CAROUSEL ---
 const OfferCarousel = ({ bannerData }) => {
-    
-    // 1. CRITICAL CHECK: Hidden by Founder?
-    if (bannerData && bannerData.isVisible === false) {
-        return null; 
-    }
+    if (bannerData && bannerData.isVisible === false) return null; 
 
-    // 2. Default Offers (Fallback)
     const defaultOffers = [
       {
         id: 1,
@@ -109,101 +111,56 @@ const OfferCarousel = ({ bannerData }) => {
       }
     ];
 
-    // 3. Determine Slides to Show
     const backendSlides = bannerData?.slides || [];
     const displayOffers = backendSlides.length > 0 ? backendSlides : defaultOffers;
-
     const [currentIndex, setCurrentIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
   
     useEffect(() => {
       if (displayOffers.length > 1) {
-          const interval = setInterval(() => {
-            nextSlide();
-          }, 5000); 
+          const interval = setInterval(() => { nextSlide(); }, 5000); 
           return () => clearInterval(interval);
       }
     }, [currentIndex, displayOffers.length]);
   
-    const nextSlide = () => {
-      setCurrentIndex((prev) => (prev === displayOffers.length - 1 ? 0 : prev + 1));
-    };
-  
-    const prevSlide = () => {
-      setCurrentIndex((prev) => (prev === 0 ? displayOffers.length - 1 : prev - 1));
-    };
-  
+    const nextSlide = () => setCurrentIndex((prev) => (prev === displayOffers.length - 1 ? 0 : prev + 1));
+    const prevSlide = () => setCurrentIndex((prev) => (prev === 0 ? displayOffers.length - 1 : prev - 1));
     const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
     const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
-    
     const handleTouchEnd = () => {
         if (!touchStart || !touchEnd) return;
         const distance = touchStart - touchEnd;
         if (distance > 50) nextSlide();
         else if (distance < -50) prevSlide();
-        setTouchStart(0);
-        setTouchEnd(0);
+        setTouchStart(0); setTouchEnd(0);
     };
   
     return (
       <div 
         className="relative h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
       >
         {displayOffers.map((offer, index) => (
-          <div
-            key={offer._id || offer.id || index}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-              index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
-            }`}
-          >
-            <img 
-              src={offer.image} 
-              alt={offer.title} 
-              className="w-full h-full object-cover opacity-80"
-            />
+          <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
+            <img src={offer.image} alt={offer.title} className="w-full h-full object-cover opacity-80"/>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
-                   <span className="bg-indigo-600 text-white text-xs md:text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-wider shadow-lg shadow-indigo-600/30">
-                     Featured
-                   </span>
-                   <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">
-                     {offer.title}
-                   </h2>
-                   <p className="text-slate-200 text-lg md:text-lg font-medium max-w-lg drop-shadow-sm leading-snug">
-                     {offer.subtitle}
-                   </p>
+                   <span className="bg-indigo-600 text-white text-xs md:text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-wider shadow-lg shadow-indigo-600/30">Featured</span>
+                   <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>
+                   <p className="text-slate-200 text-lg md:text-lg font-medium max-w-lg drop-shadow-sm leading-snug">{offer.subtitle}</p>
                </div>
             </div>
           </div>
         ))}
-
-        {/* Navigation Controls */}
         {displayOffers.length > 1 && (
             <>
-                <button 
-                   onClick={(e) => { e.preventDefault(); prevSlide(); }}
-                   className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
-                >
-                   <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button 
-                   onClick={(e) => { e.preventDefault(); nextSlide(); }}
-                   className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"
-                >
-                   <ChevronRight className="w-6 h-6" />
-                </button>
+                <button onClick={(e) => { e.preventDefault(); prevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"><ChevronLeft className="w-6 h-6" /></button>
+                <button onClick={(e) => { e.preventDefault(); nextSlide(); }} className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100 hidden md:block"><ChevronRight className="w-6 h-6" /></button>
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                   {displayOffers.map((_, idx) => (
-                       <button 
-                         key={idx}
-                         onClick={() => setCurrentIndex(idx)}
-                         className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/40 w-2 hover:bg-white/60'}`}
-                       />
-                   ))}
+                    {displayOffers.map((_, idx) => (
+                        <button key={idx} onClick={() => setCurrentIndex(idx)} className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/40 w-2 hover:bg-white/60'}`}/>
+                    ))}
                 </div>
             </>
         )}
@@ -211,10 +168,8 @@ const OfferCarousel = ({ bannerData }) => {
     );
 };
 
-// --- COMPONENT: DYNAMIC CIRCULAR CATEGORY HIGHLIGHT ---
+// --- COMPONENT: VISUAL CATEGORIES ---
 const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] }) => {
-  
-  // 1. Initial State (Default Images Fallback)
   const [visualMap, setVisualMap] = useState({
     "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
     "Clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
@@ -228,7 +183,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     "Fashion": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop"
   });
 
-  // 2. Fetch Updated Images from Backend
   useEffect(() => {
     const fetchCategoryImages = async () => {
         try {
@@ -237,9 +191,7 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
                 const data = await res.json();
                 setVisualMap(prev => ({ ...prev, ...data }));
             }
-        } catch (error) {
-            console.error("Failed to fetch category images", error);
-        }
+        } catch (error) { console.error("Failed to fetch category images", error); }
     };
     fetchCategoryImages();
   }, []);
@@ -251,40 +203,236 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
   return (
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
-        
-        {/* FIX: Added 'py-4' instead of 'pb-4' so the top border is not clipped */}
         <div className="flex gap-6 overflow-x-auto px-4 py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
-                
                 return (
-                  <button 
-                    key={idx}
-                    onClick={() => setActiveCategory(cat)}
-                    className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1"
-                  >
-                      <div className={`
-                        w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md
-                        ${isActive ? 'border-indigo-600 scale-105' : 'border-white group-hover:border-indigo-200'}
-                      `}>
+                  <button key={idx} onClick={() => setActiveCategory(cat)} className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1">
+                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md ${isActive ? 'border-indigo-600 scale-105' : 'border-white group-hover:border-indigo-200'}`}>
                           <div className="w-full h-full rounded-full overflow-hidden relative">
-                             <img 
-                               src={image} 
-                               alt={cat} 
-                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                             />
+                             <img src={image} alt={cat} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
                              <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
                           </div>
                       </div>
-                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>
-                          {cat}
-                      </span>
+                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
                   </button>
                 );
             })}
         </div>
     </div>
+  );
+};
+
+// ==========================================
+// --- NEW PREMIUM REVIEWS SECTION LOGIC ---
+// ==========================================
+
+// 1. FallingText Animation Component
+const FallingText = ({ text, className = "", delay = 0 }) => {
+  const letters = text.split("");
+  const container = {
+    hidden: { opacity: 0 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: 0.04 * i + delay },
+    }),
+  };
+  const child = {
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", damping: 12, stiffness: 100 },
+    },
+    hidden: {
+      opacity: 0,
+      y: -50,
+      transition: { type: "spring", damping: 12, stiffness: 100 },
+    },
+  };
+
+  return (
+    <motion.span
+      style={{ display: "inline-block" }}
+      variants={container}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      className={className}
+    >
+      {letters.map((letter, index) => (
+        <motion.span variants={child} key={index} style={{ display: "inline-block", minWidth: letter === " " ? "0.3em" : "auto" }}>
+          {letter}
+        </motion.span>
+      ))}
+    </motion.span>
+  );
+};
+
+// 2. Reviews Data
+const testimonials = [
+  {
+    id: 1,
+    name: "Rahul Sharma",
+    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=150&auto=format&fit=crop",
+    quote: "The customization is next level! I ordered a wallet with my name, and the quality is just wow.",
+    rating: 5,
+  },
+  {
+    id: 2,
+    name: "Priya Patel",
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
+    quote: "Weekends are busy, but Giftomize made gifting so easy. Delivery was super fast too!",
+    rating: 5,
+  },
+  {
+    id: 3,
+    name: "Amit Verma",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+    quote: "Found unique handmade gifts here that I couldn't find anywhere else. The interface is super clean.",
+    rating: 4,
+  },
+  {
+    id: 4,
+    name: "Sneha Gupta",
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+    quote: "Ordering for my team was hassle-free. The bulk order process is smooth. Saves me so much stress!",
+    rating: 5,
+  },
+  {
+    id: 5,
+    name: "Vikram Singh",
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
+    quote: "As someone who values quality, this app is essential. Premium products, great packaging. Perfect.",
+    rating: 5,
+  },
+  {
+    id: 6,
+    name: "Anjali Mehta",
+    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
+    quote: "I recommend Giftomize to everyone. It's not just about buying; it's about supporting local artisans.",
+    rating: 5,
+  },
+  {
+    id: 7,
+    name: "Rohan Das",
+    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=150&auto=format&fit=crop",
+    quote: "The prices are surprisingly affordable for custom goods. Highly recommended for students.",
+    rating: 5,
+  },
+];
+
+// 3. Custom Star Icon
+const StarIcon = () => (
+  <svg className="w-3.5 h-3.5 text-yellow-500 fill-current drop-shadow-sm" viewBox="0 0 20 20">
+    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+  </svg>
+);
+
+// 4. Testimonial Card Component
+const TestimonialCard = ({ data }) => {
+  return (
+    <div className="group relative rounded-2xl p-[1px] bg-gradient-to-b from-zinc-200 to-transparent hover:from-indigo-400/50 hover:to-purple-400/50 transition-all duration-500">
+      <div className="bg-white/60 backdrop-blur-xl p-6 rounded-2xl h-full flex flex-col gap-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-1">
+        
+        {/* Top Row */}
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <img src={data.image} alt={data.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-md"/>
+              <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-white">
+                <BadgeCheck size={10} className="text-white" />
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-zinc-900 text-sm leading-tight">{data.name}</h4>
+              <p className="text-xs text-zinc-500 font-medium">{data.role}</p>
+            </div>
+          </div>
+          <Quote className="text-zinc-200 fill-zinc-100 transform rotate-180" size={32} />
+        </div>
+
+        {/* Quote */}
+        <p className="text-zinc-600 text-[13px] leading-relaxed font-medium relative z-10">"{data.quote}"</p>
+
+        {/* Rating & Footer */}
+        <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center justify-between">
+          <div className="flex gap-0.5">
+            {[...Array(5)].map((_, i) => (i < data.rating ? <StarIcon key={i} /> : null))}
+          </div>
+          <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 group-hover:text-indigo-600 transition-colors">Verified Purchase</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 5. Main Reviews Section
+const ReviewsSection = () => {
+  return (
+    <section className="relative py-24 flex flex-col items-center justify-center overflow-hidden bg-zinc-50/50">
+      
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,#C9EBFF,transparent)] opacity-20"></div>
+
+      {/* Header */}
+      <div className="relative text-center mb-16 px-4 z-10 max-w-3xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/50 border border-indigo-200 text-indigo-700 text-[10px] font-bold tracking-wider uppercase mb-6 backdrop-blur-sm">
+          <BadgeCheck size={12} /> Trusted by India
+        </div>
+
+        <h2 className="text-4xl md:text-6xl font-black text-zinc-900 tracking-tighter mb-6 drop-shadow-sm flex flex-col items-center">
+          <FallingText text="Loved by Locals." />
+          <div className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-500 pb-2">
+            <FallingText text="Trusted by You." delay={0.5} />
+          </div>
+        </h2>
+
+        <p className="text-zinc-500 text-lg leading-relaxed font-medium">
+          Join thousands of users who have found the perfect gift. 
+          Real stories from the <span className="font-bold text-zinc-800">Giftomize community</span>.
+        </p>
+      </div>
+
+      {/* Marquee Container */}
+      <div className="relative w-full max-w-[1400px] mx-auto h-[700px] overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 z-10">
+        
+        {/* Gradient Masks */}
+        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
+
+        {/* Column 1 */}
+        <div className="marquee-column space-y-6">
+          {[...testimonials, ...testimonials].slice(0, 6).map((item, idx) => (
+            <TestimonialCard key={`col1-${idx}`} data={item} />
+          ))}
+        </div>
+
+        {/* Column 2 (Reverse) */}
+        <div className="marquee-column space-y-6 hidden md:block" style={{ animationDuration: '60s', animationDirection: 'reverse' }}>
+          {[...testimonials, ...testimonials].slice(2, 8).map((item, idx) => (
+            <TestimonialCard key={`col2-${idx}`} data={item} />
+          ))}
+        </div>
+
+        {/* Column 3 */}
+        <div className="marquee-column space-y-6 hidden lg:block" style={{ animationDuration: '50s' }}>
+          {[...testimonials, ...testimonials].slice(4, 10).map((item, idx) => (
+            <TestimonialCard key={`col3-${idx}`} data={item} />
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        .marquee-column { animation: scrollUp 45s linear infinite; }
+        .marquee-column:hover { animation-play-state: paused; }
+        @keyframes scrollUp {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-50%); }
+        }
+      `}</style>
+    </section>
   );
 };
 
@@ -300,30 +448,23 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
-  // --- STATE: Banner Data (Starts as null) ---
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
 
-  // --- FETCH BANNERS FROM BACKEND ---
   useEffect(() => {
     const fetchBanners = async () => {
         try {
             const res = await fetch(`${API_URL}/api/users/banners`);
             if (res.ok) {
-                // Returns: { isVisible: boolean, slides: [...] } OR null
                 const data = await res.json();
                 setBannerData(data);
             }
-        } catch (error) {
-            console.error("Failed to fetch banners", error);
-        } finally {
-            setIsBannersLoading(false);
-        }
+        } catch (error) { console.error("Failed to fetch banners", error); } 
+        finally { setIsBannersLoading(false); }
     };
     fetchBanners();
-  }, []); // Runs once on mount
+  }, []); 
 
-  // --- FILTER LOGIC ---
   const filteredProducts = products.filter(p => {
       const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
       const descMatch = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -338,160 +479,97 @@ const ShopView = ({
             {/* 1. STICKY HEADER & FILTERS */}
             <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200 pt-4 pb-4 px-4 shadow-sm transition-all">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    
-                    {/* Left: Title */}
                     <div className="hidden md:block">
-                       <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                          Marketplace
-                       </h2>
+                       <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">Marketplace</h2>
                        <p className="text-sm text-slate-500 font-medium">Curated handcrafted goods.</p>
                     </div>
-                    
-                    {/* Right: Search */}
                     <div className="relative group w-full md:w-96">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                         </div>
-                        <input 
-                            type="text" 
-                            placeholder="Search products..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="block w-full pl-10 pr-10 py-3 bg-slate-100/50 border border-slate-200 text-slate-900 text-sm placeholder-slate-400 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none font-bold"
-                        />
+                        <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="block w-full pl-10 pr-10 py-3 bg-slate-100/50 border border-slate-200 text-slate-900 text-sm placeholder-slate-400 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none font-bold"/>
                          {searchQuery && (
-                            <button 
-                              onClick={() => setSearchQuery('')}
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </button>
+                            <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600"><XCircle className="h-4 w-4" /></button>
                          )}
                     </div>
                 </div>
             </div>
 
-            {/* --- NEW MARQUEE STRIP --- */}
+            {/* MARQUEE STRIP */}
             <MarqueeStrip />
 
             {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0">
-                
-                {/* --- OFFER CAROUSEL --- */}
-                {!isBannersLoading && (
-                    <div className="mt-0"> 
-                        <OfferCarousel bannerData={bannerData} />
-                    </div>
-                )}
+                {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
+                <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
 
-                {/* --- VISUAL CATEGORY STRIP --- */}
-                <CategoryHighlight 
-                    activeCategory={activeCategory} 
-                    setActiveCategory={setActiveCategory} 
-                    products={products} 
-                />
-
-                {/* --- PRODUCT GRID --- */}
+                {/* PRODUCT GRID */}
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
-                
-                    {/* CASE 1: LOADING (Skeletons) */}
                     {isLoading && [...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
-
-                    {/* CASE 2: LOADED & EMPTY (No Products at all) */}
                     {!isLoading && products.length === 0 && (
                         <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
-                            <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100">
-                                <PackageOpen className="w-10 h-10 text-indigo-500"/>
-                            </div>
+                            <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100"><PackageOpen className="w-10 h-10 text-indigo-500"/></div>
                             <h3 className="text-2xl font-black text-slate-900">Marketplace is Empty</h3>
                             <p className="text-slate-500 mt-2 max-w-md mx-auto">Be the first to list a product and start selling to millions.</p>
-                            <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group">
-                                <Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/>
-                            </Link>
+                            <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group"><Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></Link>
                         </div>
                     )}
-
-                    {/* CASE 3: NO SEARCH/FILTER RESULTS */}
                     {!isLoading && products.length > 0 && filteredProducts.length === 0 && (
                         <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                <Filter className="w-8 h-8 text-slate-400"/>
-                            </div>
+                            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
                             <h3 className="text-xl font-bold text-slate-900">No matches found</h3>
-                            <p className="text-slate-500 mt-1">
-                                We couldn't find any "{activeCategory !== 'All' ? activeCategory : ''}" products matching "{searchQuery}"
-                            </p>
-                            <button 
-                                onClick={() => { setSearchQuery(""); if(setActiveCategory) setActiveCategory("All"); }}
-                                className="mt-6 flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-5 py-2.5 rounded-xl transition-colors"
-                            >
-                                <XCircle className="w-4 h-4"/> Clear All Filters
-                            </button>
+                            <p className="text-slate-500 mt-1">We couldn't find any "{activeCategory !== 'All' ? activeCategory : ''}" products matching "{searchQuery}"</p>
+                            <button onClick={() => { setSearchQuery(""); if(setActiveCategory) setActiveCategory("All"); }} className="mt-6 flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-5 py-2.5 rounded-xl transition-colors"><XCircle className="w-4 h-4"/> Clear All Filters</button>
                         </div>
                     )}
-
-                    {/* CASE 4: PRODUCT GRID USING REUSABLE COMPONENT */}
                     {!isLoading && filteredProducts.map((product) => (
-                        <ProductCard 
-                            key={product._id || product.id} 
-                            product={product} 
-                            wishlist={wishlist} 
-                            toggleWishlist={toggleWishlist} 
-                            addToCart={addToCart} 
-                        />
+                        <ProductCard key={product._id || product.id} product={product} wishlist={wishlist} toggleWishlist={toggleWishlist} addToCart={addToCart} />
                     ))}
                 </div>
             </div>
 
-            {/* --- SAME TO SAME LIGHT THEME FOOTER --- */}
-            <footer className="border-t pt-16 md:pt-20 pb-10 px-6 md:px-12 mb-0 bg-white border-slate-200">
-                <div className="flex flex-col gap-12 mb-16 md:mb-20">
-                    
-                    {/* 1. BRAND NAME (Full width) */}
-                    <div className="w-full border-b pb-8 border-slate-200">
-                        <h2 className="text-[12vw] font-bold leading-none tracking-tighter select-none text-slate-300 opacity-50">
-                            GIFTOMIZE
-                        </h2>
-                    </div>
+            {/* --- NEW PREMIUM REVIEWS SECTION --- */}
+            <ReviewsSection />
 
-                    {/* 2. LINKS GRID */}
+            {/* FOOTER - Updated to Match #65280E Theme */}
+            <footer 
+              className="border-t pt-16 md:pt-20 pb-10 px-6 md:px-12 mb-0 text-white/80" 
+              style={{ backgroundColor: '#65280E', borderColor: 'rgba(255,255,255,0.1)' }}
+            >
+                <div className="flex flex-col gap-12 mb-16 md:mb-20">
+                    <div className="w-full border-b pb-8 border-white/10">
+                        <h2 className="text-[12vw] font-bold leading-none tracking-tighter select-none text-white opacity-10">GIFTOMIZE</h2>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
                         <div className="col-span-2 md:col-span-1">
-                            <p className="text-sm font-medium leading-relaxed text-slate-500">
-                                The operating system for modern Indian D2C brands. Zero inventory, infinite scale.
-                            </p>
+                            <p className="text-sm font-medium leading-relaxed text-white/70">The operating system for modern Indian D2C brands. Zero inventory, infinite scale.</p>
                         </div>
-
                         <div className="flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-slate-500">Shop</h4>
-                            <Link to="/" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Catalog</Link>
-                            <Link to="/" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Pricing</Link>
+                            <h4 className="font-bold text-xs uppercase text-white/90">Shop</h4>
+                            <Link to="/" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Catalog</Link>
+                            <Link to="/" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Pricing</Link>
                         </div>
-
                         <div className="flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-slate-500">Company</h4>
-                            <a href="#" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Terms</a>
-                            <a href="#" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">Privacy</a>
+                            <h4 className="font-bold text-xs uppercase text-white/90">Company</h4>
+                            <a href="#" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Terms</a>
+                            <a href="#" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Privacy</a>
                         </div>
-
                         <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-slate-500">Support</h4>
-                            <a href="mailto:giftomizeofficial@gmail.com" className="hover:opacity-100 opacity-60 text-slate-900 font-medium whitespace-nowrap text-sm">giftomizeofficial@gmail.com</a>
+                            <h4 className="font-bold text-xs uppercase text-white/90">Support</h4>
+                            <a href="mailto:giftomizeofficial@gmail.com" className="hover:text-white transition-colors text-white/60 font-medium whitespace-nowrap text-sm">giftomizeofficial@gmail.com</a>
                             <div className="flex flex-col gap-1 text-sm">
-                                <a href="tel:+917298317177" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">+91 72983 17177</a>
-                                <a href="tel:+917568045830" className="hover:opacity-100 opacity-60 text-slate-900 font-medium">+91 75680 45830</a>
+                                <a href="tel:+917298317177" className="hover:text-white transition-colors text-white/60 font-medium">+91 72983 17177</a>
+                                <a href="tel:+917568045830" className="hover:text-white transition-colors text-white/60 font-medium">+91 75680 45830</a>
                             </div>
                         </div>
                     </div>
-
                 </div>
-                
-                <div className="flex flex-col md:flex-row justify-between border-t pt-8 gap-4 border-slate-200">
-                    <div className="text-xs font-bold flex items-center gap-2 text-slate-500">
-                        <span className="w-2 h-2 rounded-full animate-pulse bg-orange-600"></span>
+                <div className="flex flex-col md:flex-row justify-between border-t pt-8 gap-4 border-white/10">
+                    <div className="text-xs font-bold flex items-center gap-2 text-white/50">
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-emerald-400"></span>
                         ALL SYSTEMS GO
                     </div>
-                    <p className="text-xs text-slate-500">© 2026 GIFTOMIZE INC.</p>
+                    <p className="text-xs text-white/50">© 2026 GIFTOMIZE INC.</p>
                 </div>
             </footer>
       </div>

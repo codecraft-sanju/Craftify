@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, Box } from 'lucide-react';
+import { ShoppingBag, User, Heart } from 'lucide-react';
 
 const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
   const navigate = useNavigate();
@@ -20,63 +20,84 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
 
   if (!showNavbar) return null;
 
+  // Theme Color Constant
+  const THEME_BG = '#65280E';
+
   return (
     <>
       {/* --- DESKTOP NAVBAR --- */}
-      <nav className="fixed top-0 inset-x-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-xl border-b border-white/50 hidden md:block">
+      <nav 
+        className="fixed top-0 inset-x-0 z-50 transition-all duration-300 shadow-md hidden md:block"
+        style={{ backgroundColor: THEME_BG, borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+      >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/shop" className="flex items-center gap-2 cursor-pointer group">
-            <img
-              src="/gifticon.jpg"
-              alt="Giftomize Logo"
-              className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-all group-hover:scale-105"
-            />
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              GIFTOMIZE<span className="text-indigo-600"></span>
+          
+          {/* LOGO SECTION */}
+          <Link to="/shop" className="flex items-center gap-3 cursor-pointer group">
+            <div className="p-0.5 bg-white/20 rounded-xl overflow-hidden backdrop-blur-sm">
+                <img
+                src="/gifticon.jpg"
+                alt="Giftomize Logo"
+                className="w-10 h-10 rounded-lg object-cover shadow-lg transition-transform group-hover:scale-105"
+                />
+            </div>
+            <span className="text-2xl font-black tracking-tight text-white tracking-wide">
+              GIFTOMIZE
             </span>
           </Link>
 
-          <div className="flex items-center gap-8 font-bold text-sm text-slate-500">
-            <Link to="/shop" className="hover:text-slate-900 transition-colors">
+          {/* CENTER LINKS */}
+          <div className="flex items-center gap-8 font-bold text-sm text-white/80">
+            <Link 
+                to="/shop" 
+                className="hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-lg"
+            >
               Marketplace
             </Link>
+            
             <Link
               to="/wishlist"
-              className="hover:text-slate-900 transition-colors flex items-center gap-1"
+              className="hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-lg flex items-center gap-2"
             >
-              Wishlist{' '}
+              Wishlist
               {wishlist.length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">
+                <span className="bg-white text-[#65280E] text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
                   {wishlist.length}
                 </span>
               )}
             </Link>
+            
             <Link
               to={currentUser ? '/profile' : '/login'}
-              className="hover:text-slate-900 transition-colors"
+              className="hover:text-white transition-colors hover:bg-white/10 px-3 py-2 rounded-lg"
             >
               My Orders
             </Link>
           </div>
 
+          {/* RIGHT ICONS */}
           <div className="flex items-center gap-3">
+            
+            {/* Cart Icon */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="p-2.5 rounded-full hover:bg-slate-100 relative text-slate-600 transition-colors"
+              className="p-2.5 rounded-full relative transition-colors hover:bg-white/10 text-white"
             >
               <ShoppingBag className="w-5 h-5" />
               {cart.length > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#65280E]"></span>
               )}
             </button>
+
+            {/* Profile Icon */}
             <button
               onClick={() =>
                 currentUser ? navigate('/profile') : navigate('/login')
               }
-              className="flex items-center gap-2 pl-1 pr-1 py-1 rounded-full hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-2 pl-1 pr-1 py-1 rounded-full transition-colors hover:bg-white/10"
             >
               {currentUser ? (
-                <div className="w-9 h-9 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-white shadow-md overflow-hidden">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-[#65280E] bg-white border-2 border-white/20 shadow-md overflow-hidden">
                   {currentUser.avatar && currentUser.avatar.includes('http') ? (
                     <img
                       src={currentUser.avatar}
@@ -90,7 +111,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
                   )}
                 </div>
               ) : (
-                <div className="p-2 bg-slate-900 text-white rounded-full shadow-lg shadow-slate-900/20">
+                <div className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all border border-white/10">
                   <User className="w-4 h-4" />
                 </div>
               )}
@@ -100,26 +121,44 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
       </nav>
 
       {/* --- MOBILE HEADER --- */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-100 h-16 flex items-center justify-between px-6">
-        <Link to="/shop" className="flex items-center gap-2">
-          <img
-            src="/gifticon.jpg"
-            alt="Giftomize Logo"
-            className="w-8 h-8 rounded-lg object-cover shadow-md"
-          />
-          <span className="text-lg font-bold text-slate-900">
-            Giftomize<span className="text-indigo-600">.</span>
+      <div 
+        className="md:hidden fixed top-0 inset-x-0 z-40 h-16 flex items-center justify-between px-6 shadow-md"
+        style={{ backgroundColor: THEME_BG, borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <Link to="/shop" className="flex items-center gap-3">
+          <div className="p-0.5 bg-white/20 rounded-lg">
+             <img
+                src="/gifticon.jpg"
+                alt="Giftomize Logo"
+                className="w-8 h-8 rounded-md object-cover"
+             />
+          </div>
+          <span className="text-lg font-black text-white tracking-wide">
+            Giftomize
           </span>
         </Link>
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="p-2 relative text-slate-900"
-        >
-          <ShoppingBag className="w-6 h-6" />
-          {cart.length > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          )}
-        </button>
+        
+        <div className="flex items-center gap-1">
+             <button
+              onClick={() => navigate('/wishlist')}
+              className="p-2 relative text-white hover:bg-white/10 rounded-full transition-colors"
+            >
+              <Heart className="w-6 h-6" />
+              {wishlist.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[#65280E]"></span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="p-2 relative text-white hover:bg-white/10 rounded-full transition-colors"
+            >
+              <ShoppingBag className="w-6 h-6" />
+              {cart.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#65280E]"></span>
+              )}
+            </button>
+        </div>
       </div>
     </>
   );
