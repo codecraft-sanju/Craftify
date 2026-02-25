@@ -1,3 +1,4 @@
+// src/ShopView.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react'; 
 
 import ProductCard from './ProductCard'; 
+import Footer from './Footer'; // Reusable Footer component
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -198,8 +200,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        {/* --- FULL WIDTH SCROLL FIX --- */}
-        {/* Added -mx-4 and px-4 to break out of container padding while keeping alignment */}
         <div className="flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
@@ -220,10 +220,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     </div>
   );
 };
-
-// ==========================================
-// --- NEW PREMIUM REVIEWS SECTION LOGIC ---
-// ==========================================
 
 // 1. FallingText Animation Component
 const FallingText = ({ text, className = "", delay = 0 }) => {
@@ -319,20 +315,17 @@ const testimonials = [
   },
 ];
 
-// 3. Custom Star Icon
 const StarIcon = () => (
   <svg className="w-3.5 h-3.5 text-yellow-500 fill-current drop-shadow-sm" viewBox="0 0 20 20">
     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
   </svg>
 );
 
-// 4. Testimonial Card Component
 const TestimonialCard = ({ data }) => {
   return (
     <div className="group relative rounded-2xl p-[1px] bg-gradient-to-b from-zinc-200 to-transparent hover:from-indigo-400/50 hover:to-purple-400/50 transition-all duration-500">
       <div className="bg-white/60 backdrop-blur-xl p-6 rounded-2xl h-full flex flex-col gap-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-1">
         
-        {/* Top Row */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -343,16 +336,14 @@ const TestimonialCard = ({ data }) => {
             </div>
             <div>
               <h4 className="font-bold text-zinc-900 text-sm leading-tight">{data.name}</h4>
-              <p className="text-xs text-zinc-500 font-medium">{data.role}</p>
+              <p className="text-xs text-zinc-500 font-medium">Verified User</p>
             </div>
           </div>
           <Quote className="text-zinc-200 fill-zinc-100 transform rotate-180" size={32} />
         </div>
 
-        {/* Quote */}
         <p className="text-zinc-600 text-[13px] leading-relaxed font-medium relative z-10">"{data.quote}"</p>
 
-        {/* Rating & Footer */}
         <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center justify-between">
           <div className="flex gap-0.5">
             {[...Array(5)].map((_, i) => (i < data.rating ? <StarIcon key={i} /> : null))}
@@ -364,16 +355,13 @@ const TestimonialCard = ({ data }) => {
   );
 };
 
-// 5. Main Reviews Section
 const ReviewsSection = () => {
   return (
     <section className="relative py-24 flex flex-col items-center justify-center overflow-hidden bg-zinc-50/50">
       
-      {/* Background Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,#C9EBFF,transparent)] opacity-20"></div>
 
-      {/* Header */}
       <div className="relative text-center mb-16 px-4 z-10 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/50 border border-indigo-200 text-indigo-700 text-[10px] font-bold tracking-wider uppercase mb-6 backdrop-blur-sm">
           <BadgeCheck size={12} /> Trusted by India
@@ -392,28 +380,23 @@ const ReviewsSection = () => {
         </p>
       </div>
 
-      {/* Marquee Container */}
       <div className="relative w-full max-w-[1400px] mx-auto h-[700px] overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 z-10">
         
-        {/* Gradient Masks */}
         <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
 
-        {/* Column 1 */}
         <div className="marquee-column space-y-6">
           {[...testimonials, ...testimonials].slice(0, 6).map((item, idx) => (
             <TestimonialCard key={`col1-${idx}`} data={item} />
           ))}
         </div>
 
-        {/* Column 2 (Reverse) */}
         <div className="marquee-column space-y-6 hidden md:block" style={{ animationDuration: '60s', animationDirection: 'reverse' }}>
           {[...testimonials, ...testimonials].slice(2, 8).map((item, idx) => (
             <TestimonialCard key={`col2-${idx}`} data={item} />
           ))}
         </div>
 
-        {/* Column 3 */}
         <div className="marquee-column space-y-6 hidden lg:block" style={{ animationDuration: '50s' }}>
           {[...testimonials, ...testimonials].slice(4, 10).map((item, idx) => (
             <TestimonialCard key={`col3-${idx}`} data={item} />
@@ -509,47 +492,8 @@ const ShopView = ({
             {/* --- NEW PREMIUM REVIEWS SECTION --- */}
             <ReviewsSection />
 
-            {/* FOOTER - Updated to Match #65280E Theme */}
-            <footer 
-              className="border-t pt-16 md:pt-20 pb-28 md:pb-10 px-6 md:px-12 mb-0 text-white/80" 
-              style={{ backgroundColor: '#65280E', borderColor: 'rgba(255,255,255,0.1)' }}
-            >
-                <div className="flex flex-col gap-12 mb-16 md:mb-20">
-                    <div className="w-full border-b pb-8 border-white/10">
-                        <h2 className="text-[12vw] font-bold leading-none tracking-tighter select-none text-white opacity-10">GIFTOMIZE</h2>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-                        <div className="col-span-2 md:col-span-1">
-                            <p className="text-sm font-medium leading-relaxed text-white/70">The operating system for modern Indian D2C brands. Zero inventory, infinite scale.</p>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-white/90">Shop</h4>
-                            <Link to="/" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Catalog</Link>
-                            <Link to="/" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Pricing</Link>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-white/90">Company</h4>
-                            <a href="#" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Terms</a>
-                            <a href="#" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Privacy</a>
-                        </div>
-                        <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
-                            <h4 className="font-bold text-xs uppercase text-white/90">Support</h4>
-                            <a href="mailto:giftomizeofficial@gmail.com" className="hover:text-white transition-colors text-white/60 font-medium whitespace-nowrap text-sm">giftomizeofficial@gmail.com</a>
-                            <div className="flex flex-col gap-1 text-sm">
-                                <a href="tel:+917298317177" className="hover:text-white transition-colors text-white/60 font-medium">+91 72983 17177</a>
-                                <a href="tel:+917568045830" className="hover:text-white transition-colors text-white/60 font-medium">+91 75680 45830</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex flex-col md:flex-row justify-between border-t pt-8 gap-4 border-white/10">
-                    <div className="text-xs font-bold flex items-center gap-2 text-white/50">
-                        <span className="w-2 h-2 rounded-full animate-pulse bg-emerald-400"></span>
-                        ALL SYSTEMS GO
-                    </div>
-                    <p className="text-xs text-white/50">© 2026 GIFTOMIZE INC.</p>
-                </div>
-            </footer>
+            {/* REUSABLE FOOTER */}
+            <Footer />
       </div>
   );
 };
