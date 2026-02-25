@@ -1,16 +1,16 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
   ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, 
-  Quote, BadgeCheck, Heart, ShoppingCart, Star, ShoppingBag 
+  Quote, BadgeCheck, Heart, ShoppingCart, Star, ShoppingBag, Palette 
 } from 'lucide-react'; 
 
 import Footer from './Footer'; // Reusable Footer component
 
-// API URL definition
+// API URL definition (Fallback to localhost if env not set)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Create a Motion Link component to animate the router Link
@@ -34,7 +34,7 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- COMPONENT: INTERNAL PRODUCT CARD (Animated + Clickable) ---
+// --- COMPONENT: INTERNAL PRODUCT CARD (Fully Merged & Optimized) ---
 const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart }) => {
     // 1. Safe Data Extraction
     const productId = product._id || product.id;
@@ -42,24 +42,25 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
     const shopName = product.shop?.name || 'Verified Seller';
 
-    // 2. REAL IMAGE LOGIC
+    // 2. REAL IMAGE LOGIC (Priority: coverImage -> images array -> single image)
     const displayImage = product.coverImage || 
                          (product.images && product.images.length > 0 ? product.images[0].url : null) || 
                          product.image;
 
-    // 3. Helper to ensure URL is valid
+    // 3. Helper to ensure URL is valid (Smart Image Fix)
     const getImageUrl = (path) => {
         if (!path) return "https://placehold.co/400x500?text=No+Image";
         if (path.startsWith('http') || path.startsWith('https') || path.startsWith('data:')) {
             return path;
         }
+        // Local path handling
         const cleanPath = path.replace(/^\//, '');
         return `${API_URL}/${cleanPath}`;
     };
 
     const finalImageSrc = getImageUrl(displayImage);
 
-    // 4. Price Logic
+    // 4. Price & Rating Logic
     const currentPrice = product.price || 0;
     const oldPrice = product.oldPrice || Math.round(currentPrice * 1.2); 
     const ratingValue = product.rating || 4.5;
@@ -67,16 +68,16 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
     return (
       <MotionLink 
         to={`/product/${productId}`} 
-        // --- MAKHAN ANIMATION LOGIC ---
-        initial={{ opacity: 0, y: 50 }} // Start slightly lower and invisible
-        animate={{ opacity: 1, y: 0 }}  // Animate to visible and original position
+        // --- MAKHAN ANIMATION LOGIC (Staggered Entry) ---
+        initial={{ opacity: 0, y: 50 }} 
+        animate={{ opacity: 1, y: 0 }} 
         transition={{ 
             duration: 0.5, 
-            delay: index * 0.05, // Stagger effect based on index (0.05s delay per card)
+            delay: index * 0.05, // 0.05s delay per card based on index
             ease: "easeOut" 
         }}
-        // -----------------------------
-        className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full group overflow-hidden relative transform hover:-translate-y-1 block"
+        // -------------------------------------------------
+        className="group bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1"
       >
          
          {/* --- IMAGE CONTAINER --- */}
@@ -95,39 +96,46 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
              {/* Hover Overlay */}
              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
 
-             {/* Custom Badge */}
-             {product.customizationAvailable && (
-                 <div className="absolute top-3 left-3 bg-purple-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm z-10">
-                     Custom
-                 </div>
-             )}
+             {/* --- BADGES --- */}
+             <div className="absolute top-3 left-3 flex flex-col gap-2 items-start z-10">
+                 {/* Custom Badge */}
+                 {product.customizationAvailable && (
+                     <div className="bg-purple-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                         <Palette className="w-3 h-3" /> Custom
+                     </div>
+                 )}
+                 
+                 {/* Stock Alert Badge */}
+                 {!isOutOfStock && product.stock <= 10 && (
+                     <div className="bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm animate-pulse">
+                         🔥 Only {product.stock} Left
+                     </div>
+                 )}
+             </div>
 
-             {/* Stock Badge */}
-             {isOutOfStock ? (
+             {/* Sold Out Badge (Top Right) */}
+             {isOutOfStock && (
                  <div className="absolute top-3 right-12 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm z-10">
                      Sold Out
                  </div>
-             ) : (product.stock <= 10 && (
-                 <div className="absolute top-3 left-3 mt-8 bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm animate-pulse z-10">
-                     Only {product.stock} Left
-                 </div>
-             ))}
+             )}
 
-             {/* Wishlist Button (Stop Propagation) */}
+             {/* Wishlist Button (STOP PROPAGATION to prevent navigation) */}
              <button 
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     toggleWishlist(product);
                 }} 
-                className="absolute top-3 right-3 p-2.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm text-slate-400 hover:text-red-500 hover:bg-white transition-all duration-300 z-20 active:scale-90"
+                className={`absolute top-3 right-3 p-2.5 rounded-full shadow-sm backdrop-blur-md transition-all duration-300 z-20 active:scale-90 ${isWishlisted ? 'bg-white text-red-500' : 'bg-white/90 text-slate-400 hover:text-red-500 hover:bg-white'}`}
              >
-                 <Heart className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
+                 <Heart className={`w-4 h-4 ${isWishlisted ? "fill-red-500" : ""}`} />
              </button>
          </div>
   
          {/* --- CONTENT CONTAINER --- */}
          <div className="p-4 flex flex-col flex-1">
+             {/* Shop Name & Category */}
              <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{product.category || "General"}</span>
                 <div className="flex items-center gap-1 text-slate-400">
@@ -136,11 +144,13 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
                 </div>
              </div>
              
+             {/* Title & Rating */}
              <div className="mb-2">
                 <h3 className="font-bold text-slate-900 line-clamp-1 text-base group-hover:text-indigo-600 transition-colors mb-1 leading-tight">
                     {product.name}
                 </h3>
                 
+                {/* Rating Badge */}
                 <div className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 w-fit">
                    <Star className="w-3 h-3 fill-current" /> 
                    <span>{ratingValue.toFixed(1)}</span>
@@ -152,6 +162,7 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
                 {product.description}
              </p>
              
+             {/* Price Section */}
              <div className="mt-auto flex items-end justify-between mb-4 border-b border-slate-50 pb-4">
                 <div className="flex flex-col">
                     <span className="text-xs text-slate-400 font-medium line-through">
@@ -162,6 +173,7 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
                     </span>
                 </div>
                 
+                {/* Discount % */}
                 {oldPrice > currentPrice && (
                      <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
                         {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
@@ -169,7 +181,7 @@ const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart 
                 )}
              </div>
   
-             {/* PERMANENT ADD TO CART BUTTON (Stop Propagation) */}
+             {/* PERMANENT ADD TO CART BUTTON (STOP PROPAGATION) */}
              <button 
                onClick={(e) => {
                    e.preventDefault();
