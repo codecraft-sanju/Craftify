@@ -1,7 +1,7 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
   ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, 
@@ -10,8 +10,11 @@ import {
 
 import Footer from './Footer'; // Reusable Footer component
 
-// API URL definition (Fallback to localhost if env not set)
+// API URL definition
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Create a Motion Link component to animate the router Link
+const MotionLink = motion(Link);
 
 // --- COMPONENT: PRODUCT SKELETON ---
 const ProductSkeleton = () => (
@@ -31,26 +34,25 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- COMPONENT: INTERNAL PRODUCT CARD (Clickable Card + Smart Logic) ---
-const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
+// --- COMPONENT: INTERNAL PRODUCT CARD (Animated + Clickable) ---
+const ProductCard = ({ product, index, wishlist = [], toggleWishlist, addToCart }) => {
     // 1. Safe Data Extraction
     const productId = product._id || product.id;
     const isWishlisted = Array.isArray(wishlist) && wishlist.some((item) => item._id === productId);
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
     const shopName = product.shop?.name || 'Verified Seller';
 
-    // 2. REAL IMAGE LOGIC (Priority: coverImage -> images array -> single image)
+    // 2. REAL IMAGE LOGIC
     const displayImage = product.coverImage || 
                          (product.images && product.images.length > 0 ? product.images[0].url : null) || 
                          product.image;
 
     // 3. Helper to ensure URL is valid
     const getImageUrl = (path) => {
-        if (!path) return "https://via.placeholder.com/400?text=No+Image";
+        if (!path) return "https://placehold.co/400x500?text=No+Image";
         if (path.startsWith('http') || path.startsWith('https') || path.startsWith('data:')) {
             return path;
         }
-        // Local path handling
         const cleanPath = path.replace(/^\//, '');
         return `${API_URL}/${cleanPath}`;
     };
@@ -63,8 +65,17 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
     const ratingValue = product.rating || 4.5;
 
     return (
-      <Link 
+      <MotionLink 
         to={`/product/${productId}`} 
+        // --- MAKHAN ANIMATION LOGIC ---
+        initial={{ opacity: 0, y: 50 }} // Start slightly lower and invisible
+        animate={{ opacity: 1, y: 0 }}  // Animate to visible and original position
+        transition={{ 
+            duration: 0.5, 
+            delay: index * 0.05, // Stagger effect based on index (0.05s delay per card)
+            ease: "easeOut" 
+        }}
+        // -----------------------------
         className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full group overflow-hidden relative transform hover:-translate-y-1 block"
       >
          
@@ -76,7 +87,7 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                 loading="lazy"
                 onError={(e) => { 
                     e.target.onerror = null; 
-                    e.target.src = "https://via.placeholder.com/400?text=Image+Error"; 
+                    e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
                 }} 
                 className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
              />
@@ -102,7 +113,7 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                  </div>
              ))}
 
-             {/* Wishlist Button (Stop Propagation prevents navigation) */}
+             {/* Wishlist Button (Stop Propagation) */}
              <button 
                 onClick={(e) => {
                     e.preventDefault();
@@ -117,7 +128,6 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
   
          {/* --- CONTENT CONTAINER --- */}
          <div className="p-4 flex flex-col flex-1">
-             {/* Category & Shop */}
              <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{product.category || "General"}</span>
                 <div className="flex items-center gap-1 text-slate-400">
@@ -126,13 +136,11 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                 </div>
              </div>
              
-             {/* Title & Rating */}
              <div className="mb-2">
                 <h3 className="font-bold text-slate-900 line-clamp-1 text-base group-hover:text-indigo-600 transition-colors mb-1 leading-tight">
                     {product.name}
                 </h3>
                 
-                {/* RATING SECTION */}
                 <div className="flex items-center gap-1 text-[11px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 w-fit">
                    <Star className="w-3 h-3 fill-current" /> 
                    <span>{ratingValue.toFixed(1)}</span>
@@ -144,7 +152,6 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                 {product.description}
              </p>
              
-             {/* PRICE SECTION (Compare At) */}
              <div className="mt-auto flex items-end justify-between mb-4 border-b border-slate-50 pb-4">
                 <div className="flex flex-col">
                     <span className="text-xs text-slate-400 font-medium line-through">
@@ -155,7 +162,6 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                     </span>
                 </div>
                 
-                {/* Discount Percentage Calculation */}
                 {oldPrice > currentPrice && (
                      <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
                         {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
@@ -163,7 +169,7 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                 )}
              </div>
   
-             {/* PERMANENT ADD TO CART BUTTON (Stop Propagation prevents navigation) */}
+             {/* PERMANENT ADD TO CART BUTTON (Stop Propagation) */}
              <button 
                onClick={(e) => {
                    e.preventDefault();
@@ -181,7 +187,7 @@ const ProductCard = ({ product, wishlist = [], toggleWishlist, addToCart }) => {
                 {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
              </button>
          </div>
-      </Link>
+      </MotionLink>
     );
 };
 
@@ -620,9 +626,12 @@ const ShopView = ({
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
                 <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
 
-                {/* PRODUCT GRID */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
+                {/* PRODUCT GRID - ANIMATED CONTAINER */}
+                <div 
+                    className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8"
+                >
                     {isLoading && [...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
+                    
                     {!isLoading && products.length === 0 && (
                         <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
                             <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100"><PackageOpen className="w-10 h-10 text-indigo-500"/></div>
@@ -631,6 +640,7 @@ const ShopView = ({
                             <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group"><Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></Link>
                         </div>
                     )}
+                    
                     {!isLoading && products.length > 0 && filteredProducts.length === 0 && (
                         <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
                             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
@@ -640,11 +650,12 @@ const ShopView = ({
                         </div>
                     )}
                     
-                    {/* Updated to use the internal ProductCard */}
-                    {!isLoading && filteredProducts.map((product) => (
+                    {/* ANIMATED PRODUCT CARDS */}
+                    {!isLoading && filteredProducts.map((product, index) => (
                         <ProductCard 
                             key={product._id || product.id} 
                             product={product} 
+                            index={index}
                             wishlist={wishlist} 
                             toggleWishlist={toggleWishlist} 
                             addToCart={addToCart} 
