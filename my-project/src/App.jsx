@@ -16,13 +16,9 @@ import {
   ArrowRight,
   Trash2,
   RefreshCcw,
-  Palette,
   AlertCircle,
   CheckCircle,
-  Home,
-  Heart,
-  User,
-  Image as ImageIcon,
+  ImageIcon,
   Plus,
   Minus
 } from 'lucide-react';
@@ -40,7 +36,7 @@ import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView';
 import SearchPage from './SearchPage';
-import SellerRegister from './SellerRegister';
+import SellerRegister from './SellerRegister'; // Ensure this is imported
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
@@ -300,9 +296,11 @@ const CraftifyContent = () => {
 
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
+  // Handle Login (Redirects based on Role)
   const handleLogin = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem('userInfo', JSON.stringify(userData));
+    // Redirect logic: Founder -> Founder, Seller -> My Shop, Buyer -> Shop
     navigate(userData.role === 'founder' ? '/founder' : userData.role === 'seller' ? '/my-shop' : '/shop');
   };
 
@@ -334,8 +332,10 @@ const CraftifyContent = () => {
     finally { setOrderLoading(false); }
   };
 
+  // Logic to hide Navbar on specific auth routes
   const showNavbar = !['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login'].includes(location.pathname);
 
+  // Toast Component Definition
   const ToastContainer = ({ toasts, removeToast }) => (
     <div className="fixed top-4 right-4 md:top-24 z-[130] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => (
@@ -355,25 +355,52 @@ const CraftifyContent = () => {
     <div className="min-h-screen">
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <Navbar cart={cart} wishlist={wishlist} currentUser={currentUser} setIsCartOpen={setIsCartOpen} />
+      
+      {/* Conditionally Render Navbar */}
+      {showNavbar && (
+        <Navbar cart={cart} wishlist={wishlist} currentUser={currentUser} setIsCartOpen={setIsCartOpen} />
+      )}
       
       <main className={showNavbar ? 'pt-16 md:pt-0' : ''}>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} />} />
           <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
           <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+
+          {/* --- SELLER REGISTRATION & LOGIN ROUTES (ADDED) --- */}
+          <Route 
+            path="/seller-register" 
+            element={
+              currentUser ? <Navigate to="/my-shop" /> : <SellerRegister onLoginSuccess={handleLogin} initialMode="register" />
+            } 
+          />
+          <Route 
+            path="/seller-login" 
+            element={
+              currentUser ? <Navigate to="/my-shop" /> : <SellerRegister onLoginSuccess={handleLogin} initialMode="login" />
+            } 
+          />
+
+          {/* Buyer Routes */}
           <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery="" setSearchQuery={()=>{}} activeCategory="All" setActiveCategory={()=>{}} /></BuyerOnlyRoute>} />
           <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} openChat={(p)=>{setActiveChatProduct(p); setIsChatOpen(true);}} />} />
+          
+          {/* Protected Routes */}
           <Route path="/wishlist" element={<ProtectedRoute user={currentUser}><WishlistView wishlist={wishlist} addToCart={addToCart} removeFromWishlist={(id) => toggleWishlist({_id: id})} /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute user={currentUser}><ProfileView currentUser={currentUser} orders={orders} onLogout={handleLogout} /></ProtectedRoute>} />
+          
+          {/* Role Specific Routes */}
           <Route path="/founder" element={<ProtectedRoute user={currentUser} allowedRoles={['founder']}><FounderAccess currentUser={currentUser} /></ProtectedRoute>} />
           <Route path="/my-shop" element={<ProtectedRoute user={currentUser} allowedRoles={['seller']}><StoreAdmin currentUser={currentUser} /></ProtectedRoute>} />
+          
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 
-      {/* MobileNav removed from here */}
+      {/* Overlays */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
       {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} socket={socket} API_URL={API_URL} />}
