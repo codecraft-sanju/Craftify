@@ -10,6 +10,7 @@ import {
   Outlet,
 } from 'react-router-dom';
 import NotFound from './NotFound';
+import PrivacyPolicy from './PrivacyPolicy';
 import {
   ShoppingBag,
   X,
@@ -367,6 +368,7 @@ const CraftifyContent = () => {
           <Route path="/" element={<LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} />} />
           <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
           <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
 
           {/* --- SELLER REGISTRATION & LOGIN ROUTES (ADDED) --- */}
           <Route 
