@@ -11,6 +11,7 @@ import {
 } from 'react-router-dom';
 import NotFound from './NotFound';
 import PrivacyPolicy from './PrivacyPolicy';
+import DeleteAccount from './DeleteAccount';
 import {
   ShoppingBag,
   X,
@@ -369,6 +370,7 @@ const CraftifyContent = () => {
           <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
           <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
 
           {/* --- SELLER REGISTRATION & LOGIN ROUTES (ADDED) --- */}
           <Route 

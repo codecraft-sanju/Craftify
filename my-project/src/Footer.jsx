@@ -33,6 +33,7 @@ const Footer = () => {
               <h4 className="font-bold text-xs uppercase text-white/90">Company</h4>
               <a href="/privacy" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Terms</a>
              <Link to="/privacy" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Privacy</Link>
+             <Link to="/delete-account" className="hover:text-white hover:translate-x-1 transition-all duration-300 text-white/60 font-medium">Delete Account</Link>
             </div>
             
             <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
