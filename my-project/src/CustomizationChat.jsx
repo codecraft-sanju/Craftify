@@ -1,6 +1,9 @@
 // src/CustomizationChat.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, MessageSquare, Paperclip, ShieldCheck, Zap, Check, AlertTriangle } from 'lucide-react';
+import { 
+  X, Send, MessageSquare, Paperclip, ShieldCheck, Zap, 
+  Check, AlertTriangle, MoreVertical, Flag, Ghost 
+} from 'lucide-react';
 
 // --- CONFIG: QUICK REPLIES ---
 const QUICK_REPLIES = [
@@ -14,7 +17,8 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [chatId, setChatId] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(""); // State for Safety Warning
+  const [errorMsg, setErrorMsg] = useState(""); 
+  const [showSafetyMenu, setShowSafetyMenu] = useState(false); // For Report/Block Menu
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -22,7 +26,6 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
   useEffect(() => {
     if (isOpen && currentUser && product) {
         setLoading(true);
-        // Prevent background scrolling on mobile
         document.body.style.overflow = 'hidden';
 
         fetch(`${API_URL}/api/chats`, {
@@ -55,8 +58,6 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
       const handleMessageReceived = (newMessageReceived) => {
           if (chatId && chatId === newMessageReceived.chatId) {
              const incomingMsg = newMessageReceived.message;
-             
-             // Check if sender is ME to prevent double messages (Optimistic UI handled locally)
              const isMe = incomingMsg.sender._id === currentUser?._id || incomingMsg.sender === currentUser?._id;
 
              if (!isMe) {
@@ -73,27 +74,35 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  // --- SECURITY CHECK FUNCTION (UPDATED) ---
+  // --- SAFETY ACTIONS (NEW) ---
+  const handleReport = () => {
+    alert("This chat has been reported to Giftomize Admin. We will review the messages within 24 hours.");
+    setShowSafetyMenu(false);
+  };
+
+  const handleBlock = () => {
+    const confirmBlock = window.confirm("Are you sure you want to block this user? You won't receive messages from them anymore.");
+    if (confirmBlock) {
+      alert("User blocked successfully.");
+      onClose();
+    }
+    setShowSafetyMenu(false);
+  };
+
+  // --- SECURITY CHECK FUNCTION ---
   const isMessageSafe = (text) => {
       const lowerText = text.toLowerCase();
-      
-      // 1. Check for Phone Numbers (Indian format mostly)
-      // Remove spaces, dashes to catch "9 8 7 6..." patterns
       const cleanText = text.replace(/[\s-]/g, ''); 
-      const phoneRegex = /(?:\+?91|0)?[6789]\d{9}/; // Matches 10 digit mobile numbers
+      const phoneRegex = /(?:\+?91|0)?[6789]\d{9}/; 
 
       if (phoneRegex.test(cleanText)) return false;
 
-      // 2. Email Check
       const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
       if (emailRegex.test(text)) return false;
 
-      // 3. Instagram / Social Handles (Strict Check)
-      // Detects: @username, ig: username, insta: username, instagram.com/...
       const instaRegex = /(?:@|(?:instagram|insta|ig)(?:\.com)?\/|ig:? ?|insta:? ?)([a-zA-Z0-9_.]+)/i;
       if (instaRegex.test(text)) return false;
 
-      // 4. Forbidden Keywords
       const forbiddenWords = [
           'call me', 'phone number', 'contact number', 'whatsapp', 
           'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'number do',
@@ -103,35 +112,27 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
       for (let word of forbiddenWords) {
           if (lowerText.includes(word)) return false;
       }
-
       return true;
   };
 
   // --- HANDLE SEND ---
   const handleSend = async (manualText = null) => {
-    // Determine content: Button click (manualText) OR Input field (message)
     const contentToSend = manualText || message;
-    
     if (!contentToSend.trim() || !chatId) return;
 
-    // --- SECURITY BLOCK ---
     if (!isMessageSafe(contentToSend)) {
         setErrorMsg("Sharing contact, social IDs or payment details is restricted!");
-        // Clear error after 3 seconds
         setTimeout(() => setErrorMsg(""), 3000);
-        return; // Stop execution
+        return; 
     }
-    setErrorMsg(""); // Clear errors if safe
+    setErrorMsg(""); 
 
     try {
         let finalMsg = contentToSend;
-
-        // Context Logic: If this is the FIRST message, attach Product Name
         if (messages.length === 0) {
             finalMsg = `Ref: ${product.name}\n\n${contentToSend}`;
         }
 
-        // Optimistic UI Update
         const tempMsg = { 
             text: finalMsg, 
             sender: { _id: currentUser._id }, 
@@ -139,13 +140,10 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
         };
         
         setMessages(prev => [...prev, tempMsg]);
-        
-        // Clear Input only if typed manually
         if (!manualText) setMessage("");
         inputRef.current?.focus();
         scrollToBottom();
         
-        // Backend Request
         await fetch(`${API_URL}/api/chats/message`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -160,10 +158,9 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
   return (
     <div className="fixed inset-0 z-[120] flex items-end md:items-center justify-center md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       
-      {/* MAIN CONTAINER */}
       <div className="bg-[#F0F2F5] w-full h-[100dvh] md:h-[650px] md:max-w-md md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative transition-all">
         
-        {/* 1. HEADER */}
+        {/* 1. HEADER (UPDATED WITH SAFETY MENU) */}
         <div className="px-4 py-3 bg-white/90 backdrop-blur-xl border-b border-slate-200 flex justify-between items-center sticky top-0 z-20 shadow-sm">
           <div className="flex items-center gap-3">
               <div className="relative">
@@ -173,15 +170,38 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-slate-900 text-sm truncate max-w-[150px]">{product.shop?.name || 'Seller'}</h3>
+                  <h3 className="font-bold text-slate-900 text-sm truncate max-w-[120px]">{product.shop?.name || 'Seller'}</h3>
                   <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
-                    Re: {product.name.substring(0, 20)}...
+                    Re: {product.name.substring(0, 15)}...
                   </p>
               </div>
           </div>
-          <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors active:scale-95">
-              <X className="w-5 h-5 text-slate-600" />
-          </button>
+          
+          <div className="flex items-center gap-1 relative">
+              {/* Safety Menu Button */}
+              <button 
+                onClick={() => setShowSafetyMenu(!showSafetyMenu)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95 text-slate-400"
+              >
+                  <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {/* Safety Dropdown */}
+              {showSafetyMenu && (
+                <div className="absolute top-12 right-0 w-40 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in zoom-in-95 duration-200">
+                  <button onClick={handleReport} className="w-full px-4 py-2.5 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-2">
+                    <Flag className="w-4 h-4" /> Report
+                  </button>
+                  <button onClick={handleBlock} className="w-full px-4 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-slate-50">
+                    <Ghost className="w-4 h-4" /> Block User
+                  </button>
+                </div>
+              )}
+
+              <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors active:scale-95">
+                  <X className="w-5 h-5 text-slate-600" />
+              </button>
+          </div>
         </div>
 
         {/* 2. MESSAGES AREA */}
@@ -191,7 +211,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
             <div className="flex justify-center mb-6 mt-2 relative z-10">
                 <div className="bg-[#FFF8C5] border border-[#F2E59A] text-yellow-900 text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm text-center">
                     <ShieldCheck className="w-3 h-3 flex-shrink-0" />
-                    <span>Your chat is monitored for safety.</span>
+                    <span>Your chat is monitored for safety. Use the menu to report.</span>
                 </div>
             </div>
 
@@ -210,7 +230,6 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
                         Ask about price, delivery or customization.
                     </p>
                     
-                    {/* --- QUICK REPLY CHIPS --- */}
                     <div className="flex flex-wrap justify-center gap-2 max-w-xs">
                         {QUICK_REPLIES.map((reply, index) => (
                             <button 
@@ -249,7 +268,6 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
 
         {/* 3. INPUT AREA */}
         <div className="p-2 bg-[#F0F2F5] sticky bottom-0 z-20 pb-safe">
-            {/* Security Warning Alert */}
             {errorMsg && (
                 <div className="absolute bottom-[4.5rem] left-4 right-4 bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center justify-center gap-2 animate-in slide-in-from-bottom-2 z-30">
                     <AlertTriangle className="w-4 h-4" />
@@ -267,7 +285,7 @@ const CustomizationChat = ({ isOpen, onClose, product, currentUser, socket, API_
                         value={message} 
                         onChange={(e) => {
                             setMessage(e.target.value);
-                            if(errorMsg) setErrorMsg(""); // Clear error when user types
+                            if(errorMsg) setErrorMsg(""); 
                         }}
                         onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
                     />
