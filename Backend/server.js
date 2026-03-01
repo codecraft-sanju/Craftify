@@ -13,11 +13,24 @@ const orderRoutes = require('./routes/orderRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 
+// --- MODIFICATIONS START: Web-Push Import ---
+const webpush = require('web-push');
+// --- MODIFICATIONS END ---
+
 // Config
 dotenv.config();
 connectDB();
 
 const app = express();
+
+// --- MODIFICATIONS START: Web-Push Config ---
+// Ensure you have PUBLIC_VAPID_KEY and PRIVATE_VAPID_KEY in your .env file
+webpush.setVapidDetails(
+  'mailto:contact@craftify.com', 
+  process.env.PUBLIC_VAPID_KEY,
+  process.env.PRIVATE_VAPID_KEY
+);
+// --- MODIFICATIONS END ---
 
 // Create HTTP Server explicitly
 const server = http.createServer(app);
@@ -57,6 +70,15 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/cart', cartRoutes);
+
+// --- MODIFICATIONS START: Notification Subscribe Route ---
+app.post('/api/notifications/subscribe', (req, res) => {
+    const subscription = req.body;
+    // Note: We will later save this 'subscription' object to the specific user/seller in the database
+    console.log("New Push Subscription Received:", subscription);
+    res.status(201).json({ success: true, message: "Subscribed successfully" });
+});
+// --- MODIFICATIONS END ---
 
 // --- NEW: HEALTH CHECK ROUTE (For Founder Dashboard) ---
 app.get('/api/health', (req, res) => {

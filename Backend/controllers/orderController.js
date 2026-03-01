@@ -3,6 +3,9 @@ const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
 const sendWhatsApp = require('../utils/sendWhatsApp'); 
+// --- MODIFICATIONS START: Import Web-Push ---
+const webpush = require('web-push');
+// --- MODIFICATIONS END ---
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -172,20 +175,38 @@ const verifyOrderPayment = async (req, res) => {
             // NOW Notify involved sellers because order is valid
             const involvedShops = [...new Set(order.items.map(item => item.shop.toString()))];
             
-            // --- WHATSAPP TO SELLERS (Silent) ---
+            // --- WHATSAPP & PUSH NOTIFICATION TO SELLERS ---
             try {
-                const shopsToNotify = await Shop.find({ _id: { $in: involvedShops } });
+                // --- MODIFICATIONS START: Added .populate('owner') to get seller details ---
+                const shopsToNotify = await Shop.find({ _id: { $in: involvedShops } }).populate('owner');
+                // --- MODIFICATIONS END ---
                 
                 for (const shop of shopsToNotify) {
+                    const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
+                    
                     if (shop.phone) {
-                        const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
                         const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Giftomize. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
                         
                         sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                     }
+
+                    // --- MODIFICATIONS START: Send Web Push Notification ---
+                    // Note: Future me jab aap User model me `pushSubscription` save karenge, tab yeh line chalegi
+                    if (shop.owner && shop.owner.pushSubscription) {
+                        const payload = JSON.stringify({
+                            title: "🎉 New Verified Order!",
+                            body: `Order #${shortOrderId} payment verified. Tap to start processing.`,
+                            url: "/my-shop"
+                        });
+
+                        webpush.sendNotification(shop.owner.pushSubscription, payload)
+                            .catch(err => console.error("Web Push Error:", err));
+                    }
+                    // --- MODIFICATIONS END ---
                 }
             } catch (notifyError) {
                 // Ignore
+                console.error("Notification System Error:", notifyError);
             }
             // ------------------------------------
 

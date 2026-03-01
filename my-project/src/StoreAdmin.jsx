@@ -15,6 +15,26 @@ const ENDPOINT = import.meta.env.VITE_API_URL;
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
+// --- MODIFICATIONS START: Replace with your actual Public Vapid Key from Backend ---
+// IMPORTANT: Copy the PUBLIC_VAPID_KEY from your backend .env file here
+const PUBLIC_VAPID_KEY = 'BBYBh-g-OGOqYgtIuE-imusyfVuLOjmJFZzU6e0b2PBPMZEPfGeKOOSCfh8Uvt0IKVb2NEONNQDNhk5X_wkYRuE'; 
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+// --- MODIFICATIONS END ---
+
 var socket;
 
 // --- PREMIUM UI COMPONENTS (Midnight Rose Theme) ---
@@ -123,10 +143,50 @@ export default function StoreAdmin({ currentUser }) {
     const [chatError, setChatError] = useState(""); 
     const scrollRef = useRef();
 
+    // --- MODIFICATIONS START: Register Service Worker for Notifications ---
+    const registerServiceWorker = async () => {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            try {
+                // Register the service worker
+                const register = await navigator.serviceWorker.register('/sw.js', {
+                    scope: '/'
+                });
+
+                // Check if already subscribed
+                let subscription = await register.pushManager.getSubscription();
+
+                if (!subscription) {
+                    // Ask for permission and subscribe
+                    subscription = await register.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+                    });
+
+                    // Send the subscription object to your backend
+                    await fetch(`${API_URL}/api/notifications/subscribe`, {
+                        method: 'POST',
+                        body: JSON.stringify(subscription),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include'
+                    });
+                }
+            } catch (err) {
+                console.error("Service Worker/Push Notification setup failed: ", err);
+            }
+        }
+    };
+    // --- MODIFICATIONS END ---
+
     useEffect(() => {
         socket = io(ENDPOINT, { withCredentials: true });
         if(currentUser) socket.emit("setup", currentUser);
         fetchStoreData();
+        
+        // --- MODIFICATIONS START: Call Notification Setup ---
+        registerServiceWorker();
+        // --- MODIFICATIONS END ---
         
         socket.on("new_order_placed", () => fetchStoreData());
         socket.on("order_verified", () => fetchStoreData());
