@@ -12,10 +12,24 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const webpush = require('web-push'); 
 
 // Config
 dotenv.config();
 connectDB();
+
+// CHANGES MADE: Initialize Web Push with VAPID keys from environment variables
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+        `mailto:${process.env.VAPID_EMAIL || 'sanjaychoudhury693@gmail.com'}`,
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    );
+    console.log("Web Push VAPID keys configured successfully.");
+} else {
+    console.warn("VAPID keys not found in .env file. Push notifications will not work.");
+}
+// CHANGES MADE: Push Notification Logic End
 
 const app = express();
 

@@ -23,7 +23,8 @@ const {
     getWishlist,
     addToWishlist,
     removeFromWishlist,
-    receiveAirtextWebhook
+    receiveAirtextWebhook,
+    subscribeToPushNotifications // CHANGES MADE: Imported new push notification controller
 } = require('../controllers/userController');
 const { protect, founder } = require('../middleware/authMiddleware');
 
@@ -34,6 +35,9 @@ router.post('/register', verifyOtpAndRegister);
 
 router.post('/login', authUser);
 router.post('/logout', logoutUser); 
+
+// CHANGES MADE: Push notification subscription route
+router.post('/subscribe', protect, subscribeToPushNotifications);
 
 // --- GLOBAL SETTINGS ROUTES (QR, Categories & Banners) ---
 

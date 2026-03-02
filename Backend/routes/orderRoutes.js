@@ -4,8 +4,8 @@ const router = express.Router();
 const {
     addOrderItems,
     getOrderById,
-    verifyOrderPayment, // Renamed from updateOrderToPaid
-    settlePayout,       // NEW: For Payout Proofs
+    verifyOrderPayment, 
+    settlePayout,       
     updateOrderStatus,
     getMyOrders,
     getShopOrders,

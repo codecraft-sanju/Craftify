@@ -1,3 +1,4 @@
+// UserController.js    
 const User = require('../models/User');
 const Shop = require('../models/Shop'); 
 const GlobalSettings = require('../models/GlobalSettings'); 
@@ -578,6 +579,36 @@ const receiveAirtextWebhook = async (req, res) => {
     }
 };
 
+
+// CHANGES MADE: Push Notification Logic Added below
+// @desc    Subscribe seller to push notifications
+// @route   POST /api/users/subscribe
+// @access  Private (Seller/Founder)
+const subscribeToPushNotifications = async (req, res) => {
+    try {
+        const subscription = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if this endpoint is already subscribed to avoid duplicates
+        const existingSub = user.pushSubscriptions.find(sub => sub.endpoint === subscription.endpoint);
+        
+        if (!existingSub) {
+            user.pushSubscriptions.push(subscription);
+            await user.save();
+        }
+
+        res.status(201).json({ message: 'Subscribed successfully' });
+    } catch (error) {
+        console.error("Push Subscribe Error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+// CHANGES MADE: Push Notification Logic End
+
 // --- Exported new functions ---
 module.exports = {
     sendRegistrationOtp,
@@ -599,5 +630,6 @@ module.exports = {
     getWishlist,
     addToWishlist,
     removeFromWishlist,
-    receiveAirtextWebhook
+    receiveAirtextWebhook,
+    subscribeToPushNotifications 
 };

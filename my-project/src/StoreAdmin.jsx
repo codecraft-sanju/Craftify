@@ -17,6 +17,23 @@ const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
 var socket;
 
+// CHANGES MADE: Helper function for Push Notifications
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+// CHANGES MADE: End helper function
+
 // --- PREMIUM UI COMPONENTS (Midnight Rose Theme) ---
 
 const Button = ({ children, variant = 'primary', size = 'md', className = '', loading, ...props }) => {
@@ -125,7 +142,46 @@ export default function StoreAdmin({ currentUser }) {
 
     useEffect(() => {
         socket = io(ENDPOINT, { withCredentials: true });
-        if(currentUser) socket.emit("setup", currentUser);
+        if(currentUser) {
+            socket.emit("setup", currentUser);
+
+            // CHANGES MADE: Push Notification Registration Logic Start
+            const registerPushNotification = async () => {
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    try {
+                        const register = await navigator.serviceWorker.register('/sw.js');
+                        
+                        const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+                        if (!publicVapidKey) {
+                            console.warn("VITE_VAPID_PUBLIC_KEY is not set in frontend .env");
+                            return;
+                        }
+
+                        let subscription = await register.pushManager.getSubscription();
+                        
+                        if (!subscription) {
+                            subscription = await register.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                            });
+                        }
+
+                        await fetch(`${API_URL}/api/users/subscribe`, {
+                            method: 'POST',
+                            body: JSON.stringify(subscription),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include'
+                        });
+                    } catch (error) {
+                        console.error("Push Notification Subscription Error:", error);
+                    }
+                }
+            };
+            registerPushNotification();
+            // CHANGES MADE: Push Notification Registration Logic End
+        }
         fetchStoreData();
         
         socket.on("new_order_placed", () => fetchStoreData());

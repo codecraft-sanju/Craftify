@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
     
     avatar: { type: String, default: 'U' },
 
-    // CHANGES MADE: Removed 'otp' and 'otpExpire' fields as they are now handled by the separate Otp.js model
+
     isPhoneVerified: { type: Boolean, default: false },
 
     address: [{
@@ -42,7 +42,17 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpire: Date,
     
     lastLogin: Date,
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+
+  
+    pushSubscriptions: [{
+        endpoint: { type: String, required: true },
+        expirationTime: { type: Date, default: null },
+        keys: {
+            p256dh: { type: String, required: true },
+            auth: { type: String, required: true }
+        }
+    }]
 
 }, { timestamps: true });
 

@@ -2,7 +2,9 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
+const User = require('../models/User'); // CHANGES MADE: Imported User model for Push Notifications
 const sendWhatsApp = require('../utils/sendWhatsApp'); 
+const webpush = require('web-push'); // CHANGES MADE: Imported web-push
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -183,9 +185,42 @@ const verifyOrderPayment = async (req, res) => {
                         
                         sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                     }
+                    
+                    // CHANGES MADE: Push Notification Logic Start
+                    // Send Web Push Notification to the shop owner
+                    const shopOwner = await User.findById(shop.owner);
+                    if (shopOwner && shopOwner.pushSubscriptions && shopOwner.pushSubscriptions.length > 0) {
+                        const payload = JSON.stringify({
+                            title: 'New Verified Order! 🎉',
+                            body: `Aapke shop (${shop.name}) ke liye ek naya order (ID: #${updatedOrder._id.toString().slice(-6).toUpperCase()}) aaya hai.`,
+                            url: '/seller/dashboard' // Yeh URL frontend handle karega
+                        });
+
+                        // Make sure your VAPID details are set somewhere in your app setup (like server.js)
+                        // If not, you might need to set them here or in a separate config file
+                        if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+                           webpush.setVapidDetails(
+                                'mailto:sanjaychoudhury693@gmail.com', // Replace with your email
+                                process.env.VAPID_PUBLIC_KEY,
+                                process.env.VAPID_PRIVATE_KEY
+                            );
+                            
+                            // Send notification to all registered devices of the seller
+                            shopOwner.pushSubscriptions.forEach(sub => {
+                                webpush.sendNotification(sub, payload).catch(err => {
+                                    console.error("Push Notification Error for specific sub:", err);
+                                    // Optional: If subscription is invalid/expired, you might want to remove it from DB
+                                });
+                            });
+                        } else {
+                            console.warn("VAPID keys not set in env. Push notifications skipped.");
+                        }
+                    }
+                    // CHANGES MADE: Push Notification Logic End
                 }
             } catch (notifyError) {
                 // Ignore
+                console.error("Notification Error:", notifyError); // Added log for debugging
             }
             // ------------------------------------
 
