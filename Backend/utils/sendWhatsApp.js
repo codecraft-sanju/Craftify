@@ -3,20 +3,21 @@ const axios = require('axios');
 
 const sendWhatsApp = async (phone, msg) => {
     try {
-        // --- CHANGES MADE: URL updated to /send-message, added '+' to phone, and added type parameter ---
-        const response = await axios.post('https://airtext-fo6q.onrender.com/send-message', {
+        // --- CHANGES MADE: URL protocol changed from https to http ---
+        // Kyuki IP address 13.233.83.235 par SSL (HTTPS) active nahi hai
+        const response = await axios.post('http://13.233.83.235:3000/send-message', {
             apiKey: process.env.AIRTEXT_API_KEY,
-            phone: `+${phone}`, // AirText/Baileys ke liye + lagana better practice hai
+            phone: `+${phone}`, 
             msg: msg,
-            type: 'whatsapp', // 'sms', 'whatsapp', ya 'both' set kar sakte ho
+            type: 'whatsapp', 
             webhookUrl: process.env.WEBHOOK_URL
         });
         return response.data;
     } catch (error) {
-        console.error("Airtext WhatsApp Utility Error:", error.message);
+        // Detailed logging for debugging
+        console.error("Airtext WhatsApp Utility Error:", error.response ? error.response.data : error.message);
         throw new Error("Failed to send whatsapp msg");
     }
 };
-
 
 module.exports = sendWhatsApp;

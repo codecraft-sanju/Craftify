@@ -4,7 +4,7 @@ const axios = require('axios');
 const sendSms = async (phone, msg) => {
     try {
         // --- CHANGES MADE: URL updated to /send-message, added '+' to phone, and added type parameter ---
-        const response = await axios.post('https://airtext-fo6q.onrender.com/send-message', {
+        const response = await axios.post('http://13.233.83.235:3000/send-message', {
             apiKey: process.env.AIRTEXT_API_KEY,
             phone: `+${phone}`, // AirText/Baileys ke liye + lagana better practice hai
             msg: msg,
