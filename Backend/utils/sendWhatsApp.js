@@ -6,7 +6,7 @@ const sendWhatsApp = async (phone, msg) => {
         // --- CHANGES MADE: URL protocol changed from https to http ---
         // Kyuki IP address 13.233.83.235 par SSL (HTTPS) active nahi hai
         const response = await axios.post('http://13.233.83.235:3000/send-message', {
-            apiKey: process.env.AIRTEXT_API_KEY,
+            apiKey:'9510ad40-9c45-4ac2-a03e-6ac71bd906e5',
             phone: `+${phone}`, 
             msg: msg,
             type: 'whatsapp', 
