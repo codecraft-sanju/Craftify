@@ -193,7 +193,7 @@ const verifyOrderPayment = async (req, res) => {
                         const payload = JSON.stringify({
                             title: 'New Verified Order! 🎉',
                             body: `Aapke shop (${shop.name}) ke liye ek naya order (ID: #${updatedOrder._id.toString().slice(-6).toUpperCase()}) aaya hai.`,
-                            url: '/seller/dashboard' // Yeh URL frontend handle karega
+                            url: '/my-shop' // Yeh URL frontend handle karega
                         });
 
                         // Make sure your VAPID details are set somewhere in your app setup (like server.js)
