@@ -118,35 +118,33 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
          {/* --- CONTENT CONTAINER (Balanced Layout) --- */}
          <div className="p-3 flex flex-col flex-1">
              
-             {/* 1. Category (Small Top Label) */}
-             <div className="mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">
-                    {product.category || "General"}
-                </span>
-             </div>
+             {/* CHANGES MADE: Redesigned layout to split Title/Price and Category/Discount horizontally */}
              
-             {/* 2. Product Title (Clear & Readable) */}
-             <div className="mb-2 min-h-[2.5rem]"> {/* min-h ensures alignment if titles vary in length */}
-                <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors">
+             {/* Row 1: Title (Left) and Current Price (Right) */}
+             <div className="flex justify-between items-start gap-2 mb-1 min-h-[2.5rem]">
+                <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors flex-1">
                     {product.name}
                 </h3>
+                <span className="text-lg font-black text-slate-900 shrink-0 mt-[-2px]">
+                    ₹{currentPrice}
+                </span>
              </div>
 
-             {/* 3. Price Row (All in one line to save height) */}
-             <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg font-black text-slate-900">
-                    ₹{currentPrice}
+             {/* Row 2: Category (Left) and Old Price / % OFF (Right) */}
+             <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    {product.category || "General"}
                 </span>
                 
                 {oldPrice > currentPrice && (
-                    <>
+                    <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-xs text-slate-400 font-medium line-through decoration-slate-300">
                             ₹{oldPrice}
                         </span>
                         <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center">
                             {Math.round(((oldPrice - currentPrice) / oldPrice) * 100)}% OFF
                         </div>
-                    </>
+                    </div>
                 )}
              </div>
   
