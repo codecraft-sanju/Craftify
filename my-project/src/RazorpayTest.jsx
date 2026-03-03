@@ -21,7 +21,7 @@ const RazorpayTest = () => {
     }
 
     try {
-      const response = await fetch('https://razorpay-test-1kgh.onrender.com/create-order', { method: 'POST' });
+      const response = await fetch('https://api.giftomize.shop/create-order', { method: 'POST' });
       const order = await response.json();
 
       const options = {
