@@ -638,7 +638,7 @@ export default function StoreAdmin({ currentUser }) {
                                         { l: 'Revenue', v: `₹${orders.reduce((a,o)=>a+(o.totalAmount||0),0).toLocaleString()}`, i: DollarSign, c: 'text-white', b: 'bg-gradient-to-br from-emerald-600 to-emerald-800', t: '+12%' }, 
                                         { l: 'Orders', v: orders.length, i: Package, c: 'text-white', b: 'bg-gradient-to-br from-blue-600 to-blue-800', t: '+5%' }, 
                                         { l: 'Products', v: products.length, i: ShoppingBag, c: 'text-white', b: 'bg-gradient-to-br from-purple-600 to-purple-800', t: 'Stock' },
-                                        { l: 'Rating', v: '4.8', i: Star, c: 'text-white', b: 'bg-gradient-to-br from-amber-500 to-amber-700', t: 'Top' }
+                                        { l: 'Rating', v: '0', i: Star, c: 'text-white', b: 'bg-gradient-to-br from-amber-500 to-amber-700', t: 'Top' }
                                     ].map((s,i)=>(
                                         <Card key={i} className="p-5 md:p-6 relative overflow-hidden group border border-white/5 hover:border-white/10">
                                             <div className="flex justify-between items-start mb-4">
@@ -932,77 +932,91 @@ export default function StoreAdmin({ currentUser }) {
                 ))}
             </div>
 
-            {/* --- ADD/EDIT MODAL --- */}
-            {isAddModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-0 md:p-4 animate-in fade-in duration-200">
-                    <div className="bg-slate-900 w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-[2rem] shadow-2xl shadow-rose-900/10 relative flex flex-col scale-100 animate-in zoom-in-95 duration-200 border border-white/10">
-                        {/* Modal Header */}
-                        <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-slate-900/90 backdrop-blur md:rounded-t-[2rem] sticky top-0 z-10">
-                            <h2 className="text-xl font-black text-white tracking-tight">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
-                            <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"><X className="w-5 h-5 text-slate-400"/></button>
-                        </div>
-                        
-                        {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar pb-32">
-                            <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
-                                {/* Image Upload */}
-                                <div className="space-y-3">
-                                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Images (Max 4)</label>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        {images.map((imgObj, idx) => (
-                                            <div key={idx} className="aspect-square relative rounded-xl overflow-hidden border border-slate-700 group shadow-lg">
-                                                <img src={imgObj.url} alt="product" className="w-full h-full object-cover" />
-                                                <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-black/50 text-red-400 p-1 rounded-full shadow-md backdrop-blur hover:bg-red-500 hover:text-white transition-all"><X className="w-3 h-3" /></button>
-                                                {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-rose-600/90 text-white text-[9px] font-bold text-center py-1 backdrop-blur">Cover</div>}
-                                            </div>
-                                        ))}
-                                        {images.length < 4 && (
-                                            <label className={`aspect-square rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 hover:border-rose-500/50 transition-all ${uploading ? 'opacity-50' : ''}`}>
-                                                {uploading ? <Loader2 className="w-6 h-6 text-rose-500 animate-spin" /> : <><Plus className="w-6 h-6 text-slate-500 mb-1" /><span className="text-[10px] font-bold text-slate-500">Add</span></>}
-                                                <input type="file" accept="image/*" className="hidden" multiple disabled={uploading} onChange={handleImageUpload} />
-                                            </label>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="e.g. Wireless Headphones"/></div>
-                                
-                                <div className="flex gap-4">
-                                    <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
-                                    <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
-                                </div>
-
-                                {/* CATEGORY SECTION - IMPROVED POSITIONING */}
-                                <div className="space-y-1 relative group z-30">
-                                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Category</label>
-                                    <div className="relative">
-                                        <input type="text" value={categoryInput} onChange={(e) => { setCategoryInput(e.target.value); setShowCategoryDropdown(true); }} onFocus={() => setShowCategoryDropdown(true)} onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white pr-10 placeholder:text-slate-600" placeholder="Select or type..." required />
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                                        
-                                        {/* DROPDOWN - ABSOLUTE POSITIONED BELOW INPUT */}
-                                        {showCategoryDropdown && (
-                                            <div className="absolute top-full left-0 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar z-50 animate-in fade-in zoom-in-95">
-                                                {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).map((c, idx) => (
-                                                    <div key={idx} onMouseDown={() => { setCategoryInput(c); setShowCategoryDropdown(false); }} className="px-4 py-3 hover:bg-slate-700 cursor-pointer text-sm font-bold text-slate-300 hover:text-white border-b border-white/5 last:border-0 transition-colors">{c}</div>
-                                                ))}
-                                                {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && <div className="px-4 py-3 text-sm text-slate-500 italic">Type to add new</div>}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Sizes (Optional)</label><input name="sizes" defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="S, M, L, XL" /></div>
-                                <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Description</label><textarea name="description" defaultValue={editingProduct?.description} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" rows="3" placeholder="Product details..."/></div>
-                            </form>
-                        </div>
-                        
-                        {/* Sticky Footer for Mobile */}
-                        <div className="p-6 border-t border-white/5 bg-slate-900 md:rounded-b-[2rem] sticky bottom-0 z-40 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.5)]">
-                            <Button type="submit" form="productForm" size="lg" loading={isSubmitting} className="w-full shadow-xl shadow-rose-900/40">Save Product</Button>
-                        </div>
-                    </div>
+            {/* --- ADD/EDIT MODAL (MODIFIED FOR DRAWER EFFECT) --- */}
+            <div 
+                className={`fixed inset-0 bg-black/80 backdrop-blur-md z-[60] transition-opacity duration-300 ${isAddModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+                onClick={() => setIsAddModalOpen(false)}
+            ></div>
+            
+            <div 
+                className={`fixed z-[70] bg-slate-900 border-white/10 flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+                bottom-0 left-0 right-0 h-[90vh] rounded-t-[2rem] border-t border-x
+                md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:-translate-x-1/2 md:-translate-y-1/2 md:h-auto md:max-h-[90vh] md:w-[600px] md:rounded-[2rem] md:border
+                ${isAddModalOpen 
+                    ? 'translate-y-0 md:scale-100 opacity-100' 
+                    : 'translate-y-full md:translate-y-10 md:scale-95 opacity-0 pointer-events-none'
+                }`}
+            >
+                {/* Drag Handle for Mobile */}
+                <div className="md:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mt-4 mb-2 cursor-grab active:cursor-grabbing" />
+                
+                {/* Modal Header */}
+                <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-slate-900/90 backdrop-blur md:rounded-t-[2rem] sticky top-0 z-10">
+                    <h2 className="text-xl font-black text-white tracking-tight">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
+                    <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors group">
+                        <X className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors"/>
+                    </button>
                 </div>
-            )}
+                
+                {/* Modal Body */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar pb-32">
+                    <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
+                        {/* Image Upload */}
+                        <div className="space-y-3">
+                            <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Images (Max 4)</label>
+                            <div className="grid grid-cols-4 gap-3">
+                                {images.map((imgObj, idx) => (
+                                    <div key={idx} className="aspect-square relative rounded-xl overflow-hidden border border-slate-700 group shadow-lg">
+                                        <img src={imgObj.url} alt="product" className="w-full h-full object-cover" />
+                                        <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-black/50 text-red-400 p-1 rounded-full shadow-md backdrop-blur hover:bg-red-500 hover:text-white transition-all"><X className="w-3 h-3" /></button>
+                                        {idx === 0 && <div className="absolute bottom-0 inset-x-0 bg-rose-600/90 text-white text-[9px] font-bold text-center py-1 backdrop-blur">Cover</div>}
+                                    </div>
+                                ))}
+                                {images.length < 4 && (
+                                    <label className={`aspect-square rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 hover:border-rose-500/50 transition-all ${uploading ? 'opacity-50' : ''}`}>
+                                        {uploading ? <Loader2 className="w-6 h-6 text-rose-500 animate-spin" /> : <><Plus className="w-6 h-6 text-slate-500 mb-1" /><span className="text-[10px] font-bold text-slate-500">Add</span></>}
+                                        <input type="file" accept="image/*" className="hidden" multiple disabled={uploading} onChange={handleImageUpload} />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="e.g. Wireless Headphones"/></div>
+                        
+                        <div className="flex gap-4">
+                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
+                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
+                        </div>
+
+                        {/* CATEGORY SECTION */}
+                        <div className="space-y-1 relative group z-30">
+                            <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Category</label>
+                            <div className="relative">
+                                <input type="text" value={categoryInput} onChange={(e) => { setCategoryInput(e.target.value); setShowCategoryDropdown(true); }} onFocus={() => setShowCategoryDropdown(true)} onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white pr-10 placeholder:text-slate-600" placeholder="Select or type..." required />
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                
+                                {/* DROPDOWN */}
+                                {showCategoryDropdown && (
+                                    <div className="absolute top-full left-0 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar z-50 animate-in fade-in zoom-in-95">
+                                        {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).map((c, idx) => (
+                                            <div key={idx} onMouseDown={() => { setCategoryInput(c); setShowCategoryDropdown(false); }} className="px-4 py-3 hover:bg-slate-700 cursor-pointer text-sm font-bold text-slate-300 hover:text-white border-b border-white/5 last:border-0 transition-colors">{c}</div>
+                                        ))}
+                                        {getAvailableCategories().filter(c => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && <div className="px-4 py-3 text-sm text-slate-500 italic">Type to add new</div>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Sizes (Optional)</label><input name="sizes" defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="S, M, L, XL" /></div>
+                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Description</label><textarea name="description" defaultValue={editingProduct?.description} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" rows="3" placeholder="Product details..."/></div>
+                    </form>
+                </div>
+                
+                {/* Sticky Footer */}
+                <div className="p-4 md:p-6 border-t border-white/5 bg-slate-900 md:rounded-b-[2rem] sticky bottom-0 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]">
+                    <Button type="submit" form="productForm" size="lg" loading={isSubmitting} className="w-full shadow-xl shadow-rose-900/40">Save Product</Button>
+                </div>
+            </div>
 
             {/* --- ORDER DETAILS MODAL --- */}
             {selectedOrder && (
