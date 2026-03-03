@@ -434,6 +434,8 @@ export default function StoreAdmin({ currentUser }) {
             name: formData.get('name'), 
             category: categoryInput, 
             price: Number(formData.get('price')), 
+            // CHANGES MADE: Added compareAtPrice mapping
+            compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
             description: formData.get('description'), 
             images: images, 
@@ -1033,6 +1035,8 @@ export default function StoreAdmin({ currentUser }) {
                         
                         <div className="flex gap-4">
                             <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
+                            {/* CHANGES MADE: Added Compare At Price Input */}
+                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">compareAtPrice (₹)</label><input name="compareAtPrice" defaultValue={editingProduct?.compareAtPrice} type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
                             <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
                         </div>
 

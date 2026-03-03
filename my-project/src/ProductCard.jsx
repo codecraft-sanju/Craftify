@@ -23,8 +23,8 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
     
     // 2. REAL IMAGE LOGIC (Priority: coverImage -> images[0] -> image)
     const displayImage = product.coverImage || 
-                         (product.images && product.images.length > 0 ? product.images[0].url : null) || 
-                         product.image;
+                          (product.images && product.images.length > 0 ? product.images[0].url : null) || 
+                          product.image;
 
     // 3. Helper to ensure URL is valid (Smart Image Fix)
     const getImageUrl = (path) => {
@@ -44,8 +44,8 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
 
     // 4. Price Logic
     const currentPrice = product.price || 0;
-    // Auto-generate 20% higher "Compare Price" if not provided, to show discount
-    const oldPrice = product.oldPrice || Math.round(currentPrice * 1.2); 
+    // CHANGES MADE: Pull compareAtPrice from DB. Fallback to 20% higher if not set or 0.
+    const oldPrice = product.compareAtPrice || Math.round(currentPrice * 1.2); 
 
     return (
       <MotionLink 
@@ -150,7 +150,6 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
              </div>
   
              {/* 4. Add to Cart Button (Bottom pinned) */}
-           {/* 4. Add to Cart Button (Bottom pinned) */}
              <button 
                onClick={(e) => {
                    e.preventDefault();

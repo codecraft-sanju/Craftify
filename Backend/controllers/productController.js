@@ -53,12 +53,13 @@ const getProductById = async (req, res) => {
 const createProduct = async (req, res) => {
     try {
         const {
-            shop: shopId, // Frontend MUST send the Shop ID now
+            shop: shopId, 
             name, price, description, category, 
             stock, tags, specs, colors, sizes,
             customizationAvailable, customizationType,
             image, coverImage, sku,
-            images // --- NEW: Array of images ---
+            images, // --- NEW: Array of images ---
+            compareAtPrice // CHANGES MADE: Extracted compareAtPrice
         } = req.body;
 
         // 1. Validation: Ensure Shop ID is provided
@@ -109,6 +110,7 @@ const createProduct = async (req, res) => {
             shop: shopId,
             name,
             price,
+            compareAtPrice: compareAtPrice || 0, // CHANGES MADE: Added to model
             description,
             coverImage: finalCoverImage,
             images: images || [], // --- NEW: Saving images array ---
@@ -157,7 +159,8 @@ const updateProduct = async (req, res) => {
             stock, tags, specs, colors, sizes,
             customizationAvailable, customizationType,
             image, coverImage,
-            images // --- NEW: Handle images update ---
+            images, // --- NEW: Handle images update ---
+            compareAtPrice // CHANGES MADE: Extracted compareAtPrice
         } = req.body;
 
         const product = await Product.findById(req.params.id);
@@ -186,6 +189,12 @@ const updateProduct = async (req, res) => {
             // 3. Update fields
             product.name = name || product.name;
             product.price = price || product.price;
+            
+            // CHANGES MADE: Update compareAtPrice gracefully
+            if (compareAtPrice !== undefined) {
+                product.compareAtPrice = compareAtPrice;
+            }
+
             product.description = description || product.description;
             
             // --- NEW: Update Images Logic ---
