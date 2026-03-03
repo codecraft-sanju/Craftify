@@ -194,7 +194,6 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
         </div>
 
         {cart.length > 0 && (
-          
           <div className="p-4 pb-10 md:p-6 md:pb-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10">
             <div className="flex justify-between items-center mb-6">
               <span className="text-slate-500 font-medium">Estimated Total</span>
@@ -212,7 +211,18 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
 };
 /* --- END MODIFIED --- */
 
-// --- SECURITY ROUTES ---
+// --- SECURITY & REDIRECT ROUTES ---
+
+// Naya Component: Agar user logged in hai, toh unko wapas public pages pe aane se rokega
+const AuthRedirect = ({ user, children }) => {
+  if (user) {
+    if (user.role === 'founder') return <Navigate to="/founder" replace />;
+    if (user.role === 'seller') return <Navigate to="/my-shop" replace />;
+    return <Navigate to="/shop" replace />;
+  }
+  return children;
+};
+
 const ProtectedRoute = ({ user, allowedRoles, children }) => {
   if (!user) return <Navigate to="/login" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/shop" replace />;
@@ -533,26 +543,16 @@ const CraftifyContent = () => {
       
       <main className={showNavbar ? 'pt-16 md:pt-0' : ''}>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} />} />
-          <Route path="/login" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
-          <Route path="/register" element={<CustomerAuth onLoginSuccess={handleLogin} />} />
+          {/* Public Routes Wrapped in AuthRedirect */}
+          <Route path="/" element={<AuthRedirect user={currentUser}><LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} /></AuthRedirect>} />
+          <Route path="/login" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
+          <Route path="/register" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
+          
+          <Route path="/seller-register" element={<AuthRedirect user={currentUser}><SellerRegister onLoginSuccess={handleLogin} initialMode="register" /></AuthRedirect>} />
+          <Route path="/seller-login" element={<AuthRedirect user={currentUser}><SellerRegister onLoginSuccess={handleLogin} initialMode="login" /></AuthRedirect>} />
+
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
-
-          {/* --- SELLER REGISTRATION & LOGIN ROUTES (ADDED) --- */}
-          <Route 
-            path="/seller-register" 
-            element={
-              currentUser ? <Navigate to="/my-shop" /> : <SellerRegister onLoginSuccess={handleLogin} initialMode="register" />
-            } 
-          />
-          <Route 
-            path="/seller-login" 
-            element={
-              currentUser ? <Navigate to="/my-shop" /> : <SellerRegister onLoginSuccess={handleLogin} initialMode="login" />
-            } 
-          />
 
           {/* Buyer Routes */}
           <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery="" setSearchQuery={()=>{}} activeCategory="All" setActiveCategory={()=>{}} /></BuyerOnlyRoute>} />
