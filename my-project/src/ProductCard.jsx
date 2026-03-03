@@ -150,6 +150,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
              </div>
   
              {/* 4. Add to Cart Button (Bottom pinned) */}
+           {/* 4. Add to Cart Button (Bottom pinned) */}
              <button 
                onClick={(e) => {
                    e.preventDefault();
@@ -160,7 +161,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
                className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
                    isOutOfStock 
                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
-                   : 'bg-slate-900 text-white shadow-slate-900/10 hover:bg-indigo-600 hover:shadow-indigo-600/20 active:scale-95'
+                   : 'bg-[#65280E] text-white shadow-[#65280E]/20 hover:bg-[#4a1d0a] hover:shadow-[#65280E]/40 active:scale-95'
                }`}
              >
                 <ShoppingBag className={`w-4 h-4 ${isOutOfStock ? 'text-slate-400' : 'text-white/70 group-hover/btn:text-white'} transition-colors`} />
