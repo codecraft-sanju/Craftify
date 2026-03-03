@@ -194,7 +194,8 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
         </div>
 
         {cart.length > 0 && (
-          <div className="p-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] pb-safe-area rounded-b-[32px] md:rounded-none z-10">
+          
+          <div className="p-4 pb-10 md:p-6 md:pb-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10">
             <div className="flex justify-between items-center mb-6">
               <span className="text-slate-500 font-medium">Estimated Total</span>
               <span className="text-2xl font-black text-slate-900">₹{total}</span>
