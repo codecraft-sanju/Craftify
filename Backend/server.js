@@ -14,9 +14,6 @@ const chatRoutes = require('./routes/chatRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const webpush = require('web-push'); 
 
-// CHANGES MADE: Added Razorpay require
-const Razorpay = require('razorpay');
-
 // Config
 dotenv.config();
 connectDB();
@@ -33,12 +30,6 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     console.warn("VAPID keys not found in .env file. Push notifications will not work.");
 }
 // CHANGES MADE: Push Notification Logic End
-
-// CHANGES MADE: Initialize Razorpay instance
-const razorpay = new Razorpay({
-    key_id: 'rzp_live_SKUDOOica8z6I6',
-    key_secret: '5kLAXLkhmIuGv1S2e7e5qURB',
-});
 
 const app = express();
 
@@ -80,21 +71,6 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/cart', cartRoutes);
-
-// CHANGES MADE: Added Razorpay create-order route
-app.post('/create-order', async (req, res) => {
-    try {
-        const options = {
-            amount: 1 * 100,
-            currency: "INR",
-            receipt: "test_receipt_1"
-        };
-        const order = await razorpay.orders.create(options);
-        res.json(order);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // --- NEW: HEALTH CHECK ROUTE (For Founder Dashboard) ---
 app.get('/api/health', (req, res) => {
