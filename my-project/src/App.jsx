@@ -45,6 +45,7 @@ import CheckoutModal from './CheckoutModal';
 import ProfileView from './ProfileView'; 
 import WishlistView from './WishlistView'; 
 import ProductDetail from './ProductDetail';
+import RazorpayTest from './RazorpayTest';
 
 const GlobalStyles = () => (
   <style>{`
@@ -385,6 +386,7 @@ const CraftifyContent = () => {
               currentUser ? <Navigate to="/my-shop" /> : <SellerRegister onLoginSuccess={handleLogin} initialMode="login" />
             } 
           />
+          <Route path="/test-payment" element={<RazorpayTest/>} />
 
           {/* Buyer Routes */}
           <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery="" setSearchQuery={()=>{}} activeCategory="All" setActiveCategory={()=>{}} /></BuyerOnlyRoute>} />
