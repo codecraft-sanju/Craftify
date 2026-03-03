@@ -22,7 +22,6 @@ const orderItemSchema = new mongoose.Schema({
         text: { type: String },
         font: { type: String }
     },
-    // Seller's specific status for the item
     status: {
         type: String,
         enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'],
@@ -46,41 +45,43 @@ const orderSchema = new mongoose.Schema({
         phone: { type: String, required: true }
     },
     
-    // --- 1. USER PAYMENT INFO (Incoming: Customer -> Founder) ---
+    // --- 1. USER PAYMENT INFO (Incoming: Customer -> Founder via Razorpay) ---
+    // CHANGES MADE: Updated to store Razorpay specific details
     paymentInfo: {
         method: { 
             type: String, 
             enum: ['Online', 'COD'], 
-            required: true 
+            required: true,
+            default: 'Online' // Ab Razorpay hai toh default Online rahega
         },
-        transactionId: { 
+        razorpayPaymentId: {  // Naya field Razorpay payment ID ke liye
             type: String 
         }, 
+        razorpayOrderId: {    // Naya field Razorpay order ID ke liye
+            type: String 
+        },
         status: {
             type: String,
-            enum: ['Pending', 'Verified', 'Failed'],
+            enum: ['Pending', 'Success', 'Failed'], // 'Verified' ko 'Success' kar diya
             default: 'Pending'
         }
     },
 
     // --- 2. THE GATEKEEPER FIELD (SAFETY LOCK) ---
-    // If this is FALSE, the order is HIDDEN from the Seller.
-    // Founder must manually switch this to TRUE to reveal the order.
     isVerifiedByFounder: {
         type: Boolean,
         default: false 
     },
 
     // --- 3. PAYOUT INFO (Outgoing: Founder -> Seller) ---
-    // This creates the "Digital Ledger" record accessible by both parties.
     payoutInfo: {
         status: {
             type: String,
             enum: ['Pending', 'Settled'],
             default: 'Pending'
         },
-        transactionId: { type: String, default: null }, // Founder's UTR to Seller
-        proofImage: { type: String, default: null },    // Screenshot URL
+        transactionId: { type: String, default: null },
+        proofImage: { type: String, default: null },
         settledAt: { type: Date }
     },
 
@@ -98,12 +99,10 @@ const orderSchema = new mongoose.Schema({
     },
     orderStatus: {
         type: String,
-        // Added 'Verifying Payment' as the initial state
         enum: ['Verifying Payment', 'Processing', 'Partially Shipped', 'Shipped', 'Delivered', 'Cancelled'],
         default: 'Verifying Payment' 
     },
     
-    // --- CANCELLATION FIELDS ---
     cancellationReason: { 
         type: String,
         default: null 
@@ -111,7 +110,6 @@ const orderSchema = new mongoose.Schema({
     cancelledAt: { 
         type: Date 
     },
-    // ---------------------------
 
     deliveredAt: { type: Date },
     shippedAt: { type: Date },
@@ -130,7 +128,6 @@ const orderSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// --- Pre-save hook ---
 orderSchema.pre('save', async function() {
     if (this.isModified('items')) {
         // Future logic

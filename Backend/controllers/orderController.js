@@ -2,9 +2,9 @@
 const Order = require('../models/Order');
 const Shop = require('../models/Shop');
 const Product = require('../models/Product');
-const User = require('../models/User'); // CHANGES MADE: Imported User model for Push Notifications
+const User = require('../models/User'); // For Push Notifications
 const sendWhatsApp = require('../utils/sendWhatsApp'); 
-const webpush = require('web-push'); // CHANGES MADE: Imported web-push
+const webpush = require('web-push'); 
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -30,14 +30,9 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'Please provide complete shipping address and phone number.' });
         }
 
-        // --- VALIDATION Payment Info ---
-        if (!paymentInfo || !paymentInfo.method) {
-            return res.status(400).json({ message: 'Payment method is required' });
-        }
-        
-        // If Online payment, Transaction ID is mandatory
-        if (paymentInfo.method === 'Online' && !paymentInfo.transactionId) {
-            return res.status(400).json({ message: 'Transaction ID is required for Online payments' });
+        // --- VALIDATION Payment Info (UPDATED FOR RAZORPAY) ---
+        if (!paymentInfo || !paymentInfo.id) {
+            return res.status(400).json({ message: 'Payment verification failed. Razorpay ID missing.' });
         }
 
         // 1. Create the Order
@@ -46,18 +41,20 @@ const addOrderItems = async (req, res) => {
             items: orderItems, 
             shippingAddress,   
             paymentInfo: {
-                method: paymentInfo.method,
-                transactionId: paymentInfo.transactionId || null,
-                status: 'Pending' 
+                method: 'Online',
+                razorpayPaymentId: paymentInfo.id,
+                status: paymentInfo.status === 'paid' ? 'Success' : 'Pending' 
             },
             // --- GATEKEEPER LOGIC START ---
-            isVerifiedByFounder: false,
-            orderStatus: 'Verifying Payment',
+            isVerifiedByFounder: true, 
+            orderStatus: 'Processing',
             // ------------------------------
             itemsPrice,
             taxPrice,
             shippingPrice,
             totalAmount: totalPrice,
+            isPaid: true,
+            paidAt: Date.now()
         });
 
         const createdOrder = await order.save();
@@ -81,11 +78,9 @@ const addOrderItems = async (req, res) => {
         // 3. --- WHATSAPP NOTIFICATION TRIGGER (TO CUSTOMER) ---
         if (req.user && req.user.phone) {
             try {
-                // Generate Professional Message Content
-                const customerName = req.user.name.split(' ')[0]; // First name only
+                const customerName = req.user.name.split(' ')[0]; 
                 const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();
                 
-                // Format Product List nicely
                 let productDetails = "";
                 orderItems.forEach(item => {
                     productDetails += `• ${item.name} (Qty: ${item.qty}) - ₹${item.price}\n`;
@@ -96,19 +91,18 @@ const addOrderItems = async (req, res) => {
 
 Hello ${customerName},
 
-Thank you for shopping with Giftomize! Your order has been successfully placed.
+Thank you for shopping with Craftify! Your payment has been received and your order is confirmed.
 
 *Order Details:*
 ${productDetails}
 *Total Amount:* ₹${totalPrice}
-*Current Status:* Verifying Payment ⏳
+*Current Status:* Processing 🚀
 
-We will notify you once your payment is verified and the seller begins processing your order.
+The seller will begin processing your order shortly.
 
 Best Regards,
-*Team Giftomize*`;
+*Team Craftify*`;
 
-                // Send silently (ignore errors)
                 sendWhatsApp(req.user.phone, message).catch(() => {});
 
             } catch (msgError) {
@@ -116,13 +110,60 @@ Best Regards,
             }
         }
 
-        // --- SOCKET IO: Notify FOUNDER Only ---
+        // --- NOTIFY SELLERS IMMEDIATELY ---
+        const involvedShops = [...new Set(orderItems.map(item => item.shop.toString()))];
+        
+        try {
+            const shopsToNotify = await Shop.find({ _id: { $in: involvedShops } });
+            
+            for (const shop of shopsToNotify) {
+                if (shop.phone) {
+                    const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();
+                    const sellerMsg = `Hello ${shop.name}, great news! You have received a new paid order (ID: #${shortOrderId}) on Craftify. Please check your seller dashboard for more details. Happy Selling!`;
+                    sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
+                }
+                
+                // Push Notification Logic
+                const shopOwner = await User.findById(shop.owner);
+                if (shopOwner && shopOwner.pushSubscriptions && shopOwner.pushSubscriptions.length > 0) {
+                    const payload = JSON.stringify({
+                        title: 'New Paid Order! 🎉',
+                        body: `Aapke shop (${shop.name}) ke liye ek naya order aaya hai.`,
+                        url: '/my-shop' 
+                    });
+
+                    if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+                       webpush.setVapidDetails(
+                            'mailto:sanjaychoudhury693@gmail.com', 
+                            process.env.VAPID_PUBLIC_KEY,
+                            process.env.VAPID_PRIVATE_KEY
+                        );
+                        
+                        shopOwner.pushSubscriptions.forEach(sub => {
+                            webpush.sendNotification(sub, payload).catch(err => {
+                                console.error("Push Notification Error for specific sub:", err);
+                            });
+                        });
+                    }
+                }
+            }
+        } catch (notifyError) {
+            console.error("Seller Notification Error:", notifyError); 
+        }
+
+        // --- SOCKET IO: Notify FOUNDER & SELLERS ---
         if (req.io) {
             req.io.emit('new_order_placed', {
                 orderId: createdOrder._id,
                 totalAmount: createdOrder.totalAmount,
                 customerName: req.user.name,
-                requiresApproval: true
+                requiresApproval: false 
+            });
+
+            req.io.emit('order_verified', {
+                orderId: createdOrder._id,
+                shopIds: involvedShops,
+                status: 'Processing'
             });
         }
 
@@ -181,12 +222,12 @@ const verifyOrderPayment = async (req, res) => {
                 for (const shop of shopsToNotify) {
                     if (shop.phone) {
                         const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
-                        const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Giftomize. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
+                        const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Craftify. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
                         
                         sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                     }
                     
-                    // CHANGES MADE: Push Notification Logic Start
+                    // Push Notification Logic Start
                     // Send Web Push Notification to the shop owner
                     const shopOwner = await User.findById(shop.owner);
                     if (shopOwner && shopOwner.pushSubscriptions && shopOwner.pushSubscriptions.length > 0) {
@@ -196,31 +237,26 @@ const verifyOrderPayment = async (req, res) => {
                             url: '/my-shop' // Yeh URL frontend handle karega
                         });
 
-                        // Make sure your VAPID details are set somewhere in your app setup (like server.js)
-                        // If not, you might need to set them here or in a separate config file
                         if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
                            webpush.setVapidDetails(
-                                'mailto:sanjaychoudhury693@gmail.com', // Replace with your email
+                                'mailto:sanjaychoudhury693@gmail.com', 
                                 process.env.VAPID_PUBLIC_KEY,
                                 process.env.VAPID_PRIVATE_KEY
                             );
                             
-                            // Send notification to all registered devices of the seller
                             shopOwner.pushSubscriptions.forEach(sub => {
                                 webpush.sendNotification(sub, payload).catch(err => {
                                     console.error("Push Notification Error for specific sub:", err);
-                                    // Optional: If subscription is invalid/expired, you might want to remove it from DB
                                 });
                             });
                         } else {
                             console.warn("VAPID keys not set in env. Push notifications skipped.");
                         }
                     }
-                    // CHANGES MADE: Push Notification Logic End
+                    // Push Notification Logic End
                 }
             } catch (notifyError) {
-                // Ignore
-                console.error("Notification Error:", notifyError); // Added log for debugging
+                console.error("Notification Error:", notifyError); 
             }
             // ------------------------------------
 

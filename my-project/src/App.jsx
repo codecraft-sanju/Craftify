@@ -38,7 +38,7 @@ import FounderAccess from './FounderAccess';
 import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView';
 import SearchPage from './SearchPage';
-import SellerRegister from './SellerRegister'; // Ensure this is imported
+import SellerRegister from './SellerRegister';
 import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
@@ -171,6 +171,17 @@ const BuyerOnlyRoute = ({ children }) => {
   const user = savedUser ? JSON.parse(savedUser) : null;
   if (user?.role === 'seller') return <Navigate to="/my-shop" replace />;
   return children;
+};
+
+// --- CHANGES MADE: Added Razorpay Script Loader ---
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 };
 
 // --- MAIN CONTENT ---
@@ -314,24 +325,128 @@ const CraftifyContent = () => {
     navigate('/');
   };
 
+  // --- CHANGES MADE: Updated confirmOrder for Razorpay Integration ---
   const confirmOrder = async (orderData) => {
     setOrderLoading(true);
-    const orderPayload = {
-      orderItems: cart.map(i => ({ product: i.product, shop: i.shop, name: i.name, image: i.image, price: i.price, qty: i.qty, selectedSize: i.selectedSize })),
-      shippingAddress: orderData.shippingAddress,
-      paymentInfo: orderData.paymentInfo,
-      totalPrice: cart.reduce((acc, i) => acc + (i.price * i.qty), 0),
-    };
+
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      addToast('Error', 'Razorpay SDK failed to load. Are you online?', 'error');
+      setOrderLoading(false);
+      return;
+    }
+
+    const totalAmount = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
     try {
-      const res = await fetch(`${API_URL}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderPayload), credentials: 'include' });
-      if (res.ok) {
-        setCart([]);
-        setIsCheckoutOpen(false);
-        addToast('Success', 'Order Placed!');
-        navigate('/profile');
+      // 1. Ask backend to create a Razorpay Order
+      const orderResponse = await fetch(`${API_URL}/api/razorpay/create-order`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: totalAmount }) 
+      });
+      
+      const orderDataResponse = await orderResponse.json();
+
+      if (!orderDataResponse.success) {
+         addToast('Error', 'Could not initiate payment', 'error');
+         setOrderLoading(false);
+         return;
       }
-    } catch (e) { addToast('Error', 'Failed to place order', 'error'); }
-    finally { setOrderLoading(false); }
+
+      const order = orderDataResponse.order;
+
+      // 2. Open Razorpay Checkout Modal
+      const options = {
+        "key": import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_SKUDOOica8z6I6",
+        "amount": order.amount,
+        "currency": order.currency,
+        "name": "Craftify",
+        "description": "Purchase from Craftify",
+        "order_id": order.id,
+        "handler": async function (paymentResponse){
+           // Payment is successful! Now verify and place order on our backend.
+           
+           try {
+             // Optional verification step (If you want to be extra safe before placing order)
+             const verifyRes = await fetch(`${API_URL}/api/razorpay/verify-payment`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                 razorpay_order_id: paymentResponse.razorpay_order_id,
+                 razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                 razorpay_signature: paymentResponse.razorpay_signature
+               })
+             });
+             
+             const verifyData = await verifyRes.json();
+             
+             if(verifyData.success) {
+                 // 3. Place actual order in DB
+                 const orderPayload = {
+                    orderItems: cart.map(i => ({ product: i.product, shop: i.shop, name: i.name, image: i.image, price: i.price, qty: i.qty, selectedSize: i.selectedSize })),
+                    shippingAddress: orderData.shippingAddress,
+                    paymentInfo: {
+                      method: 'Online',
+                      id: paymentResponse.razorpay_payment_id,
+                      status: 'paid'
+                    },
+                    itemsPrice: totalAmount,
+                    taxPrice: 0,
+                    shippingPrice: 0,
+                    totalPrice: totalAmount,
+                 };
+
+                 const res = await fetch(`${API_URL}/api/orders`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(orderPayload), 
+                    credentials: 'include' 
+                 });
+
+                 if (res.ok) {
+                    setCart([]);
+                    setIsCheckoutOpen(false);
+                    addToast('Success', 'Payment Successful & Order Placed!');
+                    navigate('/profile');
+                 } else {
+                     addToast('Error', 'Order saving failed after payment', 'error');
+                 }
+             } else {
+                 addToast('Error', 'Payment verification failed', 'error');
+             }
+
+           } catch (e) {
+             console.error(e);
+             addToast('Error', 'Something went wrong while verifying order', 'error');
+           } finally {
+             setOrderLoading(false);
+           }
+        },
+        "prefill": {
+          "name": currentUser?.name || formData.fullName || "",
+          "email": currentUser?.email || "",
+          "contact": formData.phone || ""
+        },
+        "theme": {
+          "color": "#4f46e5" // Indigo 600
+        }
+      };
+
+      const rzp1 = new window.Razorpay(options);
+      
+      rzp1.on('payment.failed', function (response){
+        addToast('Error', 'Payment Failed. ' + response.error.description, 'error');
+        setOrderLoading(false);
+      });
+
+      rzp1.open();
+
+    } catch (error) { 
+      console.error(error);
+      addToast('Error', 'Failed to connect to payment gateway', 'error'); 
+      setOrderLoading(false);
+    }
   };
 
   // Logic to hide Navbar on specific auth routes

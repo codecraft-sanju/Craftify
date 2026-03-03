@@ -83,12 +83,6 @@ export default function FounderAccess({ currentUser }) {
     const [products, setProducts] = useState([]); 
     const [loading, setLoading] = useState(true);
     
-    // QR & Payment
-    const [myQr, setMyQr] = useState(null);
-    const [qrFile, setQrFile] = useState(null);
-    const [qrPreview, setQrPreview] = useState("");
-    const [uploadingQr, setUploadingQr] = useState(false);
-    
     // Categories
     const [categoryImages, setCategoryImages] = useState(DEFAULT_CATEGORY_IMAGES);
     const [editingCategory, setEditingCategory] = useState(null); 
@@ -127,11 +121,10 @@ export default function FounderAccess({ currentUser }) {
         const options = { credentials: 'include' };
 
         try {
-            const [usersRes, shopsRes, ordersRes, qrRes, productsRes, categoriesRes, bannersRes] = await Promise.all([
+            const [usersRes, shopsRes, ordersRes, productsRes, categoriesRes, bannersRes] = await Promise.all([
                 fetch(`${API_URL}/api/users`, options),
                 fetch(`${API_URL}/api/shops`, options),
                 fetch(`${API_URL}/api/orders`, options),
-                fetch(`${API_URL}/api/users/qr`),
                 fetch(`${API_URL}/api/products`),
                 fetch(`${API_URL}/api/users/categories`),
                 fetch(`${API_URL}/api/users/banners`) 
@@ -141,11 +134,6 @@ export default function FounderAccess({ currentUser }) {
             if (shopsRes.ok) setShops(await shopsRes.json());
             if (ordersRes.ok) setOrders(await ordersRes.json());
             if (productsRes.ok) setProducts(await productsRes.json());
-            
-            if (qrRes.ok) {
-                const data = await qrRes.json();
-                setMyQr(data.qrCode);
-            }
 
             if (categoriesRes.ok) {
                 const savedCategories = await categoriesRes.json();
@@ -211,9 +199,6 @@ export default function FounderAccess({ currentUser }) {
     const platformProfit = Math.round(totalPlatformRevenue * 0.10); 
 
     // --- ORDER FILTERING ---
-    // 1. Gatekeeper Queue: Unpaid & Unverified
-    const unverifiedOrders = orders.filter(o => !o.isVerifiedByFounder && o.orderStatus !== 'Cancelled');
-    
     // 2. Payout Queue: Delivered but not settled
     const pendingPayouts = orders.filter(o => o.orderStatus === 'Delivered' && o.payoutInfo?.status !== 'Settled');
 
@@ -295,35 +280,8 @@ export default function FounderAccess({ currentUser }) {
         } catch (err) { console.error("Failed to update shop status", err); }
     };
 
-    const handleQrUpload = async () => {
-        if (!qrFile) return alert("Please select a file first");
-        setUploadingQr(true); 
-        try {
-            const qrUrl = await uploadToCloudinary(qrFile);
-            const res = await fetch(`${API_URL}/api/users/qr`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', 
-                body: JSON.stringify({ qrUrl })
-            });
-            if (res.ok) {
-                setMyQr(qrUrl); 
-                setQrFile(null); 
-                setQrPreview("");
-                alert("QR Code updated successfully!"); 
-            } else {
-                alert("Failed to save QR in database.");
-            }
-        } catch (error) { 
-            console.error(error); 
-            alert("Error uploading QR code.");
-        } finally { 
-            setUploadingQr(false); 
-        }
-    };
-
     // --- GATEKEEPER APPROVAL (STEP 2) ---
-    // This unlocks the order for the seller
+    // Kept for backward compatibility with old manual orders
     const handleVerifyPayment = async (orderId) => {
         if(!window.confirm("Verify transaction and unlock order for seller?")) return;
         try {
@@ -339,7 +297,7 @@ export default function FounderAccess({ currentUser }) {
     };
 
     // --- PAYOUT SETTLEMENT (STEP 4) ---
-    // Uploads proof and marks payout settled
+    // Uploads proof and marks payout settled (Founder to Seller)
     const handleSettlePayout = async () => {
         if (!payoutFile) return alert("Please upload a payment screenshot.");
         if (!selectedOrderForPayout) return;
@@ -461,7 +419,7 @@ export default function FounderAccess({ currentUser }) {
                         <BarChart3 className="w-3 h-3 text-slate-600"/>
                     </div>
                     <NavItem id="overview" label="Dashboard" icon={Activity} />
-                    <NavItem id="payments" label="Finance & QR" icon={Wallet} />
+                    <NavItem id="payments" label="Finance & Payouts" icon={Wallet} />
                     
                     <div className="px-4 py-2 mb-2 mt-8 flex items-center justify-between">
                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Operations</p>
@@ -543,7 +501,7 @@ export default function FounderAccess({ currentUser }) {
                          {activeTab === 'overview' && (
                              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
                                  
-                                 {/* --- NEW: SERVER HEALTH CARD (Render Monitor) --- */}
+                                 {/* SERVER HEALTH CARD */}
                                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-full ${serverStatus === 'Online' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
@@ -587,7 +545,7 @@ export default function FounderAccess({ currentUser }) {
                                          { label: 'Total Revenue', val: `₹${totalPlatformRevenue.toLocaleString()}`, icon: DollarSign, from: 'from-emerald-400', to: 'to-emerald-600', shadow: 'shadow-emerald-500/20' },
                                          { label: 'Net Profit', val: `₹${platformProfit.toLocaleString()}`, icon: TrendingUp, from: 'from-blue-400', to: 'to-indigo-600', shadow: 'shadow-blue-500/20' },
                                          { label: 'Pending Payouts', val: `${pendingPayouts.length} Orders`, icon: CreditCard, from: 'from-amber-400', to: 'to-orange-500', shadow: 'shadow-amber-500/20' },
-                                         { label: 'Gatekeeper Queue', val: `${unverifiedOrders.length} Unverified`, icon: ShieldCheck, from: 'from-violet-400', to: 'to-purple-600', shadow: 'shadow-violet-500/20' },
+                                         { label: 'Total Orders', val: `${orders.length} Processed`, icon: Box, from: 'from-violet-400', to: 'to-purple-600', shadow: 'shadow-violet-500/20' },
                                      ].map((stat, i) => (
                                          <GlassCard key={i} className="p-6 relative overflow-hidden group border-0">
                                              <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.from} ${stat.to} opacity-10 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-125 duration-700`}></div>
@@ -603,16 +561,16 @@ export default function FounderAccess({ currentUser }) {
                                  </div>
 
                                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                                     {/* 1. GATEKEEPER LIST (High Priority) */}
+                                     {/* 1. RECENT TRANSACTIONS (Replaced Gatekeeper) */}
                                      <GlassCard className="xl:col-span-2 flex flex-col min-h-[500px]">
                                          <div className="p-8 border-b border-slate-100 flex justify-between items-center">
                                              <div>
                                                  <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                                                     <ShieldCheck className="text-indigo-600 w-5 h-5"/> Gatekeeper Queue
+                                                     <Activity className="text-indigo-600 w-5 h-5"/> Recent Transactions
                                                  </h3>
-                                                 <p className="text-slate-500 text-sm">Approve these orders so sellers can see them.</p>
+                                                 <p className="text-slate-500 text-sm">Latest orders processed via Razorpay.</p>
                                              </div>
-                                             <Badge color={unverifiedOrders.length > 0 ? "red" : "green"}>{unverifiedOrders.length} Pending</Badge>
+                                             <Badge color="blue">{orders.length} Total</Badge>
                                          </div>
                                          <div className="flex-1 overflow-x-auto">
                                              <table className="w-full text-left border-separate border-spacing-y-3 px-4">
@@ -620,30 +578,34 @@ export default function FounderAccess({ currentUser }) {
                                                      <tr>
                                                          <th className="px-4 pb-2">Order ID</th>
                                                          <th className="px-4 pb-2">Customer</th>
-                                                         <th className="px-4 pb-2">UTR / Ref</th>
+                                                         <th className="px-4 pb-2">Payment Ref (Razorpay)</th>
                                                          <th className="px-4 pb-2">Amount</th>
-                                                         <th className="px-4 pb-2 text-right">Action</th>
+                                                         <th className="px-4 pb-2 text-right">Status</th>
                                                      </tr>
                                                  </thead>
                                                  <tbody>
-                                                     {unverifiedOrders.map(order => (
+                                                     {orders.slice(0, 8).map(order => (
                                                          <tr key={order._id} className="group bg-white border border-indigo-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 rounded-xl">
                                                              <td className="px-4 py-4 rounded-l-xl font-mono text-xs text-slate-500">#{order._id.slice(-6)}</td>
                                                              <td className="px-4 py-4 font-bold text-slate-700">{order.shippingAddress?.fullName}</td>
                                                              <td className="px-4 py-4">
-                                                                 <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-700 select-all">
-                                                                     {order.paymentInfo?.transactionId || "N/A"}
+                                                                 <span className="font-mono text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-700 select-all">
+                                                                     {order.paymentInfo?.razorpayPaymentId || order.paymentInfo?.transactionId || "N/A"}
                                                                  </span>
                                                              </td>
                                                              <td className="px-4 py-4 font-black text-slate-900">₹{order.totalAmount}</td>
                                                              <td className="px-4 py-4 rounded-r-xl text-right">
-                                                                 <ActionButton size="sm" onClick={() => handleVerifyPayment(order._id)} variant="primary" icon={CheckCircle}>Approve</ActionButton>
+                                                                 {!order.isVerifiedByFounder ? (
+                                                                     <ActionButton size="sm" onClick={() => handleVerifyPayment(order._id)} variant="primary" icon={CheckCircle}>Approve</ActionButton>
+                                                                 ) : (
+                                                                     <Badge color={order.orderStatus === 'Delivered' ? 'green' : 'blue'}>{order.orderStatus}</Badge>
+                                                                 )}
                                                              </td>
                                                          </tr>
                                                      ))}
-                                                     {unverifiedOrders.length === 0 && (
+                                                     {orders.length === 0 && (
                                                          <tr>
-                                                             <td colSpan="5" className="text-center py-12 text-slate-400 italic">No pending verifications. Good job!</td>
+                                                             <td colSpan="5" className="text-center py-12 text-slate-400 italic">No recent transactions found.</td>
                                                          </tr>
                                                      )}
                                                  </tbody>
@@ -651,15 +613,19 @@ export default function FounderAccess({ currentUser }) {
                                          </div>
                                      </GlassCard>
 
-                                     {/* Quick Action / Mini QR */}
+                                     {/* Action Alerts */}
                                      <div className="space-y-6">
-                                         <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-8 text-white shadow-2xl shadow-slate-900/20 relative overflow-hidden">
+                                         
+                                         {/* --- NEW: Razorpay Active Box --- */}
+                                         <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[2rem] p-8 text-white shadow-2xl shadow-indigo-900/20 relative overflow-hidden">
                                              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
                                              <div className="relative z-10">
-                                                 <QrCode className="w-10 h-10 mb-6 text-indigo-400" />
-                                                 <h3 className="text-2xl font-bold mb-2">Master QR Code</h3>
-                                                 <p className="text-slate-400 text-sm mb-6 leading-relaxed">Ensure your global payment QR is up to date. This is displayed during customer checkout.</p>
-                                                 <button onClick={() => setActiveTab('payments')} className="w-full bg-white text-slate-900 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors">Manage QR</button>
+                                                 <Zap className="w-10 h-10 mb-6 text-yellow-400" />
+                                                 <h3 className="text-2xl font-bold mb-2">Razorpay Active</h3>
+                                                 <p className="text-indigo-200 text-sm mb-6 leading-relaxed">Payments are now fully automated. Customer transactions are directly routed to your Razorpay account.</p>
+                                                 <a href="https://dashboard.razorpay.com" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full bg-white text-indigo-900 py-3 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors">
+                                                     View Dashboard <ArrowUpRight className="w-4 h-4"/>
+                                                 </a>
                                              </div>
                                          </div>
                                          
@@ -676,61 +642,21 @@ export default function FounderAccess({ currentUser }) {
 
                          {/* === TAB: PAYMENTS & PAYOUTS === */}
                          {activeTab === 'payments' && (
-                             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in slide-in-from-bottom-8 duration-500">
-                                 {/* Upload QR Card */}
-                                 <GlassCard className="p-8 h-fit">
-                                     <div className="flex items-center gap-3 mb-6">
-                                         <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600"><QrCode className="w-6 h-6"/></div>
-                                         <div>
-                                             <h3 className="font-bold text-slate-900 text-lg">Update Payment QR</h3>
-                                             <p className="text-xs text-slate-500">Accepted formats: PNG, JPG</p>
-                                         </div>
-                                     </div>
-                                     
-                                     <div className="group relative aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex flex-col items-center justify-center overflow-hidden mb-6 cursor-pointer">
-                                         {qrPreview ? (
-                                             <img src={qrPreview} className="w-full h-full object-cover p-4 rounded-[2rem]" alt="Preview" />
-                                         ) : myQr ? (
-                                             <img src={myQr} className="w-full h-full object-cover p-4 rounded-[2rem] opacity-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all" alt="Current" />
-                                         ) : (
-                                             <div className="text-center p-6">
-                                                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4 text-indigo-500 group-hover:scale-110 transition-transform"><UploadCloud className="w-8 h-8"/></div>
-                                                 <p className="font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">Click to Upload</p>
-                                             </div>
-                                         )}
-                                         <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={(e) => {
-                                             if(e.target.files[0]) {
-                                                 setQrFile(e.target.files[0]);
-                                                 setQrPreview(URL.createObjectURL(e.target.files[0]));
-                                             }
-                                         }} />
-                                     </div>
-
-                                     <ActionButton 
-                                         onClick={handleQrUpload} 
-                                         disabled={!qrFile} 
-                                         loading={uploadingQr} 
-                                         className="w-full py-4 text-sm"
-                                         icon={Save}
-                                     >
-                                         {uploadingQr ? "Uploading..." : "Save New QR Code"}
-                                     </ActionButton>
-                                 </GlassCard>
-
+                             <div className="animate-in slide-in-from-bottom-8 duration-500">
                                  {/* Payout List (The Ledger) */}
-                                 <GlassCard className="xl:col-span-2 flex flex-col h-[700px] p-0 overflow-hidden">
+                                 <GlassCard className="flex flex-col h-[800px] p-0 overflow-hidden w-full">
                                      <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-10">
                                          <div>
-                                             <h3 className="font-bold text-slate-900 text-lg">Seller Payouts</h3>
-                                             <p className="text-xs text-slate-500 font-medium">Settle delivered orders</p>
+                                             <h3 className="font-bold text-slate-900 text-lg">Seller Payouts Ledger</h3>
+                                             <p className="text-xs text-slate-500 font-medium">Settle delivered orders to vendors</p>
                                          </div>
                                          <div className="flex gap-2">
                                              <Badge color="green">{orders.filter(o => o.payoutInfo?.status === 'Settled').length} Settled</Badge>
                                              <Badge color="amber">{pendingPayouts.length} Pending</Badge>
                                          </div>
                                      </div>
-                                     <div className="flex-1 overflow-auto p-4 custom-scrollbar bg-slate-50/50">
-                                         <div className="space-y-3">
+                                     <div className="flex-1 overflow-auto p-4 lg:p-8 custom-scrollbar bg-slate-50/50">
+                                         <div className="space-y-4 max-w-5xl mx-auto">
                                              {orders.filter(o => o.isPaid).map(order => (
                                                  <div key={order._id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-all flex flex-col md:flex-row items-center justify-between gap-4 group">
                                                      <div className="flex items-center gap-4 w-full md:w-auto">

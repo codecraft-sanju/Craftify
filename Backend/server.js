@@ -14,6 +14,10 @@ const chatRoutes = require('./routes/chatRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const webpush = require('web-push'); 
 
+// CHANGES MADE: Added crypto and Razorpay
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
+
 // Config
 dotenv.config();
 connectDB();
@@ -30,6 +34,12 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     console.warn("VAPID keys not found in .env file. Push notifications will not work.");
 }
 // CHANGES MADE: Push Notification Logic End
+
+// CHANGES MADE: Initialize Razorpay instance
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_SKUDOOica8z6I6',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '5kLAXLkhmIuGv1S2e7e5qURB',
+});
 
 const app = express();
 
@@ -71,6 +81,42 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/cart', cartRoutes);
+
+// --- CHANGES MADE: RAZORPAY ROUTES ---
+app.post('/api/razorpay/create-order', async (req, res) => {
+    try {
+        const { amount } = req.body;
+        const options = {
+            amount: Math.round(amount * 100), // Amount in paise
+            currency: "INR",
+            receipt: "rcpt_" + Date.now()
+        };
+        const order = await razorpay.orders.create(options);
+        res.json({ success: true, order });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/razorpay/verify-payment', (req, res) => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const sign = razorpay_order_id + "|" + razorpay_payment_id;
+        
+        const expectedSign = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "5kLAXLkhmIuGv1S2e7e5qURB")
+            .update(sign.toString())
+            .digest("hex");
+
+        if (razorpay_signature === expectedSign) {
+            res.json({ success: true, message: "Payment verified successfully" });
+        } else {
+            res.status(400).json({ success: false, message: "Invalid signature" });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // --- NEW: HEALTH CHECK ROUTE (For Founder Dashboard) ---
 app.get('/api/health', (req, res) => {
