@@ -53,16 +53,17 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
         // --- MAKHAN ANIMATION LOGIC (Staggered Entry) ---
         initial={{ opacity: 0, y: 50 }} 
         animate={{ opacity: 1, y: 0 }} 
+        // CHANGES MADE: Updated duration, delay, and ease for a smoother staggered effect
         transition={{ 
-            duration: 0.5, 
-            delay: index * 0.05, // Stagger effect based on index
-            ease: "easeOut" 
+            duration: 0.6, 
+            delay: index * 0.15, // Stagger effect based on index
+            ease: [0.25, 0.8, 0.25, 1] 
         }}
         className="group bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 block"
       >
          
          {/* --- IMAGE CONTAINER --- */}
-         <div className="relative aspect-[4/5] bg-slate-50 overflow-hidden">
+         <div className="relative aspect-square bg-slate-50 overflow-hidden">
              <img 
                 src={finalImageSrc} 
                 alt={product.name}
@@ -115,7 +116,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
          </div>
   
          {/* --- CONTENT CONTAINER (Balanced Layout) --- */}
-         <div className="p-4 flex flex-col flex-1">
+         <div className="p-3 flex flex-col flex-1">
              
              {/* 1. Category (Small Top Label) */}
              <div className="mb-1">
@@ -151,17 +152,17 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
   
              {/* 4. Add to Cart Button (Bottom pinned) */}
              <button 
-               onClick={(e) => {
+                onClick={(e) => {
                    e.preventDefault();
                    e.stopPropagation();
                    if(!isOutOfStock) addToCart(product);
-               }}
-               disabled={isOutOfStock}
-               className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
-                   isOutOfStock 
-                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
-                   : 'bg-[#65280E] text-white shadow-[#65280E]/20 hover:bg-[#4a1d0a] hover:shadow-[#65280E]/40 active:scale-95'
-               }`}
+                }}
+                disabled={isOutOfStock}
+                className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
+                    isOutOfStock 
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
+                    : 'bg-[#65280E] text-white shadow-[#65280E]/20 hover:bg-[#4a1d0a] hover:shadow-[#65280E]/40 active:scale-95'
+                }`}
              >
                 <ShoppingBag className={`w-4 h-4 ${isOutOfStock ? 'text-slate-400' : 'text-white/70 group-hover/btn:text-white'} transition-colors`} />
                 {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
