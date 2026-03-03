@@ -514,6 +514,51 @@ export default function StoreAdmin({ currentUser }) {
         return products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
     }, [products, productSearch]);
 
+    // --- NEW: DYNAMIC CHART DATA LOGIC (Last 7 Days) ---
+    const chartData = useMemo(() => {
+        if (!orders || orders.length === 0) {
+            return { values: [0, 0, 0, 0, 0, 0, 0], labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] };
+        }
+
+        const days = 7;
+        const sales = Array(days).fill(0);
+        const labels = Array(days).fill('');
+        
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        // Pichle 7 dino ke naam generate karna (eg. Mon, Tue)
+        for (let i = 0; i < days; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - (days - 1 - i));
+            labels[i] = d.toLocaleDateString('en-US', { weekday: 'short' }); 
+        }
+
+        // Orders loop karke daily total amount nikalna
+        orders.forEach(order => {
+            // Cancelled orders ko count nahi karna
+            if (order.orderStatus === 'Cancelled') return;
+            
+            const orderDate = new Date(order.createdAt);
+            const diffTime = today - orderDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 0 && diffDays < days) {
+                const index = days - 1 - diffDays;
+                sales[index] += order.totalAmount || 0;
+            }
+        });
+
+        // Values ko 0-100% scale me convert karna graph height ke liye
+        const maxVal = Math.max(...sales);
+        const scaledValues = sales.map(val => maxVal > 0 ? Math.round((val / maxVal) * 100) : 0);
+
+        // Agar sale hui hai lekin percentage bohot kam hai, toh thoda sa height (min 5%) dikhane ke liye
+        const finalValues = scaledValues.map((v, i) => (sales[i] > 0 && v < 5) ? 5 : v);
+
+        return { values: finalValues, labels };
+    }, [orders]);
+
 
     const SidebarItem = ({ id, icon: Icon, label, badge }) => (
         <button 
@@ -658,9 +703,12 @@ export default function StoreAdmin({ currentUser }) {
                                                 <h4 className="font-bold text-slate-300 text-sm">Revenue Flow</h4>
                                                 <select className="text-xs bg-slate-950 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 font-bold outline-none focus:border-rose-500"><option>Last 7 Days</option><option>Last 30 Days</option></select>
                                             </div>
-                                            <CssBarChart data={[30, 50, 45, 80, 60, 90, 55]} />
+                                            {/* DYNAMIC CHART IMPLEMENTED HERE */}
+                                            <CssBarChart data={chartData.values} />
                                             <div className="flex justify-between text-[10px] text-slate-500 font-bold mt-4 uppercase tracking-widest px-2">
-                                                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                                                {chartData.labels.map((label, index) => (
+                                                    <span key={index}>{label}</span>
+                                                ))}
                                             </div>
                                         </Card>
                                     </div>
