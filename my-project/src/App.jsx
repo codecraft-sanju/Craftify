@@ -85,9 +85,22 @@ export const Button = ({ children, variant = 'primary', className = '', icon: Ic
     danger: 'bg-white text-red-600 border border-red-100 hover:bg-red-50',
     ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
     indigo: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20',
+    // Added custom brand color variant
+    brand: 'text-white shadow-xl shadow-[#65280E]/20', 
   };
+  
+  // Logic to apply the custom brand color if variant is 'brand'
+  const buttonClass = variant === 'brand' 
+    ? `relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants.brand} ${className}`
+    : `relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants[variant]} ${className}`;
+
   return (
-    <button disabled={loading || props.disabled} className={`relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants[variant]} ${className}`} {...props}>
+    <button 
+      disabled={loading || props.disabled} 
+      className={buttonClass} 
+      style={variant === 'brand' ? { backgroundColor: '#65280E' } : {}}
+      {...props}
+    >
       {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : Icon && <Icon className="w-4 h-4" />}
       {children}
     </button>
@@ -101,63 +114,102 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
     red: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/10',
     slate: 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/10',
     amber: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', 
+    brand: 'bg-[#65280E]/10 text-[#65280E] ring-1 ring-[#65280E]/20', // Custom brand badge
   };
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}>{children}</span>;
 };
 
-// --- CART DRAWER ---
+/* --- MODIFIED: CART DRAWER --- */
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const itemCount = cart.reduce((acc, item) => acc + item.qty, 0);
 
   return (
     <>
-      <div className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose} />
-      <div className={`fixed top-0 right-0 h-full w-full md:max-w-md bg-white z-[150] shadow-2xl flex flex-col transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-6 border-b flex items-center justify-between">
-          <h2 className="text-xl font-black flex items-center gap-2">My Cart <Badge color="slate">{itemCount}</Badge></h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-500" /></button>
+      <div 
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[140] transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+        onClick={onClose} 
+      />
+      <div 
+        className={`fixed z-[150] bg-white flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+          bottom-0 left-0 right-0 h-[85vh] rounded-t-[32px]
+          md:top-0 md:bottom-auto md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none
+          ${isOpen 
+            ? 'translate-y-0 md:translate-x-0' 
+            : 'translate-y-full md:translate-y-0 md:translate-x-full'
+          }`}
+      >
+        <div className="md:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 mb-2" />
+        
+        <div className="px-6 py-4 md:py-6 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+            My Cart <Badge color="brand" className="text-sm px-3 py-1">{itemCount}</Badge>
+          </h2>
+          <button 
+            onClick={onClose} 
+            className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors group"
+          >
+            <X className="w-5 h-5 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400">
-              <ShoppingBag className="w-12 h-12 opacity-10 mb-4" />
-              <p>Your cart is empty.</p>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
+              <div className="w-24 h-24 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: 'rgba(101, 40, 14, 0.05)' }}>
+                <ShoppingBag className="w-10 h-10" style={{ color: '#65280E' }} />
+              </div>
+              <p className="text-lg font-medium text-slate-500">Your cart is feeling empty</p>
+              <Button variant="secondary" onClick={onClose} className="mt-2">Continue Shopping</Button>
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item._id} className="flex gap-4 p-3 border rounded-2xl bg-white shadow-sm">
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+              <div key={item._id} className="flex gap-4 p-4 border border-slate-100 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow group">
+                <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-50 flex-shrink-0 border border-slate-100">
                   <PremiumImage src={item.image} alt={item.name} />
                 </div>
-                <div className="flex-1 flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
-                    <button onClick={() => onRemove(item._id)} className="text-slate-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                <div className="flex-1 flex flex-col justify-between py-1">
+                  <div className="flex justify-between items-start gap-2">
+                    <h4 className="font-bold text-sm text-slate-800 line-clamp-2 leading-tight group-hover:text-[#65280E] transition-colors">{item.name}</h4>
+                    <button onClick={() => onRemove(item._id)} className="text-slate-300 hover:text-red-500 transition-colors p-1 bg-slate-50 hover:bg-red-50 rounded-lg">
+                      <Trash2 size={16}/>
+                    </button>
                   </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-1 border">
-                       <button onClick={() => onUpdateQty(item._id, 'dec')} className="p-1 hover:text-indigo-600 disabled:opacity-30" disabled={item.qty <= 1}><Minus size={14}/></button>
-                       <span className="text-xs font-bold w-4 text-center">{item.qty}</span>
-                       <button onClick={() => onUpdateQty(item._id, 'inc')} className="p-1 hover:text-indigo-600"><Plus size={14}/></button>
+                  <div className="flex justify-between items-end mt-3">
+                    <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                       <button onClick={() => onUpdateQty(item._id, 'dec')} className="p-1.5 bg-white shadow-sm rounded-lg hover:text-[#65280E] disabled:opacity-40 transition-all" disabled={item.qty <= 1}>
+                         <Minus size={14} strokeWidth={3}/>
+                       </button>
+                       <span className="text-sm font-black w-4 text-center text-slate-700">{item.qty}</span>
+                       <button onClick={() => onUpdateQty(item._id, 'inc')} className="p-1.5 bg-white shadow-sm rounded-lg hover:text-[#65280E] transition-all">
+                         <Plus size={14} strokeWidth={3}/>
+                       </button>
                     </div>
-                    <span className="font-bold">₹{item.price * item.qty}</span>
+                    <span className="font-black text-lg" style={{ color: '#65280E' }}>₹{item.price * item.qty}</span>
                   </div>
                 </div>
               </div>
             ))
           )}
         </div>
+
         {cart.length > 0 && (
-          <div className="p-6 border-t bg-slate-50 pb-safe-area">
-            <div className="flex justify-between text-lg font-black mb-6"><span>Total</span><span className="text-indigo-600">₹{total}</span></div>
-            <Button onClick={onCheckout} className="w-full" size="lg">{currentUser ? 'Checkout Now' : 'Login to Checkout'} <ArrowRight className="w-4 h-4" /></Button>
+          <div className="p-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] pb-safe-area rounded-b-[32px] md:rounded-none z-10">
+            <div className="flex justify-between items-center mb-6">
+              <span className="text-slate-500 font-medium">Estimated Total</span>
+              <span className="text-2xl font-black text-slate-900">₹{total}</span>
+            </div>
+            <Button onClick={onCheckout} className="w-full py-4 text-base" variant="brand">
+              {currentUser ? 'Proceed to Checkout' : 'Login to Checkout'} 
+              <ArrowRight className="w-5 h-5 ml-1" />
+            </Button>
           </div>
         )}
       </div>
     </>
   );
 };
+/* --- END MODIFIED --- */
 
 // --- SECURITY ROUTES ---
 const ProtectedRoute = ({ user, allowedRoles, children }) => {
@@ -429,7 +481,7 @@ const CraftifyContent = () => {
           "contact": orderData.shippingAddress?.phone || ""
         },
         "theme": {
-          "color": "#4f46e5" // Indigo 600
+          "color": "#65280E" // Updated Razorpay theme color to match brand
         }
       };
 
