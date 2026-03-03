@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { 
   Heart, 
   ShoppingBag, 
@@ -47,19 +47,22 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
     // CHANGES MADE: Pull compareAtPrice from DB. Fallback to 20% higher if not set or 0.
     const oldPrice = product.compareAtPrice || Math.round(currentPrice * 1.2); 
 
+    const cardRef = useRef(null);
+    const isInView = useInView(cardRef, { once: true, margin: "50px" });
+
     return (
       <MotionLink 
+        ref={cardRef}
         to={`/product/${productId}`} 
-        // --- MAKHAN ANIMATION LOGIC (Staggered Entry) ---
-        initial={{ opacity: 0, y: 50 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        // CHANGES MADE: Updated duration, delay, and ease for a smoother staggered effect
+        initial={{ opacity: 0, y: 40 }} 
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+        whileHover={{ y: -5 }}
         transition={{ 
             duration: 0.6, 
-            delay: index * 0.15, // Stagger effect based on index
-            ease: [0.25, 0.8, 0.25, 1] 
+            delay: (index % 8) * 0.1, 
+            ease: "easeOut" 
         }}
-        className="group bg-white rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 block"
+        className="group bg-[#FFFBF0] rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 block"
       >
          
          {/* --- IMAGE CONTAINER --- */}
@@ -117,8 +120,6 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
   
          {/* --- CONTENT CONTAINER (Balanced Layout) --- */}
          <div className="p-3 flex flex-col flex-1">
-             
-             {/* CHANGES MADE: Redesigned layout to split Title/Price and Category/Discount horizontally */}
              
              {/* Row 1: Title (Left) and Current Price (Right) */}
              <div className="flex justify-between items-start gap-2 mb-1 min-h-[2.5rem]">

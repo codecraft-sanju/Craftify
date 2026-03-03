@@ -458,7 +458,7 @@ const ShopView = ({
   });
 
   return (
-      <div className="min-h-screen bg-[#F8FAFC] md:pt-20 flex flex-col">
+      <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col">
             
             {/* MARQUEE STRIP */}
             <MarqueeStrip />
