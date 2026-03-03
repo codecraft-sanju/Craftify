@@ -173,7 +173,7 @@ const BuyerOnlyRoute = ({ children }) => {
   return children;
 };
 
-// --- CHANGES MADE: Added Razorpay Script Loader ---
+// --- ADDED: Razorpay Script Loader ---
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
@@ -325,7 +325,7 @@ const CraftifyContent = () => {
     navigate('/');
   };
 
-  // --- CHANGES MADE: Updated confirmOrder for Razorpay Integration ---
+  // --- UPDATED: confirmOrder for Razorpay Integration ---
   const confirmOrder = async (orderData) => {
     setOrderLoading(true);
 
@@ -368,7 +368,6 @@ const CraftifyContent = () => {
            // Payment is successful! Now verify and place order on our backend.
            
            try {
-             // Optional verification step (If you want to be extra safe before placing order)
              const verifyRes = await fetch(`${API_URL}/api/razorpay/verify-payment`, {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
@@ -424,9 +423,10 @@ const CraftifyContent = () => {
            }
         },
         "prefill": {
-          "name": currentUser?.name || formData.fullName || "",
+          // --- FIX: Using orderData.shippingAddress here ---
+          "name": currentUser?.name || orderData.shippingAddress?.fullName || "",
           "email": currentUser?.email || "",
-          "contact": formData.phone || ""
+          "contact": orderData.shippingAddress?.phone || ""
         },
         "theme": {
           "color": "#4f46e5" // Indigo 600
