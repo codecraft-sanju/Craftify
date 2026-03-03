@@ -980,26 +980,26 @@ export default function StoreAdmin({ currentUser }) {
                 ))}
             </div>
 
-            {/* --- ADD/EDIT MODAL (MODIFIED FOR DRAWER EFFECT) --- */}
+            {/* --- ADD/EDIT MODAL (MODIFIED FOR DESKTOP SIDE-DRAWER EFFECT) --- */}
             <div 
                 className={`fixed inset-0 bg-black/80 backdrop-blur-md z-[60] transition-opacity duration-300 ${isAddModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
                 onClick={() => setIsAddModalOpen(false)}
             ></div>
             
             <div 
-                className={`fixed z-[70] bg-slate-900 border-white/10 flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+                className={`fixed z-[70] bg-slate-900 flex flex-col shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] border-white/10
                 bottom-0 left-0 right-0 h-[90vh] rounded-t-[2rem] border-t border-x
-                md:top-1/2 md:left-1/2 md:bottom-auto md:right-auto md:-translate-x-1/2 md:-translate-y-1/2 md:h-auto md:max-h-[90vh] md:w-[600px] md:rounded-[2rem] md:border
+                md:top-0 md:bottom-0 md:right-0 md:left-auto md:h-full md:w-[450px] md:rounded-none md:rounded-l-[2rem] md:border-l md:border-t-0 md:border-r-0
                 ${isAddModalOpen 
-                    ? 'translate-y-0 md:scale-100 opacity-100' 
-                    : 'translate-y-full md:translate-y-10 md:scale-95 opacity-0 pointer-events-none'
+                    ? 'translate-y-0 md:translate-x-0' 
+                    : 'translate-y-full md:translate-y-0 md:translate-x-full'
                 }`}
             >
                 {/* Drag Handle for Mobile */}
                 <div className="md:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mt-4 mb-2 cursor-grab active:cursor-grabbing" />
                 
                 {/* Modal Header */}
-                <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-slate-900/90 backdrop-blur md:rounded-t-[2rem] sticky top-0 z-10">
+                <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-slate-900/90 backdrop-blur md:rounded-tl-[2rem] sticky top-0 z-10">
                     <h2 className="text-xl font-black text-white tracking-tight">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
                     <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors group">
                         <X className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors"/>
@@ -1061,7 +1061,7 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
                 
                 {/* Sticky Footer */}
-                <div className="p-4 md:p-6 border-t border-white/5 bg-slate-900 md:rounded-b-[2rem] sticky bottom-0 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]">
+                <div className="p-4 md:p-6 border-t border-white/5 bg-slate-900 sticky bottom-0 z-40 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)]">
                     <Button type="submit" form="productForm" size="lg" loading={isSubmitting} className="w-full shadow-xl shadow-rose-900/40">Save Product</Button>
                 </div>
             </div>
