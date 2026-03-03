@@ -449,8 +449,8 @@ const CraftifyContent = () => {
     }
   };
 
-  // Logic to hide Navbar on specific auth routes
-  const showNavbar = !['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login'].includes(location.pathname);
+  // --- FIX APPLIED HERE: Added '/my-shop' and '/founder' to the hide list ---
+  const showNavbar = !['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login', '/my-shop', '/founder'].includes(location.pathname);
 
   // Toast Component Definition
   const ToastContainer = ({ toasts, removeToast }) => (
