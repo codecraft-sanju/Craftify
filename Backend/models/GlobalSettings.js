@@ -32,6 +32,8 @@ const globalSettingsSchema = new mongoose.Schema({
         slides: [
             {
                 image: { type: String, required: true }, // Image URL
+                // --- CHANGES MADE HERE: Added mobileImage field ---
+                mobileImage: { type: String, default: "" },
                 title: { type: String, default: "" },    // "Super Sale"
                 subtitle: { type: String, default: "" }, // "50% Off"
                 isActive: { type: Boolean, default: true } // Single slide ko hide karne ke liye

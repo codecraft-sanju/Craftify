@@ -147,8 +147,14 @@ const OfferCarousel = ({ bannerData }) => {
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
             
-         
-            <img src={offer.image} alt={offer.title} className="w-full h-full object-cover object-center"/>
+            {/* --- CHANGES MADE HERE: Responsive Art Direction --- */}
+            <picture>
+              {offer.mobileImage && (
+                <source media="(max-width: 768px)" srcSet={offer.mobileImage} />
+              )}
+              <img src={offer.image} alt={offer.title} className="w-full h-full object-cover object-center"/>
+            </picture>
+
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
                    <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>

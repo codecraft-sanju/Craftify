@@ -94,6 +94,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
     const [banners, setBanners] = useState([]); 
     const [isBannerVisible, setIsBannerVisible] = useState(true); 
     const [newBannerFile, setNewBannerFile] = useState(null);
+    const [newMobileBannerFile, setNewMobileBannerFile] = useState(null); // <-- Added Mobile Banner File State
     const [newBannerTitle, setNewBannerTitle] = useState("");
     const [newBannerSubtitle, setNewBannerSubtitle] = useState("");
     const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -245,16 +246,34 @@ export default function FounderAccess({ currentUser, onLogout }) {
     };
 
     const handleAddBanner = async () => {
-        // CHANGED: Removed !newBannerTitle validation
         if (!newBannerFile) return alert("Image is required");
         setIsBannerUploading(true);
         try {
             const imageUrl = await uploadToCloudinary(newBannerFile);
-            const newSlide = { image: imageUrl, title: newBannerTitle, subtitle: newBannerSubtitle, isActive: true };
+            
+            // <-- NEW MOBILE IMAGE UPLOAD LOGIC -->
+            let mobileImageUrl = "";
+            if (newMobileBannerFile) {
+                mobileImageUrl = await uploadToCloudinary(newMobileBannerFile);
+            }
+
+            const newSlide = { 
+                image: imageUrl, 
+                mobileImage: mobileImageUrl, // <-- Assign Mobile Image
+                title: newBannerTitle, 
+                subtitle: newBannerSubtitle, 
+                isActive: true 
+            };
+            
             const updatedBanners = [...banners, newSlide];
             setBanners(updatedBanners);
             await saveBannerSettings(updatedBanners, isBannerVisible);
-            setNewBannerFile(null); setNewBannerTitle(""); setNewBannerSubtitle("");
+            
+            // Clear all states after upload
+            setNewBannerFile(null); 
+            setNewMobileBannerFile(null); // <-- Clear Mobile File
+            setNewBannerTitle(""); 
+            setNewBannerSubtitle("");
         } catch (error) { console.error(error); } finally { setIsBannerUploading(false); }
     };
 
@@ -832,34 +851,68 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                      <GlassCard className="p-6 h-fit border-indigo-100 shadow-xl shadow-indigo-500/5">
                                          <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 text-lg"><Plus className="w-5 h-5 text-indigo-500"/> Create Promotion</h3>
                                          <div className="space-y-4">
-                                             <label className="block aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/10 transition-all relative overflow-hidden group">
-                                                 {newBannerFile ? <img src={URL.createObjectURL(newBannerFile)} className="w-full h-full object-cover" alt="Preview" /> : (
-                                                     <div className="flex flex-col items-center text-slate-400 group-hover:text-indigo-500 transition-colors">
-                                                         <ImageIcon className="w-10 h-10 mb-2"/>
-                                                         <span className="text-xs font-bold uppercase tracking-wider">Upload Cover</span>
-                                                     </div>
-                                                 )}
-                                                 <input type="file" className="hidden" accept="image/*" onChange={(e) => setNewBannerFile(e.target.files[0])} />
-                                             </label>
+                                             <div className="grid grid-cols-2 gap-4">
+                                                 <label className="block aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/10 transition-all relative overflow-hidden group">
+                                                     {newBannerFile ? <img src={URL.createObjectURL(newBannerFile)} className="w-full h-full object-cover" alt="Preview" /> : (
+                                                         <div className="flex flex-col items-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                                             <ImageIcon className="w-8 h-8 mb-2"/>
+                                                             <span className="text-[10px] font-bold uppercase tracking-wider text-center px-2">Desktop Cover (Required)</span>
+                                                         </div>
+                                                     )}
+                                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => setNewBannerFile(e.target.files[0])} />
+                                                 </label>
+
+                                                 <label className="block aspect-square h-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/10 transition-all relative overflow-hidden group">
+                                                     {newMobileBannerFile ? <img src={URL.createObjectURL(newMobileBannerFile)} className="w-full h-full object-cover" alt="Preview Mobile" /> : (
+                                                         <div className="flex flex-col items-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                                             <ImageIcon className="w-8 h-8 mb-2"/>
+                                                             <span className="text-[10px] font-bold uppercase tracking-wider text-center px-2">Mobile Square (Optional)</span>
+                                                         </div>
+                                                     )}
+                                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => setNewMobileBannerFile(e.target.files[0])} />
+                                                 </label>
+                                             </div>
                                              <input type="text" placeholder="Headline (e.g. Summer Sale)" value={newBannerTitle} onChange={(e) => setNewBannerTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
                                              <input type="text" placeholder="Subtext (e.g. 50% Off)" value={newBannerSubtitle} onChange={(e) => setNewBannerSubtitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                                             {/* CHANGED: Removed !newBannerTitle from disabled prop */}
                                              <ActionButton onClick={handleAddBanner} disabled={!newBannerFile} loading={isBannerUploading} className="w-full py-4 text-sm" icon={Plus}>{isBannerUploading ? "Publishing..." : "Publish Campaign"}</ActionButton>
                                          </div>
                                      </GlassCard>
 
                                      {/* List */}
+                                     {/* --- CHANGES MADE HERE: Added mobile image display in the list --- */}
                                      <div className="lg:col-span-2 grid gap-4">
                                          {banners.map((banner, idx) => (
-                                             <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex gap-5 items-center group">
-                                                 <div className="w-48 h-24 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative">
-                                                     <img src={banner.image} className="w-full h-full object-cover" alt={banner.title} />
+                                             <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5 items-start sm:items-center group">
+                                                 
+                                                 <div className="flex gap-2">
+                                                     {/* Desktop Image Thumbnail */}
+                                                     <div className="w-32 h-16 sm:w-40 sm:h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative border border-slate-200">
+                                                         <img src={banner.image} className="w-full h-full object-cover" alt="Desktop" />
+                                                         <div className="absolute bottom-0 left-0 bg-black/60 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-tr-lg">Desktop</div>
+                                                     </div>
+                                                     
+                                                     {/* Mobile Image Thumbnail (If exists) */}
+                                                     {banner.mobileImage ? (
+                                                         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative border border-slate-200">
+                                                             <img src={banner.mobileImage} className="w-full h-full object-cover" alt="Mobile" />
+                                                             <div className="absolute bottom-0 left-0 bg-black/60 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-tr-lg">Mobile</div>
+                                                         </div>
+                                                     ) : (
+                                                         <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-xl shrink-0 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+                                                             <ImageIcon className="w-4 h-4 mb-1 opacity-50"/>
+                                                             <span className="text-[8px] text-center leading-tight">No Mobile<br/>Cover</span>
+                                                         </div>
+                                                     )}
                                                  </div>
-                                                 <div className="flex-1">
-                                                     <h4 className="font-bold text-slate-900 text-lg">{banner.title}</h4>
-                                                     <p className="text-sm text-slate-500">{banner.subtitle}</p>
+
+                                                 <div className="flex-1 w-full">
+                                                     <h4 className="font-bold text-slate-900 text-lg truncate">{banner.title || "Untitled Banner"}</h4>
+                                                     <p className="text-sm text-slate-500 truncate">{banner.subtitle || "No subtitle"}</p>
                                                  </div>
-                                                 <button onClick={() => handleRemoveBanner(idx)} className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 className="w-5 h-5"/></button>
+
+                                                 <button onClick={() => handleRemoveBanner(idx)} className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all self-end sm:self-auto ml-auto sm:ml-0">
+                                                     <Trash2 className="w-5 h-5"/>
+                                                 </button>
                                              </div>
                                          ))}
                                          {banners.length === 0 && <div className="p-12 text-center text-slate-400 bg-white/50 rounded-3xl border border-dashed border-slate-200">No active banners. Add one to get started.</div>}
