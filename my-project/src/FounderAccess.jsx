@@ -70,7 +70,8 @@ const DEFAULT_CATEGORY_IMAGES = {
     "Books": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=2070&auto=format&fit=crop"
 };
 
-export default function FounderAccess({ currentUser }) {
+// Yahan onLogout prop add kiya
+export default function FounderAccess({ currentUser, onLogout }) {
     // --- STATE MANAGEMENT ---
     const [activeTab, setActiveTab] = useState('overview');
     const [searchQuery, setSearchQuery] = useState('');
@@ -244,7 +245,8 @@ export default function FounderAccess({ currentUser }) {
     };
 
     const handleAddBanner = async () => {
-        if (!newBannerFile || !newBannerTitle) return alert("Image and Title are required");
+        // CHANGED: Removed !newBannerTitle validation
+        if (!newBannerFile) return alert("Image is required");
         setIsBannerUploading(true);
         try {
             const imageUrl = await uploadToCloudinary(newBannerFile);
@@ -449,7 +451,8 @@ export default function FounderAccess({ currentUser }) {
                             <p className="text-[10px] text-slate-400 flex items-center gap-1">Super Admin <ShieldCheck className="w-3 h-3 text-emerald-400"/></p>
                         </div>
                     </div>
-                    <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-semibold text-xs border border-white/5">
+                    {/* Yahan onLogout call kiya hai navigate ki jagah */}
+                    <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-semibold text-xs border border-white/5">
                         <LogOut className="w-3 h-3" /> Exit Dashboard
                     </button>
                 </div>
@@ -840,7 +843,8 @@ export default function FounderAccess({ currentUser }) {
                                              </label>
                                              <input type="text" placeholder="Headline (e.g. Summer Sale)" value={newBannerTitle} onChange={(e) => setNewBannerTitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
                                              <input type="text" placeholder="Subtext (e.g. 50% Off)" value={newBannerSubtitle} onChange={(e) => setNewBannerSubtitle(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                                             <ActionButton onClick={handleAddBanner} disabled={!newBannerFile || !newBannerTitle} loading={isBannerUploading} className="w-full py-4 text-sm" icon={Plus}>{isBannerUploading ? "Publishing..." : "Publish Campaign"}</ActionButton>
+                                             {/* CHANGED: Removed !newBannerTitle from disabled prop */}
+                                             <ActionButton onClick={handleAddBanner} disabled={!newBannerFile} loading={isBannerUploading} className="w-full py-4 text-sm" icon={Plus}>{isBannerUploading ? "Publishing..." : "Publish Campaign"}</ActionButton>
                                          </div>
                                      </GlassCard>
 

@@ -1,16 +1,18 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+// --- CHANGES MADE HERE: Removed Quote and BadgeCheck from lucide-react imports ---
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
-  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, 
-  Quote, BadgeCheck 
+  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift 
 } from 'lucide-react'; 
 
 // --- IMPORT THE REUSABLE PRODUCT CARD ---
 import ProductCard from './ProductCard'; 
 import Footer from './Footer'; // Reusable Footer component
-import { motion } from 'framer-motion';
+
+// --- CHANGES MADE HERE: Removed framer-motion import and added ReviewsSection import ---
+import ReviewsSection from './ReviewsSection';
 
 // API URL definition (Fallback to localhost if env not set)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -143,10 +145,11 @@ const OfferCarousel = ({ bannerData }) => {
       >
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
-            <img src={offer.image} alt={offer.title} className="w-full h-full object-cover opacity-80"/>
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-8 md:p-12">
+            
+            {/* --- CHANGES MADE HERE: Removed 'opacity-80' from the img class and removed the dark background gradient from the div below it so the image is totally clear --- */}
+            <img src={offer.image} alt={offer.title} className="w-full h-full object-cover"/>
+            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
-                   <span className="bg-indigo-600 text-white text-xs md:text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block uppercase tracking-wider shadow-lg shadow-indigo-600/30">Featured</span>
                    <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>
                    <p className="text-slate-200 text-lg md:text-lg font-medium max-w-lg drop-shadow-sm leading-snug">{offer.subtitle}</p>
                </div>
@@ -225,200 +228,7 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
   );
 };
 
-// 1. FallingText Animation Component
-const FallingText = ({ text, className = "", delay = 0 }) => {
-  const letters = text.split("");
-  const container = {
-    hidden: { opacity: 0 },
-    visible: (i = 1) => ({
-      opacity: 1,
-      transition: { staggerChildren: 0.05, delayChildren: 0.04 * i + delay },
-    }),
-  };
-  const child = {
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: "spring", damping: 12, stiffness: 100 },
-    },
-    hidden: {
-      opacity: 0,
-      y: -50,
-      transition: { type: "spring", damping: 12, stiffness: 100 },
-    },
-  };
-
-  return (
-    <motion.span
-      style={{ display: "inline-block" }}
-      variants={container}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-100px" }}
-      className={className}
-    >
-      {letters.map((letter, index) => (
-        <motion.span variants={child} key={index} style={{ display: "inline-block", minWidth: letter === " " ? "0.3em" : "auto" }}>
-          {letter}
-        </motion.span>
-      ))}
-    </motion.span>
-  );
-};
-
-// 2. Reviews Data
-const testimonials = [
-  {
-    id: 1,
-    name: "Rahul Sharma",
-    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=150&auto=format&fit=crop",
-    quote: "The customization is next level! I ordered a wallet with my name, and the quality is just wow.",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Priya Patel",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
-    quote: "Weekends are busy, but Giftomize made gifting so easy. Delivery was super fast too!",
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: "Amit Verma",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
-    quote: "Found unique handmade gifts here that I couldn't find anywhere else. The interface is super clean.",
-    rating: 4,
-  },
-  {
-    id: 4,
-    name: "Sneha Gupta",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-    quote: "Ordering for my team was hassle-free. The bulk order process is smooth. Saves me so much stress!",
-    rating: 5,
-  },
-  {
-    id: 5,
-    name: "Vikram Singh",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
-    quote: "As someone who values quality, this app is essential. Premium products, great packaging. Perfect.",
-    rating: 5,
-  },
-  {
-    id: 6,
-    name: "Anjali Mehta",
-    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
-    quote: "I recommend Giftomize to everyone. It's not just about buying; it's about supporting local artisans.",
-    rating: 5,
-  },
-  {
-    id: 7,
-    name: "Rohan Das",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=150&auto=format&fit=crop",
-    quote: "The prices are surprisingly affordable for custom goods. Highly recommended for students.",
-    rating: 5,
-  },
-];
-
-const StarIcon = () => (
-  <svg className="w-3.5 h-3.5 text-yellow-500 fill-current drop-shadow-sm" viewBox="0 0 20 20">
-    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-  </svg>
-);
-
-const TestimonialCard = ({ data }) => {
-  return (
-    <div className="group relative rounded-2xl p-[1px] bg-gradient-to-b from-zinc-200 to-transparent hover:from-indigo-400/50 hover:to-purple-400/50 transition-all duration-500">
-      <div className="bg-white/60 backdrop-blur-xl p-6 rounded-2xl h-full flex flex-col gap-4 shadow-[0_2px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-500 hover:-translate-y-1">
-        
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img src={data.image} alt={data.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-md"/>
-              <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5 border-2 border-white">
-                <BadgeCheck size={10} className="text-white" />
-              </div>
-            </div>
-            <div>
-              <h4 className="font-bold text-zinc-900 text-sm leading-tight">{data.name}</h4>
-              <p className="text-xs text-zinc-500 font-medium">Verified User</p>
-            </div>
-          </div>
-          <Quote className="text-zinc-200 fill-zinc-100 transform rotate-180" size={32} />
-        </div>
-
-        <p className="text-zinc-600 text-[13px] leading-relaxed font-medium relative z-10">"{data.quote}"</p>
-
-        <div className="mt-auto pt-3 border-t border-zinc-100 flex items-center justify-between">
-          <div className="flex gap-0.5">
-            {[...Array(5)].map((_, i) => (i < data.rating ? <StarIcon key={i} /> : null))}
-          </div>
-          <span className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 group-hover:text-indigo-600 transition-colors">Verified Purchase</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ReviewsSection = () => {
-  return (
-    <section className="relative py-24 flex flex-col items-center justify-center overflow-hidden bg-zinc-50/50">
-      
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,#C9EBFF,transparent)] opacity-20"></div>
-
-      <div className="relative text-center mb-16 px-4 z-10 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/50 border border-indigo-200 text-indigo-700 text-[10px] font-bold tracking-wider uppercase mb-6 backdrop-blur-sm">
-          <BadgeCheck size={12} /> Trusted by India
-        </div>
-
-        <h2 className="text-4xl md:text-6xl font-black text-zinc-900 tracking-tighter mb-6 drop-shadow-sm flex flex-col items-center">
-          <FallingText text="Loved by Locals." />
-          <div className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-500 pb-2">
-            <FallingText text="Trusted by You." delay={0.5} />
-          </div>
-        </h2>
-
-        <p className="text-zinc-500 text-lg leading-relaxed font-medium">
-          Join thousands of users who have found the perfect gift. 
-          Real stories from the <span className="font-bold text-zinc-800">Giftomize community</span>.
-        </p>
-      </div>
-
-      <div className="relative w-full max-w-[1400px] mx-auto h-[700px] overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 z-10">
-        
-        <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-zinc-50 via-zinc-50/80 to-transparent z-20 pointer-events-none"></div>
-
-        <div className="marquee-column space-y-6">
-          {[...testimonials, ...testimonials].slice(0, 6).map((item, idx) => (
-            <TestimonialCard key={`col1-${idx}`} data={item} />
-          ))}
-        </div>
-
-        <div className="marquee-column space-y-6 hidden md:block" style={{ animationDuration: '60s', animationDirection: 'reverse' }}>
-          {[...testimonials, ...testimonials].slice(2, 8).map((item, idx) => (
-            <TestimonialCard key={`col2-${idx}`} data={item} />
-          ))}
-        </div>
-
-        <div className="marquee-column space-y-6 hidden lg:block" style={{ animationDuration: '50s' }}>
-          {[...testimonials, ...testimonials].slice(4, 10).map((item, idx) => (
-            <TestimonialCard key={`col3-${idx}`} data={item} />
-          ))}
-        </div>
-      </div>
-
-      <style>{`
-        .marquee-column { animation: scrollUp 45s linear infinite; }
-        .marquee-column:hover { animation-play-state: paused; }
-        @keyframes scrollUp {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(-50%); }
-        }
-      `}</style>
-    </section>
-  );
-};
+// --- CHANGES MADE HERE: Removed the review components (FallingText, testimonials, StarIcon, TestimonialCard, ReviewsSection) from this file ---
 
 const ShopView = ({ 
     searchQuery, 
