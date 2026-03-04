@@ -140,15 +140,16 @@ const OfferCarousel = ({ bannerData }) => {
   
     return (
       <div 
-        className="relative h-[500px] md:h-auto md:aspect-[3/1] lg:aspect-[21/6] overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl"
+        {/* --- CHANGES MADE HERE: Changed aspect ratios to responsive heights to better fit standard banners without cropping --- */}
+        className="relative h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] w-full overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 sm:-mx-6 md:mx-0 rounded-none md:rounded-3xl"
         onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
       >
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
             
-            {/* --- CHANGES MADE HERE: Removed 'opacity-80' from the img class and removed the dark background gradient from the div below it so the image is totally clear --- */}
-            <img src={offer.image} alt={offer.title} className="w-full h-full object-cover"/>
-            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
+            {/* --- CHANGES MADE HERE: Removed 'opacity-80' and changed 'object-cover' to 'object-contain' so the full image is always visible --- */}
+            <img src={offer.image} alt={offer.title} className="w-full h-full object-contain bg-slate-900"/>
+            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12 pointer-events-none">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
                    <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>
                    <p className="text-slate-200 text-lg md:text-lg font-medium max-w-lg drop-shadow-sm leading-snug">{offer.subtitle}</p>
@@ -273,15 +274,13 @@ const ShopView = ({
             {/* MARQUEE STRIP */}
             <MarqueeStrip />
 
-            {/* 2. MAIN CONTENT AREA */}
+            {/* MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
                 <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
 
                 {/* PRODUCT GRID */}
-                <div 
-                    className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8"
-                >
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                     {isLoading && [...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
                     
                     {!isLoading && products.length === 0 && (
