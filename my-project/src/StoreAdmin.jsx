@@ -11,7 +11,6 @@ import {
 import io from 'socket.io-client';
 
 import OrderDetailsModal from './OrderDetailsModal';
-// CHANGES MADE: Imported the newly extracted ProductModal
 import ProductModal from './ProductModal';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -21,7 +20,6 @@ const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
 var socket;
 
-// CHANGES MADE: Helper function for Push Notifications
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -68,7 +66,6 @@ export const Card = ({ children, className = "" }) => (
     </div>
 );
 
-// CHANGES MADE: Exported Badge so OrderDetailsModal can use it
 export const Badge = ({ children, color = 'slate' }) => {
     const colors = { 
         green: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', 
@@ -81,7 +78,6 @@ export const Badge = ({ children, color = 'slate' }) => {
     return <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border ${colors[color]}`}>{children}</span>;
 };
 
-// --- CSS CHART COMPONENT (Neon Glow) ---
 export const CssBarChart = ({ data }) => (
     <div className="flex items-end justify-between h-40 gap-2 mt-6 px-2">
         {data.map((h, i) => (
@@ -96,9 +92,6 @@ export const CssBarChart = ({ data }) => (
     </div>
 );
 
-// ==========================================
-// MAIN STORE ADMIN COMPONENT
-// ==========================================
 export default function StoreAdmin({ currentUser }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -122,9 +115,11 @@ export default function StoreAdmin({ currentUser }) {
     const [images, setImages] = useState([]); 
     const [uploading, setUploading] = useState(false);
 
-    // Category States
+    // Category & Color States
     const [categoryInput, setCategoryInput] = useState("");
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+    // CHANGES MADE: State to handle dynamic colors array in modal
+    const [productColors, setProductColors] = useState([]); 
 
     // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
@@ -143,7 +138,6 @@ export default function StoreAdmin({ currentUser }) {
         if(currentUser) {
             socket.emit("setup", currentUser);
 
-            // CHANGES MADE: Push Notification Registration Logic Start
             const registerPushNotification = async () => {
                 if ('serviceWorker' in navigator && 'PushManager' in window) {
                     try {
@@ -178,7 +172,6 @@ export default function StoreAdmin({ currentUser }) {
                 }
             };
             registerPushNotification();
-            // CHANGES MADE: Push Notification Registration Logic End
         }
         fetchStoreData();
         
@@ -405,6 +398,16 @@ export default function StoreAdmin({ currentUser }) {
             setImages([]);
         }
 
+        // CHANGES MADE: Populate colors if editing, handle legacy string arrays mapping to new object arrays
+        if (product && product.colors && product.colors.length > 0) {
+            const formattedColors = product.colors.map(c => 
+                typeof c === 'string' ? { name: c, hexCode: '#000000', imageUrl: '' } : c
+            );
+            setProductColors(formattedColors);
+        } else {
+            setProductColors([]);
+        }
+
         setCategoryInput(product ? product.category : "");
         setShowCategoryDropdown(false);
         setIsAddModalOpen(true); 
@@ -432,13 +435,14 @@ export default function StoreAdmin({ currentUser }) {
             name: formData.get('name'), 
             category: categoryInput, 
             price: Number(formData.get('price')), 
-            // CHANGES MADE: Added compareAtPrice mapping
             compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
             description: formData.get('description'), 
             images: images, 
             coverImage: images[0].url, 
-            sizes: sizesArray 
+            sizes: sizesArray,
+            // CHANGES MADE: Appending the dynamic product colors array
+            colors: productColors 
         };
 
         try {
@@ -463,7 +467,6 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); }
     };
 
-    // CHANGES MADE: Removed local cancel state handling, returning boolean instead
     const handleUpdateOrderStatus = async (orderId, status, reason = "") => {
         try {
             const bodyData = { status };
@@ -507,18 +510,15 @@ export default function StoreAdmin({ currentUser }) {
         return [...new Set([...defaults, ...shopCategories, ...productCategories])].sort();
     };
 
-    // Filter Logic for Orders
     const filteredOrders = useMemo(() => {
         if (orderFilter === 'All') return orders;
         return orders.filter(o => o.orderStatus === orderFilter);
     }, [orders, orderFilter]);
 
-    // Search Logic for Products
     const filteredProducts = useMemo(() => {
         return products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
     }, [products, productSearch]);
 
-    // --- NEW: DYNAMIC CHART DATA LOGIC (Last 7 Days) ---
     const chartData = useMemo(() => {
         if (!orders || orders.length === 0) {
             return { values: [0, 0, 0, 0, 0, 0, 0], labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] };
@@ -531,16 +531,13 @@ export default function StoreAdmin({ currentUser }) {
         const today = new Date();
         today.setHours(23, 59, 59, 999);
 
-        // Pichle 7 dino ke naam generate karna (eg. Mon, Tue)
         for (let i = 0; i < days; i++) {
             const d = new Date(today);
             d.setDate(d.getDate() - (days - 1 - i));
             labels[i] = d.toLocaleDateString('en-US', { weekday: 'short' }); 
         }
 
-        // Orders loop karke daily total amount nikalna
         orders.forEach(order => {
-            // Cancelled orders ko count nahi karna
             if (order.orderStatus === 'Cancelled') return;
             
             const orderDate = new Date(order.createdAt);
@@ -553,11 +550,8 @@ export default function StoreAdmin({ currentUser }) {
             }
         });
 
-        // Values ko 0-100% scale me convert karna graph height ke liye
         const maxVal = Math.max(...sales);
         const scaledValues = sales.map(val => maxVal > 0 ? Math.round((val / maxVal) * 100) : 0);
-
-        // Agar sale hui hai lekin percentage bohot kam hai, toh thoda sa height (min 5%) dikhane ke liye
         const finalValues = scaledValues.map((v, i) => (sales[i] > 0 && v < 5) ? 5 : v);
 
         return { values: finalValues, labels };
@@ -573,7 +567,6 @@ export default function StoreAdmin({ currentUser }) {
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'}`
             }
         >
-             {/* Glow Effect for Active State */}
              {activeTab === id && (
                 <div className="absolute inset-0 bg-gradient-to-r from-rose-400/20 to-pink-400/20 blur-xl opacity-50"></div>
              )}
@@ -607,13 +600,9 @@ export default function StoreAdmin({ currentUser }) {
     return (
         <div className="min-h-screen bg-slate-950 font-sans text-slate-200 selection:bg-rose-500/30 selection:text-rose-200 overflow-hidden flex relative">
             
-            {/* ==========================================
-              DESKTOP SIDEBAR
-              ========================================== */}
             <aside 
                 className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/80 backdrop-blur-2xl border-r border-white/10 hidden md:flex flex-col shadow-2xl`}
             >
-                {/* Header with Subtle Gradient */}
                 <div className="h-28 flex items-center px-8 gap-4 border-b border-white/5 bg-gradient-to-b from-slate-800/20 to-transparent">
                     <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-rose-500/20 text-white ring-1 ring-white/20">S</div>
                     <div><h1 className="font-black text-2xl tracking-tight text-white drop-shadow-sm">Admin</h1><p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-80">Midnight OS</p></div>
@@ -646,14 +635,11 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT AREA */}
             <main className="flex-1 md:ml-72 flex flex-col h-screen overflow-hidden relative bg-slate-950 transition-all duration-500 pb-20 md:pb-0">
                 
-                {/* HEADER */}
                 <header className="bg-slate-950/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30 px-6 py-4 flex-shrink-0">
                     <div className="flex items-center justify-between max-w-7xl mx-auto w-full">
                         <div className="flex items-center gap-4">
-                            {/* Mobile Logo instead of menu */}
                             <div className="md:hidden w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center font-black text-xl text-white">S</div>
                             <h2 className="text-xl md:text-2xl font-black capitalize text-white tracking-tight flex items-center gap-2">{activeTab} {activeTab === 'dashboard' && <Sparkles className="w-4 h-4 text-rose-500"/>}</h2>
                         </div>
@@ -667,7 +653,6 @@ export default function StoreAdmin({ currentUser }) {
                                 <Bell className="w-5 h-5" />
                                 {orders.some(o => o.orderStatus === 'Processing') && <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
                             </button>
-                            {/* NEW: LOGOUT BUTTON IN HEADER */}
                             <button onClick={handleLogout} className="p-2.5 bg-slate-900 border border-slate-800 rounded-full relative active:scale-95 transition-all shadow-sm text-slate-400 hover:text-red-400 hover:border-red-500/30" title="Logout">
                                 <LogOut className="w-5 h-5" />
                             </button>
@@ -675,11 +660,9 @@ export default function StoreAdmin({ currentUser }) {
                     </div>
                 </header>
 
-                {/* SCROLLABLE CONTENT */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar scroll-smooth">
                     <div className="max-w-7xl mx-auto w-full"> 
                         
-                        {/* --- DASHBOARD TAB --- */}
                         {activeTab === 'dashboard' && (
                             <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 fade-in">
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -707,7 +690,6 @@ export default function StoreAdmin({ currentUser }) {
                                                 <h4 className="font-bold text-slate-300 text-sm">Revenue Flow</h4>
                                                 <select className="text-xs bg-slate-950 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 font-bold outline-none focus:border-rose-500"><option>Last 7 Days</option><option>Last 30 Days</option></select>
                                             </div>
-                                            {/* DYNAMIC CHART IMPLEMENTED HERE */}
                                             <CssBarChart data={chartData.values} />
                                             <div className="flex justify-between text-[10px] text-slate-500 font-bold mt-4 uppercase tracking-widest px-2">
                                                 {chartData.labels.map((label, index) => (
@@ -733,7 +715,6 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- PRODUCTS TAB --- */}
                         {activeTab === 'products' && (
                             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -741,7 +722,6 @@ export default function StoreAdmin({ currentUser }) {
                                     <Button onClick={() => handleOpenModal(null)} className="shadow-lg shadow-rose-500/20"><Plus className="w-5 h-5"/> Add Product</Button>
                                 </div>
 
-                                {/* Product Search Bar */}
                                 <div className="relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500"/>
                                     <input 
@@ -770,7 +750,6 @@ export default function StoreAdmin({ currentUser }) {
                                                 </div>
                                                 <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
                                                     <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                                                    {/* Quick Actions Overlay */}
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                         <button onClick={() => handleOpenModal(p)} className="p-2 bg-white rounded-full text-black shadow-lg hover:scale-110 transition-transform"><Edit className="w-4 h-4"/></button>
                                                         <button onClick={() => handleDeleteProduct(p._id)} className="p-2 bg-rose-500 rounded-full text-white shadow-lg hover:scale-110 transition-transform"><Trash2 className="w-4 h-4"/></button>
@@ -790,13 +769,11 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- ORDERS TAB --- */}
                         {activeTab === 'orders' && (
                             <div className="animate-in slide-in-from-right-4 duration-300">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                                     <h2 className="text-2xl font-black text-white tracking-tight">Orders</h2>
                                     
-                                    {/* Order Tabs */}
                                     <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5 overflow-x-auto scrollbar-hide">
                                         {['All', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
                                             <button 
@@ -810,7 +787,6 @@ export default function StoreAdmin({ currentUser }) {
                                     </div>
                                 </div>
 
-                                {/* Desktop Table View */}
                                 <div className="hidden md:block">
                                     <Card className="overflow-hidden border border-white/5 shadow-xl shadow-black/20 rounded-[2rem]">
                                             <div className="overflow-x-auto">
@@ -838,7 +814,6 @@ export default function StoreAdmin({ currentUser }) {
                                     </Card>
                                 </div>
 
-                                {/* Mobile Card View (Cards Stack) */}
                                 <div className="md:hidden space-y-4">
                                     {filteredOrders.map(o => (
                                         <div key={o._id} onClick={() => setSelectedOrder(o)} className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 shadow-lg active:scale-[0.98] transition-all relative overflow-hidden backdrop-blur-md">
@@ -867,10 +842,8 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- MESSAGES TAB --- */}
                         {activeTab === 'messages' && (
                             <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] gap-6 animate-in fade-in duration-300">
-                                {/* Chat List */}
                                 <Card className={`w-full md:w-80 flex flex-col border border-white/5 shadow-xl shadow-black/30 overflow-hidden bg-slate-900/80 ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
                                     <div className="p-5 border-b border-white/5 bg-slate-900/50 flex justify-between items-center">
                                         <h3 className="font-black text-white text-lg">Inbox</h3>
@@ -890,7 +863,6 @@ export default function StoreAdmin({ currentUser }) {
                                     </div>
                                 </Card>
                                 
-                                {/* Chat Window */}
                                 <Card className={`flex-1 flex-col border border-white/5 shadow-2xl overflow-hidden bg-slate-950 ${selectedChat ? 'flex' : 'hidden md:flex'}`}>
                                     {selectedChat ? (
                                         <>
@@ -925,7 +897,6 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {/* --- SETTINGS TAB --- */}
                         {activeTab === 'settings' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300 pb-24">
                                 <div>
@@ -963,8 +934,6 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             </main>
 
-            {/* --- MOBILE BOTTOM NAVIGATION --- */}
-            {/* This replaces the sidebar on mobile screens for better UX */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-white/10 z-50 flex justify-around p-2 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
                  {[
                     { id: 'dashboard', icon: LayoutDashboard },
@@ -984,7 +953,7 @@ export default function StoreAdmin({ currentUser }) {
                 ))}
             </div>
 
-            {/* CHANGES MADE: Extracted Product Modal to a separate component */}
+            {/* CHANGES MADE: Passed colors state logic into ProductModal */}
             <ProductModal 
                 isOpen={isAddModalOpen} 
                 onClose={() => setIsAddModalOpen(false)} 
@@ -999,7 +968,9 @@ export default function StoreAdmin({ currentUser }) {
                 setCategoryInput={setCategoryInput} 
                 showCategoryDropdown={showCategoryDropdown} 
                 setShowCategoryDropdown={setShowCategoryDropdown} 
-                getAvailableCategories={getAvailableCategories} 
+                getAvailableCategories={getAvailableCategories}
+                colors={productColors}
+                setColors={setProductColors} 
             />
 
             <OrderDetailsModal 

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
-// --- IMPORT THE REUSABLE PRODUCT CARD ---
 import ProductCard from './ProductCard';
 import Footer from './Footer';
 
@@ -39,6 +38,12 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
   const [activeImage, setActiveImage] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [sizeError, setSizeError] = useState(false);
+  
+  // --- NAYA CODE: Colors ke liye state ---
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [colorError, setColorError] = useState(false);
+  // ---------------------------------------
+
   const [activeIndex, setActiveIndex] = useState(0);
 
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -71,10 +76,16 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
 
   useEffect(() => {
     if (product) {
+        // DEBUGGING LOG: Browser console me dikhega ki product me kya data aaya hai
+        console.log("🔥 DEBUG - Product Data in Detail Page:", product);
+        console.log("🎨 DEBUG - Product Colors:", product.colors);
+
         const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
         setActiveImage(initialImage);
         setSelectedSize(null);
         setSizeError(false);
+        setSelectedColor(null); // Reset color on load
+        setColorError(false);
         setCustomText('');
         setActiveIndex(0);
         if (scrollRef.current) scrollRef.current.scrollLeft = 0;
@@ -83,6 +94,9 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
 
   const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
   const hasSizes = product?.sizes && product.sizes.length > 0;
+  
+  // --- NAYA CODE: Check karna ki colors hain ya nahi ---
+  const hasColors = product?.colors && product.colors.length > 0;
   
   const allImages = product?.images?.length > 0 
     ? product.images 
@@ -102,9 +116,17 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
           setSizeError(true);
           return;
       }
+      // --- NAYA CODE: Color validation ---
+      if (hasColors && !selectedColor) {
+          setColorError(true);
+          return;
+      }
+      
       addToCart({
         ...product,
         selectedSize: selectedSize,
+        // Send selected color name to cart
+        selectedColor: typeof selectedColor === 'object' ? selectedColor.name : selectedColor,
         customization: customText ? { text: customText } : null,
       });
   };
@@ -119,16 +141,12 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
 
   return (
     <>
-      {/* --- CHANGES MADE HERE: Changed pt-16 to pt-2 to reduce the top gap on mobile --- */}
       <div className="pt-2 md:pt-32 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
-        
-        {/* Gallery column is restricted to max-w-xl on desktop to keep images proportional */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 lg:gap-20 items-start">
           
           {/* --- LEFT COLUMN: GALLERY --- */}
           <div className="w-full max-w-xl mx-auto space-y-6">
             <div className="relative">
-              {/* Mobile Swipe Container */}
               <div 
                 ref={scrollRef}
                 onScroll={handleScroll}
@@ -146,7 +164,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 ))}
               </div>
 
-              {/* Desktop Display */}
               <div className="hidden md:block">
                 <LiveCustomizer
                   product={product}
@@ -156,7 +173,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 />
               </div>
 
-              {/* Mobile Dots */}
               {allImages.length > 1 && (
                 <div className="flex justify-center gap-2 absolute bottom-4 left-1/2 -translate-x-1/2 md:hidden">
                   {allImages.map((_, i) => (
@@ -169,7 +185,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
               )}
             </div>
 
-            {/* Thumbnails */}
             {allImages.length > 1 && (
               <div className="flex gap-3 overflow-x-auto pb-2 px-4 md:px-0 scrollbar-hide md:grid md:grid-cols-5 md:gap-4">
                   {allImages.map((img, index) => (
@@ -237,7 +252,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 )}
               </div>
 
-              {/* Updated Premium Typography */}
               <h1 className="text-4xl md:text-6xl font-serif font-bold text-slate-900 mb-6 leading-[1.1] tracking-tight">
                 {product.name}
               </h1>
@@ -258,6 +272,48 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                   ₹{product.price}
                 </div>
               </div>
+
+              {/* --- NAYA CODE: CHOOSE COLOR UI --- */}
+              {hasColors && (
+                  <div className="mb-8">
+                      <h3 className={`font-bold text-xs uppercase tracking-widest mb-4 ${colorError ? 'text-red-600' : 'text-slate-400'}`}>
+                          Choose Color {colorError && <span className="text-red-500 font-medium ml-1">— Required</span>}
+                      </h3>
+                      <div className="flex flex-wrap gap-3">
+                          {product.colors.map((color, idx) => {
+                              const colorName = typeof color === 'string' ? color : color.name;
+                              const colorHex = typeof color === 'string' ? color.toLowerCase() : color.hexCode;
+                              const colorImage = typeof color === 'object' ? color.imageUrl : null;
+
+                              return (
+                                  <button
+                                      key={idx}
+                                      onClick={() => {
+                                          setSelectedColor(color);
+                                          setColorError(false);
+                                          // Image swap logic
+                                          if (colorImage) setActiveImage(colorImage);
+                                      }}
+                                      className={`h-12 px-4 rounded-xl font-bold border-2 transition-all active:scale-95 flex items-center gap-2 ${
+                                          selectedColor === color
+                                          ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-200'
+                                          : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'
+                                      }`}
+                                  >
+                                      {colorHex && (
+                                          <span 
+                                              className="w-4 h-4 rounded-full shadow-inner border border-black/10" 
+                                              style={{ backgroundColor: colorHex }}
+                                          ></span>
+                                      )}
+                                      {colorName}
+                                  </button>
+                              );
+                          })}
+                      </div>
+                  </div>
+              )}
+              {/* --------------------------------- */}
 
               {hasSizes && (
                   <div className="mb-10">

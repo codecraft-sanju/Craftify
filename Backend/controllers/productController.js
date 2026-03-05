@@ -118,7 +118,7 @@ const createProduct = async (req, res) => {
             stock,
             tags, 
             specs,
-            colors, 
+            colors: colors || [], // CHANGES MADE: Now accepts array of objects (name, hexCode, imageUrl)
             sizes,
             sku: finalSku, 
             customizationAvailable, 
@@ -216,7 +216,12 @@ const updateProduct = async (req, res) => {
             product.stock = stock || product.stock;
             product.tags = tags || product.tags;
             product.specs = specs || product.specs;
-            product.colors = colors || product.colors;
+            
+            // CHANGES MADE: Update colors handling to accept array of objects
+            if (colors) {
+                product.colors = colors;
+            }
+
             product.sizes = sizes || product.sizes;
             product.customizationAvailable = customizationAvailable ?? product.customizationAvailable;
             product.customizationType = customizationType || product.customizationType;

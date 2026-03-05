@@ -17,8 +17,26 @@ export default function ProductModal({
     setCategoryInput,
     showCategoryDropdown,
     setShowCategoryDropdown,
-    getAvailableCategories
+    getAvailableCategories,
+    // CHANGES MADE: New props for colors
+    colors,
+    setColors
 }) {
+    // CHANGES MADE: Helper functions for Color Management
+    const handleAddColor = () => {
+        setColors([...colors, { name: '', hexCode: '#000000', imageUrl: '' }]);
+    };
+
+    const handleRemoveColor = (index) => {
+        setColors(colors.filter((_, i) => i !== index));
+    };
+
+    const handleColorChange = (index, field, value) => {
+        const newColors = [...colors];
+        newColors[index][field] = value;
+        setColors(newColors);
+    };
+
     return (
         <>
             {/* --- ADD/EDIT MODAL (MODIFIED FOR DESKTOP SIDE-DRAWER EFFECT) --- */}
@@ -42,7 +60,7 @@ export default function ProductModal({
                 {/* Modal Header */}
                 <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-slate-900/90 backdrop-blur md:rounded-tl-[2rem] sticky top-0 z-10">
                     <h2 className="text-xl font-black text-white tracking-tight">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
-                    <button onClick={onClose} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors group">
+                    <button type="button" onClick={onClose} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors group">
                         <X className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors"/>
                     </button>
                 </div>
@@ -70,12 +88,11 @@ export default function ProductModal({
                             </div>
                         </div>
 
-                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="e.g. Wireless Headphones"/></div>
+                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="e.g. Premium Gift Box"/></div>
                         
                         <div className="flex gap-4">
-                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
-                            {/* CHANGES MADE: Added Compare At Price Input */}
-                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">compareAtPrice (₹)</label><input name="compareAtPrice" defaultValue={editingProduct?.compareAtPrice} type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0.00"/></div>
+                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
+                            <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">compareAtPrice (₹)</label><input name="compareAtPrice" defaultValue={editingProduct?.compareAtPrice} type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
                             <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Stock</label><input name="stock" defaultValue={editingProduct?.stock} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
                         </div>
 
@@ -96,6 +113,53 @@ export default function ProductModal({
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* CHANGES MADE: NEW DYNAMIC COLORS SECTION */}
+                        <div className="space-y-3 border-t border-b border-slate-800 py-6 my-4">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Colors (Optional)</label>
+                                <button type="button" onClick={handleAddColor} className="text-xs font-bold text-rose-500 hover:text-rose-400 flex items-center gap-1 transition-colors">
+                                    <Plus className="w-3 h-3"/> Add Color
+                                </button>
+                            </div>
+                            
+                            {colors.map((color, index) => (
+                                <div key={index} className="flex flex-col gap-3 p-4 bg-slate-950 border border-slate-800 rounded-xl relative group animate-in fade-in duration-200">
+                                    <button type="button" onClick={() => handleRemoveColor(index)} className="absolute top-2 right-2 p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                                        <X className="w-4 h-4"/>
+                                    </button>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pr-8">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Color Name</label>
+                                            <input value={color.name} onChange={e => handleColorChange(index, 'name', e.target.value)} required placeholder="e.g. Midnight Black" className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white placeholder:text-slate-600" />
+                                        </div>
+                                        
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hex Code</label>
+                                            <div className="flex items-center gap-2">
+                                                <input type="color" value={color.hexCode || '#000000'} onChange={e => handleColorChange(index, 'hexCode', e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer bg-slate-900 border border-slate-700 p-0.5" />
+                                                <input value={color.hexCode || '#000000'} onChange={e => handleColorChange(index, 'hexCode', e.target.value)} placeholder="#000000" className="flex-1 p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white uppercase" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-1 sm:col-span-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Link an Image</label>
+                                            <select value={color.imageUrl || ''} onChange={e => handleColorChange(index, 'imageUrl', e.target.value)} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white appearance-none">
+                                                <option value="">No specific image (Use default)</option>
+                                                {images.map((img, i) => (
+                                                    <option key={i} value={img.url}>Image {i + 1} (Uploaded Preview)</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-[10px] text-slate-500 ml-1">Optional: Select an image uploaded above to show when this color is clicked.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {colors.length === 0 && (
+                                <p className="text-xs text-slate-500 italic ml-1">No colors added yet.</p>
+                            )}
                         </div>
 
                         <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Sizes (Optional)</label><input name="sizes" defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="S, M, L, XL" /></div>

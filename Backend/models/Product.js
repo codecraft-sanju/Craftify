@@ -81,7 +81,12 @@ const productSchema = new mongoose.Schema({
             url: { type: String, required: true }
         }
     ],
-    colors: [String], 
+    // --- CHANGES MADE HERE: Updated colors to hold name, hex code, and specific image ---
+    colors: [{
+        name: { type: String, required: true }, // e.g., "Midnight Black"
+        hexCode: { type: String },              // e.g., "#000000"
+        imageUrl: { type: String }              // Specific image URL for this color
+    }], 
     sizes: [String],
     specs: [{
         key: String,   
@@ -116,7 +121,6 @@ const productSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// --- FIXED: Removed 'next' completely ---
 // Changed to async function for consistency
 productSchema.pre('save', async function() {
     if (!this.isModified('name')) return;
