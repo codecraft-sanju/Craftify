@@ -119,7 +119,8 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
 
   return (
     <>
-      <div className="pt-16 md:pt-32 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
+      {/* --- CHANGES MADE HERE: Changed pt-16 to pt-2 to reduce the top gap on mobile --- */}
+      <div className="pt-2 md:pt-32 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
         
         {/* Gallery column is restricted to max-w-xl on desktop to keep images proportional */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 lg:gap-20 items-start">
