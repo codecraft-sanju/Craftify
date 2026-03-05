@@ -220,13 +220,15 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
                 const image = visualMap[cat] || fallbackImage;
                 return (
                   <button key={idx} onClick={() => setActiveCategory(cat)} className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1">
-                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md ${isActive ? 'border-indigo-600 scale-105' : 'border-white group-hover:border-indigo-200'}`}>
+                      {/* --- CHANGES MADE HERE: Updated border colors to pink and light pink --- */}
+                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md ${isActive ? 'border-pink-400 scale-105' : 'border-white group-hover:border-pink-200'}`}>
                           <div className="w-full h-full rounded-full overflow-hidden relative">
                              <img src={image} alt={cat} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
                              <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
                           </div>
                       </div>
-                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-indigo-700' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
+                      {/* --- CHANGES MADE HERE: Updated text color to pink --- */}
+                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
                   </button>
                 );
             })}
