@@ -125,8 +125,8 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
       addToCart({
         ...product,
         selectedSize: selectedSize,
-        // Send selected color name to cart
-        selectedColor: typeof selectedColor === 'object' ? selectedColor.name : selectedColor,
+        // Send selected color name to cart (Fixed null error here)
+        selectedColor: selectedColor ? (typeof selectedColor === 'object' ? selectedColor.name : selectedColor) : null,
         customization: customText ? { text: customText } : null,
       });
   };
