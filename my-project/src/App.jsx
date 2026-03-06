@@ -444,9 +444,19 @@ const CraftifyContent = () => {
              const verifyData = await verifyRes.json();
              
              if(verifyData.success) {
-                 // 3. Place actual order in DB
+                 
                  const orderPayload = {
-                    orderItems: cart.map(i => ({ product: i.product, shop: i.shop, name: i.name, image: i.image, price: i.price, qty: i.qty, selectedSize: i.selectedSize })),
+                    
+                    orderItems: cart.map(i => ({ 
+                        product: i.product, 
+                        shop: i.shop, 
+                        name: i.name, 
+                        image: i.image, 
+                        price: i.price, 
+                        qty: i.qty, 
+                        selectedSize: i.selectedSize,
+                        selectedColor: i.selectedColor 
+                    })),
                     shippingAddress: orderData.shippingAddress,
                     paymentInfo: {
                       method: 'Online',
