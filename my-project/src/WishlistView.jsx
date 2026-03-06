@@ -5,7 +5,7 @@ import { ShoppingBag, Trash2, ArrowRight, Heart } from 'lucide-react';
 
 const WishlistView = ({ wishlist, addToCart, removeFromWishlist }) => {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pt-28 pb-10 px-6">
+    <div className="min-h-screen bg-[#FFFBF0] pt-28 pb-10 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
             <div className="p-3 bg-red-50 rounded-full">
