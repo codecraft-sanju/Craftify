@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle } from 'lucide-react';
+// --- MODIFIED SECTION START ---
+import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle, Info, Truck, Home } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+// --- MODIFIED SECTION END ---
 
 // --- CONFIGURATION ---
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -79,6 +83,92 @@ const Badge = ({ children, color = 'slate' }) => {
 const ProfileView = ({ currentUser, orders, onLogout }) => {
   const [uploading, setUploading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  
+  const [invoiceMsgId, setInvoiceMsgId] = useState(null);
+  // --- MODIFIED SECTION START ---
+  const [trackingOrderId, setTrackingOrderId] = useState(null);
+  // --- MODIFIED SECTION END ---
+
+  const generateInvoice = (order, user) => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229);
+    doc.text('Giftomize', 14, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Email: giftomizeofficial@gmail.com', 14, 30);
+    doc.text('Website: www.giftomize.shop', 14, 35);
+
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text('INVOICE', 160, 20);
+
+    doc.setFontSize(10);
+    doc.text(`Order ID: ${order._id}`, 14, 50);
+    doc.text(`Order Date: ${formatDate(order.createdAt)}`, 14, 55);
+    doc.text(`Invoice Date: ${formatDate(new Date())}`, 14, 60);
+    
+    doc.text(`Payment Method: ${order.paymentInfo?.method || 'N/A'}`, 14, 65);
+    if (order.paymentInfo?.transactionId) {
+      doc.text(`Transaction ID: ${order.paymentInfo.transactionId}`, 14, 70);
+    }
+
+    doc.text('Billed To:', 120, 50);
+    doc.setFont("helvetica", "bold");
+    doc.text(user?.name || 'Customer', 120, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(user?.email || '', 120, 60);
+
+    const tableColumn = ["Item Details", "Qty", "Price", "Total"];
+    const tableRows = [];
+
+    order.items?.forEach(item => {
+      let itemDesc = item.name;
+      const extras = [];
+      if (item.selectedColor) extras.push(`Color: ${item.selectedColor}`);
+      if (item.selectedSize) extras.push(`Size: ${item.selectedSize}`);
+      
+      if (extras.length > 0) {
+        itemDesc += `\n(${extras.join(', ')})`;
+      }
+
+      const itemData = [
+        itemDesc,
+        item.qty,
+        `Rs ${item.price}`,
+        `Rs ${item.qty * item.price}`
+      ];
+      tableRows.push(itemData);
+    });
+
+    autoTable(doc, {
+      startY: 80,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229] },
+      styles: { cellPadding: 3, fontSize: 10, valign: 'middle' },
+      columnStyles: { 0: { cellWidth: 80 } }
+    });
+
+    const finalY = doc.lastAutoTable.finalY || 80;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Amount Paid: Rs ${order.totalAmount}`, 14, finalY + 15);
+
+    doc.save(`Giftomize_Invoice_${order._id.slice(-6).toUpperCase()}.pdf`);
+  };
+
+  const handleInvoiceClick = (order) => {
+    if (order.orderStatus !== 'Delivered') {
+      setInvoiceMsgId(order._id);
+      setTimeout(() => setInvoiceMsgId(null), 4000);
+    } else {
+      generateInvoice(order, currentUser);
+    }
+  };
 
   // --- IMAGE UPLOAD LOGIC ---
   const handleImageUpload = async (e) => {
@@ -374,7 +464,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 </div>
               </div>
 
-              {/* --- CANCELLATION NOTICE FOR CUSTOMER (INSERTED HERE) --- */}
+              {/* --- CANCELLATION NOTICE FOR CUSTOMER --- */}
               {o.orderStatus === 'Cancelled' && (
                   <div className="mt-6 bg-red-50 border border-red-100 rounded-2xl p-5 animate-in fade-in">
                       <div className="flex items-start gap-3">
@@ -403,14 +493,97 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               )}
 
               {/* Action Buttons */}
-              <div className="mt-4 flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button size="sm" variant="secondary" className="text-xs h-9">
-                  Track Order
-                </Button>
-                <Button size="sm" variant="ghost" className="text-xs h-9">
-                  View Invoice
-                </Button>
+              <div className="mt-4 flex justify-end gap-3">
+                {/* --- MODIFIED SECTION START (Hide Track Order if Cancelled) --- */}
+                {o.orderStatus !== 'Cancelled' && (
+                  <Button 
+                    size="sm" 
+                    variant={trackingOrderId === o._id ? "indigo" : "secondary"} 
+                    className="text-xs h-9 transition-colors"
+                    onClick={() => setTrackingOrderId(trackingOrderId === o._id ? null : o._id)}
+                  >
+                    {trackingOrderId === o._id ? 'Close Tracking' : 'Track Order'}
+                  </Button>
+                )}
+                {/* --- MODIFIED SECTION END --- */}
+                
+                <div className="relative flex items-center">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="text-xs h-9" 
+                    onClick={() => handleInvoiceClick(o)}
+                  >
+                    View Invoice
+                  </Button>
+                  
+                  {invoiceMsgId === o._id && (
+                    <div className="absolute bottom-full right-0 mb-3 w-64 p-3.5 bg-slate-900 text-white text-xs font-medium rounded-2xl shadow-2xl shadow-indigo-900/20 animate-in fade-in slide-in-from-bottom-2 z-20 flex items-start gap-3 border border-slate-700">
+                      <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                      <p className="leading-relaxed">
+                       The invoice will be generated only after your item is safely delivered. Please wait a little.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* --- MODIFIED SECTION START (Tracking Timeline UI) --- */}
+              {trackingOrderId === o._id && o.orderStatus !== 'Cancelled' && (
+                <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-4 fade-in duration-300">
+                  <h4 className="text-sm font-bold text-slate-900 mb-6 px-2">Journey Details</h4>
+                  
+                  <div className="relative pl-6 space-y-8 before:absolute before:inset-y-2 before:left-[11px] before:w-[2px] before:bg-slate-100">
+                    
+                    {/* Step 1: Placed */}
+                    <div className="relative flex items-start gap-4">
+                      <div className="absolute -left-6 w-6 h-6 rounded-full bg-indigo-500 border-4 border-white flex items-center justify-center shadow-sm">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-slate-900">Order Placed</p>
+                        <p className="text-xs text-slate-500 mt-0.5">We have received your order.</p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Processing */}
+                    <div className="relative flex items-start gap-4">
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus !== 'Pending' ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                        <Package className={`w-3 h-3 ${o.orderStatus !== 'Pending' ? 'text-white' : 'text-slate-400'}`} />
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${o.orderStatus !== 'Pending' ? 'text-slate-900' : 'text-slate-400'}`}>Processing</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Your items are being packed.</p>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Shipped */}
+                    <div className="relative flex items-start gap-4">
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                        <Truck className={`w-3 h-3 ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'text-white' : 'text-slate-400'}`} />
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'text-slate-900' : 'text-slate-400'}`}>Shipped</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Your order is on the way to you.</p>
+                      </div>
+                    </div>
+
+                    {/* Step 4: Delivered */}
+                    <div className="relative flex items-start gap-4">
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus === 'Delivered' ? 'bg-green-500' : 'bg-slate-200'}`}>
+                        <Home className={`w-3 h-3 ${o.orderStatus === 'Delivered' ? 'text-white' : 'text-slate-400'}`} />
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${o.orderStatus === 'Delivered' ? 'text-slate-900' : 'text-slate-400'}`}>Delivered</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Package arrived safely.</p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+              {/* --- MODIFIED SECTION END --- */}
+
             </div>
           ))
         )}
