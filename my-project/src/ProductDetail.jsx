@@ -122,10 +122,9 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
           return;
       }
       
-      addToCart({
-        ...product,
+      // --- FIX: Separated product and options arguments ---
+      addToCart(product, {
         selectedSize: selectedSize,
-        // Send selected color name to cart (Fixed null error here)
         selectedColor: selectedColor ? (typeof selectedColor === 'object' ? selectedColor.name : selectedColor) : null,
         customization: customText ? { text: customText } : null,
       });
