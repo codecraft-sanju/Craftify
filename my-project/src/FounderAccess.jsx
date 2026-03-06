@@ -6,7 +6,9 @@ import {
     Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
     Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon, 
     Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3,
-    Server, FileText
+    Server, FileText,
+    // CHANGES MADE HERE: Added icons for order details
+    MapPin, Phone, Package, Mail
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,6 +33,7 @@ const Badge = ({ children, color = "slate", icon: Icon }) => {
     purple: "bg-violet-500/10 text-violet-600 border-violet-200/50",
     red: "bg-rose-500/10 text-rose-600 border-rose-200/50",
     amber: "bg-amber-500/10 text-amber-600 border-amber-200/50",
+    pink: "bg-pink-500/10 text-pink-600 border-pink-200/50", // Added pink for colors
   };
   return (
     <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${styles[color] || styles.slate} flex items-center gap-1.5 w-fit`}>
@@ -879,7 +882,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                      </GlassCard>
 
                                      {/* List */}
-                                     {/* --- CHANGES MADE HERE: Added mobile image display in the list --- */}
                                      <div className="lg:col-span-2 grid gap-4">
                                          {banners.map((banner, idx) => (
                                              <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5 items-start sm:items-center group">
@@ -976,69 +978,121 @@ export default function FounderAccess({ currentUser, onLogout }) {
                  {selectedOrderForPayout && (
                      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedOrderForPayout(null)}></div>
-                         <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl relative animate-in slide-in-from-bottom-10 duration-300 overflow-hidden flex flex-col max-h-[85vh]">
-                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                         <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl relative animate-in slide-in-from-bottom-10 duration-300 flex flex-col max-h-[90vh]">
+                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-[2rem] shrink-0">
                                  <div>
-                                     <h3 className="text-lg font-black text-slate-900">Settle Payout</h3>
-                                     <p className="text-xs text-slate-500">Order #{selectedOrderForPayout._id.slice(-6)}</p>
+                                     <h3 className="text-xl font-black text-slate-900">Settle Payout</h3>
+                                     <p className="text-xs text-slate-500 font-bold mt-1">Order #{selectedOrderForPayout._id.slice(-6).toUpperCase()}</p>
                                  </div>
-                                 <button onClick={() => setSelectedOrderForPayout(null)} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-400"/></button>
+                                 <button onClick={() => setSelectedOrderForPayout(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X className="w-5 h-5 text-slate-500"/></button>
                              </div>
                              
                              <div className="p-6 overflow-y-auto custom-scrollbar space-y-6 bg-white">
                                  {/* Summary */}
-                                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                     <div className="flex justify-between items-center mb-2">
-                                         <span className="text-sm font-bold text-slate-500">Order Total</span>
-                                         <span className="text-lg font-black text-slate-900">₹{selectedOrderForPayout.totalAmount}</span>
+                                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                     <div className="flex justify-between items-center mb-3">
+                                         <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Order Total</span>
+                                         <span className="text-2xl font-black text-indigo-600">₹{selectedOrderForPayout.totalAmount}</span>
                                      </div>
-                                     <div className="h-px bg-slate-200 my-2"></div>
+                                     <div className="h-px bg-slate-200 my-3"></div>
                                      <div className="flex justify-between items-center">
                                          <span className="text-xs font-bold text-slate-400">Items to Settle</span>
-                                         <span className="text-xs font-bold text-slate-900">{selectedOrderForPayout.items.length} Items</span>
+                                         <span className="text-xs font-bold text-slate-900 bg-slate-200 px-2 py-1 rounded-md">{selectedOrderForPayout.items.length} Items</span>
+                                     </div>
+                                 </div>
+
+                                 {/* --- NEW: Delivery Details --- */}
+                                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                     <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
+                                         <MapPin className="w-4 h-4 text-blue-500"/> Delivery Details
+                                     </h4>
+                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-700">
+                                         <div>
+                                             <p className="font-bold text-slate-900 text-base mb-2">{selectedOrderForPayout.shippingAddress?.fullName}</p>
+                                             <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400"/> {selectedOrderForPayout.shippingAddress?.phone}</p>
+                                             <p className="flex items-center gap-2 mt-1.5"><Mail className="w-4 h-4 text-slate-400"/> {selectedOrderForPayout.customer?.email}</p>
+                                         </div>
+                                         <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                             <p>{selectedOrderForPayout.shippingAddress?.address}</p>
+                                             <p>{selectedOrderForPayout.shippingAddress?.city}, {selectedOrderForPayout.shippingAddress?.postalCode}</p>
+                                             <p className="font-bold mt-1">{selectedOrderForPayout.shippingAddress?.country}</p>
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 {/* --- NEW: Ordered Items Details --- */}
+                                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                     <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
+                                         <Package className="w-4 h-4 text-rose-500"/> Ordered Items
+                                     </h4>
+                                     <div className="space-y-3">
+                                         {selectedOrderForPayout.items?.map((item, index) => (
+                                             <div key={item._id || index} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+                                                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                 </div>
+                                                 <div className="flex-1 min-w-0">
+                                                     <h5 className="font-bold text-slate-900 text-sm truncate">{item.name}</h5>
+                                                     <div className="flex flex-wrap gap-2 mt-2">
+                                                         {item.selectedSize && <Badge color="blue">Size: {item.selectedSize}</Badge>}
+                                                         {item.selectedColor && <Badge color="pink">Color: {item.selectedColor}</Badge>}
+                                                         <Badge color="slate">Qty: {item.qty}</Badge>
+                                                     </div>
+                                                 </div>
+                                                 <div className="text-right shrink-0">
+                                                     <p className="font-black text-indigo-600">₹{item.price}</p>
+                                                     <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Total: ₹{item.price * item.qty}</p>
+                                                 </div>
+                                             </div>
+                                         ))}
                                      </div>
                                  </div>
 
                                  {/* Seller QR Display */}
-                                 <div className="space-y-2">
-                                     <h4 className="text-sm font-bold text-slate-900">1. Scan Seller QR</h4>
-                                     <div className="flex gap-4 overflow-x-auto pb-2">
+                                 <div className="space-y-3">
+                                     <h4 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">1. Scan Seller QR</h4>
+                                     <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
                                          {/* Show QR for each shop involved if they have one */}
                                          {selectedOrderForPayout.items.map((item, idx) => (
                                              item.shop?.paymentQrCode && (
-                                                 <div key={idx} className="flex-shrink-0 bg-white border border-slate-200 rounded-xl p-3 flex flex-col items-center w-32 text-center">
-                                                     <img src={item.shop.paymentQrCode} className="w-24 h-24 object-contain mb-2" alt="QR"/>
-                                                     <p className="text-[10px] font-bold text-slate-600 truncate w-full">{item.shop.name}</p>
+                                                 <div key={idx} className="flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex flex-col items-center w-36 text-center">
+                                                     <img src={item.shop.paymentQrCode} className="w-24 h-24 object-contain mb-3 rounded-lg border border-slate-100 p-1" alt="QR"/>
+                                                     <p className="text-xs font-bold text-slate-700 truncate w-full">{item.shop.name}</p>
                                                  </div>
                                              )
                                          ))}
                                          {selectedOrderForPayout.items.every(i => !i.shop?.paymentQrCode) && (
-                                             <div className="w-full text-center text-slate-400 text-xs italic bg-slate-50 p-4 rounded-xl">No Seller QR Codes found. Use manual transfer.</div>
+                                             <div className="w-full text-center text-slate-500 text-sm font-medium bg-slate-50 p-6 rounded-xl border border-dashed border-slate-300">
+                                                 No Seller QR Codes found. Use manual transfer.
+                                             </div>
                                          )}
                                      </div>
                                  </div>
 
                                  {/* Settlement Form */}
                                  <div className="space-y-4">
-                                     <h4 className="text-sm font-bold text-slate-900">2. Upload Proof</h4>
+                                     <h4 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">2. Upload Proof</h4>
                                      
                                      <input 
                                          type="text" 
                                          placeholder="Enter Transaction ID / UTR" 
                                          value={payoutTxnId}
                                          onChange={(e) => setPayoutTxnId(e.target.value)}
-                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                         className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                                      />
 
-                                     <label className="block w-full border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/10 transition-all">
+                                     <label className="block w-full border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/80 transition-all group">
                                          {payoutFile ? (
-                                             <div className="flex items-center gap-2 text-indigo-600 font-bold">
+                                             <div className="flex items-center gap-2 text-indigo-600 font-bold bg-white px-4 py-2 rounded-lg shadow-sm">
                                                  <CheckCircle className="w-5 h-5"/> {payoutFile.name}
                                              </div>
                                          ) : (
                                              <>
-                                                 <UploadCloud className="w-8 h-8 text-slate-400 mb-2"/>
-                                                 <span className="text-xs font-bold text-slate-500">Upload Screenshot</span>
+                                                 <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                    <UploadCloud className="w-6 h-6 text-indigo-400"/>
+                                                 </div>
+                                                 <span className="text-sm font-bold text-indigo-600">Upload Payment Screenshot</span>
+                                                 <span className="text-xs text-slate-500 mt-1">PNG, JPG up to 5MB</span>
                                              </>
                                          )}
                                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setPayoutFile(e.target.files[0])} />
@@ -1046,10 +1100,10 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                  </div>
                              </div>
 
-                             <div className="p-6 border-t border-slate-100 bg-white">
+                             <div className="p-6 border-t border-slate-100 bg-white rounded-b-[2rem] shrink-0">
                                  <ActionButton 
                                      onClick={handleSettlePayout} 
-                                     className="w-full py-4 text-sm" 
+                                     className="w-full py-4 text-base" 
                                      variant="primary"
                                      loading={isSubmittingPayout}
                                      disabled={!payoutFile}
