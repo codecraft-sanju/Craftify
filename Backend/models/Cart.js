@@ -43,9 +43,6 @@ const cartSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// --- FIXED PRE-SAVE HOOK ---
-// Maine 'next' hata diya hai aur ise async bana diya hai. 
-// Isse "next is not a function" wala error 100% solve ho jayega.
 cartSchema.pre('save', async function() {
     this.totalPrice = this.items.reduce((acc, item) => {
         return acc + (item.price * item.qty);

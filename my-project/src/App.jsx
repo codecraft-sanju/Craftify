@@ -542,7 +542,7 @@ const CraftifyContent = () => {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#FEFAEF]">
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       

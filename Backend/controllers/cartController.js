@@ -32,13 +32,24 @@ const addToCart = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
+        // --- CHANGES MADE HERE: Smart Image Selection based on selectedColor ---
+        let itemImage = product.coverImage; 
+        
+        if (selectedColor && product.colors && product.colors.length > 0) {
+            const matchedColor = product.colors.find(c => c.name === selectedColor);
+            if (matchedColor && matchedColor.imageUrl) {
+                itemImage = matchedColor.imageUrl;
+            }
+        }
+        // -----------------------------------------------------------------------
+
         let cart = await Cart.findOne({ user: req.user._id });
 
         // Naya item object jo add karna hai
         const newItem = {
             product: productId,
             name: product.name,
-            image: product.coverImage,
+            image: itemImage, // --- CHANGES MADE HERE: Updated to use dynamic image ---
             price: product.price,
             qty: Number(qty) || 1,
             selectedSize,

@@ -49,7 +49,7 @@ const Button = ({
     <button
       disabled={loading || props.disabled}
       className={`${base} ${variants[variant]} ${sizes} ${className}`}
-      {...props}
+      {...props} 
     >
       {loading && <RefreshCcw className="w-4 h-4 animate-spin" />}
       {!loading && Icon && <Icon className="w-4 h-4" />}
@@ -138,7 +138,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
   const hasValidAvatar = currentUser?.avatar && currentUser.avatar.includes('http');
 
   return (
-    <div className="pt-28 pb-32 max-w-5xl mx-auto px-6">
+    <div className="bg-[#FEFAEF] pt-28 pb-32 max-w-5xl mx-auto px-6">
       {/* Profile Header */}
       <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden mb-12 text-center md:text-left group">
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-10 group-hover:opacity-15 transition-opacity"></div>
@@ -289,74 +289,88 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               </div>
 
               {/* Items Section */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3 mb-4">
+                {o.items?.map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                    
+                    {/* Item Image */}
+                    <div className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white shrink-0">
+                      <img
+                        src={item.image || item.coverImage}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => (e.target.style.display = 'none')}
+                      />
+                    </div>
+                    
+                    {/* Item Details (Name, Color, Size, Qty) */}
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
+                      
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                        <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                          Qty: {item.qty}
+                        </span>
+                        
+                        {item.selectedColor && (
+                          <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                            Color: {item.selectedColor}
+                          </span>
+                        )}
+                        
+                        {item.selectedSize && (
+                          <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                            Size: {item.selectedSize}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Item Price */}
+                    <div className="text-right shrink-0 pr-2">
+                      <p className="font-black text-slate-900">₹{item.price}</p>
+                    </div>
+                    
+                  </div>
+                ))}
+              </div>
+
+              {/* --- PAYMENT DETAILS & TOTAL SECTION --- */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                 
-                {/* Product Images Stack */}
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-4">
-                    {o.items?.slice(0, 4).map((item, i) => (
-                      <div
-                        key={i}
-                        className="w-16 h-16 rounded-2xl border-[3px] border-white shadow-md overflow-hidden bg-slate-100 relative z-10 transition-transform group-hover:scale-105"
+                {/* Transaction ID Display */}
+                <div className="w-full sm:w-auto flex flex-col gap-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                    <CreditCard className="w-3 h-3" /> Payment Transaction ID
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-white px-2 py-1 rounded-lg border border-slate-200 text-slate-700 font-mono text-sm font-bold">
+                      {o.paymentInfo?.transactionId || 'COD / Not Available'}
+                    </code>
+                    {o.paymentInfo?.transactionId && (
+                      <button 
+                        onClick={() => copyToClipboard(o.paymentInfo.transactionId)}
+                        className="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-indigo-600 active:scale-95"
+                        title="Copy ID"
                       >
-                        <img
-                          src={item.image || item.coverImage}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => (e.target.style.display = 'none')}
-                        />
-                      </div>
-                    ))}
-                    {o.items?.length > 4 && (
-                      <div className="w-16 h-16 rounded-2xl bg-slate-100 border-[3px] border-white flex items-center justify-center text-xs font-bold text-slate-500 shadow-md relative z-0">
-                        +{o.items.length - 4}
-                      </div>
+                        {copiedId === o.paymentInfo.transactionId ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
                     )}
                   </div>
-                  {o.items?.length === 1 && (
-                    <span className="text-sm font-medium text-slate-700 ml-2">
-                      {o.items[0].name}
-                    </span>
-                  )}
                 </div>
 
-                {/* --- PAYMENT DETAILS & TOTAL SECTION --- */}
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  
-                  {/* Transaction ID Display */}
-                  <div className="w-full sm:w-auto flex flex-col gap-1">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
-                      <CreditCard className="w-3 h-3" /> Payment Transaction ID
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <code className="bg-white px-2 py-1 rounded-lg border border-slate-200 text-slate-700 font-mono text-sm font-bold">
-                        {o.paymentInfo?.transactionId || 'COD / Not Available'}
-                      </code>
-                      {o.paymentInfo?.transactionId && (
-                        <button 
-                          onClick={() => copyToClipboard(o.paymentInfo.transactionId)}
-                          className="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-indigo-600 active:scale-95"
-                          title="Copy ID"
-                        >
-                          {copiedId === o.paymentInfo.transactionId ? (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Total Amount */}
-                  <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
-                      Total Paid
-                    </p>
-                    <span className="font-black text-2xl text-slate-900">
-                      ₹{o.totalAmount}
-                    </span>
-                  </div>
+                {/* Total Amount */}
+                <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
+                    Total Paid
+                  </p>
+                  <span className="font-black text-2xl text-slate-900">
+                    ₹{o.totalAmount}
+                  </span>
                 </div>
               </div>
 
