@@ -98,7 +98,8 @@ const productSchema = new mongoose.Schema({
     },
     customizationType: { 
         type: String, 
-        enum: ['text', 'upload', 'selection', 'none'],
+        // --- CHANGES MADE HERE: Added 'both' to handle cases where product needs text AND photo ---
+        enum: ['text', 'upload', 'selection', 'both', 'none'],
         default: 'none'
     },
     reviews: [reviewSchema],

@@ -20,7 +20,9 @@ const cartItemSchema = new mongoose.Schema({
     selectedColor: { type: String },
     customization: {
         text: { type: String },
-        font: { type: String }
+        font: { type: String },
+        // --- CHANGES MADE HERE: Added photoUrl to store uploaded customization image in cart ---
+        photoUrl: { type: String }
     },
     shop: {
         type: mongoose.Schema.Types.ObjectId,

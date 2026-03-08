@@ -49,28 +49,39 @@ const addToCart = async (req, res) => {
         const newItem = {
             product: productId,
             name: product.name,
-            image: itemImage, // --- CHANGES MADE HERE: Updated to use dynamic image ---
+            image: itemImage, // Updated to use dynamic image
             price: product.price,
             qty: Number(qty) || 1,
             selectedSize,
             selectedColor,
-            customization,
+            customization, // Yeh ab naturally photoUrl handle kar lega
             shop: product.shop
         };
 
         if (cart) {
-            // Check karo kya same product aur same attributes (size/color) wala item pehle se hai?
-            const itemIndex = cart.items.findIndex(item => 
-                item.product.toString() === productId && 
-                item.selectedSize === selectedSize &&
-                item.selectedColor === selectedColor
-            );
+            // --- CHANGES MADE HERE: Updated logic to also check customization fields (text, font, photoUrl) ---
+            const itemIndex = cart.items.findIndex(item => {
+                const isSameProduct = item.product.toString() === productId && 
+                                      item.selectedSize === selectedSize &&
+                                      item.selectedColor === selectedColor;
+
+                const existingCust = item.customization || {};
+                const newCust = customization || {};
+
+                // Agar customization alag hai (jaise alag photo ya alag naam), toh naya item treat karo
+                const isSameCustomization = existingCust.text === newCust.text &&
+                                            existingCust.font === newCust.font &&
+                                            existingCust.photoUrl === newCust.photoUrl;
+
+                return isSameProduct && isSameCustomization;
+            });
+            // -----------------------------------------------------------------------------------------------
 
             if (itemIndex > -1) {
-                // Product exists: Sirf quantity update karo
+                // Product aur customization same hai: Sirf quantity update karo
                 cart.items[itemIndex].qty += newItem.qty;
             } else {
-                // Product naya hai: Array mein push karo
+                // Product ya customization naya hai: Array mein push karo
                 cart.items.push(newItem);
             }
             await cart.save();

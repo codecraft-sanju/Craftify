@@ -1,6 +1,7 @@
 // src/OrderDetailsModal.jsx
 import React, { useState } from 'react';
-import { X, Truck, DollarSign, ExternalLink, MapPin, Phone, Package, Mail } from 'lucide-react';
+// --- CHANGES MADE HERE: Added Image as ImageIcon for photo link icon ---
+import { X, Truck, DollarSign, ExternalLink, MapPin, Phone, Package, Mail, Image as ImageIcon } from 'lucide-react';
 import { Button, Badge } from './StoreAdmin'; // Importing your shared UI components
 
 export default function OrderDetailsModal({ selectedOrder, onClose, onUpdateStatus }) {
@@ -72,11 +73,20 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onUpdateStat
                                             {item.selectedColor && <Badge color="pink">Color: {item.selectedColor}</Badge>}
                                             <Badge color="slate">Qty: {item.qty}</Badge>
                                         </div>
-                                        {item.customization?.text && (
-                                            <p className="text-[10px] text-indigo-400 mt-2 font-bold bg-indigo-500/10 px-2 py-1 rounded-lg inline-block">
-                                                Customization: "{item.customization.text}"
-                                            </p>
-                                        )}
+                                        
+                                        <div className="mt-2 flex flex-wrap gap-2 items-center">
+                                            {item.customization?.text && (
+                                                <p className="text-[10px] text-indigo-400 font-bold bg-indigo-500/10 px-2 py-1 rounded-lg inline-block">
+                                                    Custom Text: "{item.customization.text}"
+                                                </p>
+                                            )}
+                                            {/* --- CHANGES MADE HERE: View Uploaded Custom Photo --- */}
+                                            {item.customization?.photoUrl && (
+                                                <a href={item.customization.photoUrl} target="_blank" rel="noreferrer" className="text-[10px] text-pink-400 font-bold bg-pink-500/10 px-2 py-1 rounded-lg inline-flex items-center gap-1 border border-pink-500/20 hover:bg-pink-500/20 transition-colors">
+                                                    <ImageIcon className="w-3 h-3" /> View Custom Photo
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Price */}

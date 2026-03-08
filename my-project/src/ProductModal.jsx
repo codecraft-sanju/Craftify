@@ -18,11 +18,9 @@ export default function ProductModal({
     showCategoryDropdown,
     setShowCategoryDropdown,
     getAvailableCategories,
-    // CHANGES MADE: New props for colors
     colors,
     setColors
 }) {
-    // CHANGES MADE: Helper functions for Color Management
     const handleAddColor = () => {
         setColors([...colors, { name: '', hexCode: '#000000', imageUrl: '' }]);
     };
@@ -39,7 +37,6 @@ export default function ProductModal({
 
     return (
         <>
-            {/* --- ADD/EDIT MODAL (MODIFIED FOR DESKTOP SIDE-DRAWER EFFECT) --- */}
             <div 
                 className={`fixed inset-0 bg-black/80 backdrop-blur-md z-[60] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
                 onClick={onClose}
@@ -115,7 +112,42 @@ export default function ProductModal({
                             </div>
                         </div>
 
-                        {/* CHANGES MADE: NEW DYNAMIC COLORS SECTION */}
+                        {/* --- CHANGES MADE HERE: CUSTOMIZATION SECTION --- */}
+                        <div className="space-y-4 border-t border-b border-slate-800 py-6 my-4">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Customization Settings</label>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors cursor-pointer" onClick={() => document.getElementById('customizationAvailable').click()}>
+                                <input 
+                                    type="checkbox" 
+                                    id="customizationAvailable" 
+                                    name="customizationAvailable" 
+                                    value="true" 
+                                    defaultChecked={editingProduct?.customizationAvailable}
+                                    className="w-5 h-5 accent-rose-500 cursor-pointer"
+                                />
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-white">Enable Customization</p>
+                                    <p className="text-[10px] text-slate-500">Allow customers to add text or images</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1 relative">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Customization Type</label>
+                                <div className="relative">
+                                    <select name="customizationType" defaultValue={editingProduct?.customizationType || 'none'} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white appearance-none cursor-pointer">
+                                        <option value="none">None</option>
+                                        <option value="text">Text Only</option>
+                                        <option value="upload">Image Upload Only</option>
+                                        <option value="both">Both (Text + Image)</option>
+                                        <option value="selection">Selection</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-3 border-t border-b border-slate-800 py-6 my-4">
                             <div className="flex justify-between items-center">
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Colors (Optional)</label>

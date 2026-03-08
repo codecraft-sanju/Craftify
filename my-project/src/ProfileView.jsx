@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-// --- MODIFIED SECTION START ---
-import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle, Info, Truck, Home } from 'lucide-react';
+// --- CHANGES MADE HERE: Added Image as ImageIcon to imports ---
+import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle, Info, Truck, Home, Image as ImageIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 // --- MODIFIED SECTION END ---
@@ -129,6 +129,8 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
       const extras = [];
       if (item.selectedColor) extras.push(`Color: ${item.selectedColor}`);
       if (item.selectedSize) extras.push(`Size: ${item.selectedSize}`);
+      if (item.customization?.text) extras.push(`Text: "${item.customization.text}"`);
+      if (item.customization?.photoUrl) extras.push(`Photo attached`);
       
       if (extras.length > 0) {
         itemDesc += `\n(${extras.join(', ')})`;
@@ -381,43 +383,59 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               {/* Items Section */}
               <div className="flex flex-col gap-3 mb-4">
                 {o.items?.map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                  <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
                     
-                    {/* Item Image */}
-                    <div className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white shrink-0">
-                      <img
-                        src={item.image || item.coverImage}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => (e.target.style.display = 'none')}
-                      />
-                    </div>
-                    
-                    {/* Item Details (Name, Color, Size, Qty) */}
-                    <div className="flex-1">
-                      <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
-                      
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                        <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
-                          Qty: {item.qty}
-                        </span>
+                    <div className="flex items-center gap-4 w-full sm:w-auto flex-1">
+                        {/* Item Image */}
+                        <div className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white shrink-0">
+                          <img
+                            src={item.image || item.coverImage}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.style.display = 'none')}
+                          />
+                        </div>
                         
-                        {item.selectedColor && (
-                          <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
-                            Color: {item.selectedColor}
-                          </span>
-                        )}
-                        
-                        {item.selectedSize && (
-                          <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
-                            Size: {item.selectedSize}
-                          </span>
-                        )}
-                      </div>
+                        {/* Item Details (Name, Color, Size, Qty) */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
+                          
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                            <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                              Qty: {item.qty}
+                            </span>
+                            
+                            {item.selectedColor && (
+                              <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                                Color: {item.selectedColor}
+                              </span>
+                            )}
+                            
+                            {item.selectedSize && (
+                              <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                                Size: {item.selectedSize}
+                              </span>
+                            )}
+
+                            {/* --- CHANGES MADE HERE: Show Custom Text and Photo Info --- */}
+                            {item.customization?.text && (
+                               <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md border border-indigo-100 shadow-sm normal-case tracking-normal">
+                                 Text: "{item.customization.text}"
+                               </span>
+                            )}
+                            
+                            {item.customization?.photoUrl && (
+                               <a href={item.customization.photoUrl} target="_blank" rel="noreferrer" className="bg-pink-50 text-pink-600 px-2 py-1 rounded-md border border-pink-100 shadow-sm flex items-center gap-1 normal-case tracking-normal hover:bg-pink-100 transition-colors">
+                                 <ImageIcon className="w-3 h-3" /> View Photo
+                               </a>
+                            )}
+                            {/* --------------------------------------------------------- */}
+                          </div>
+                        </div>
                     </div>
 
                     {/* Item Price */}
-                    <div className="text-right shrink-0 pr-2">
+                    <div className="text-left sm:text-right shrink-0 w-full sm:w-auto pl-20 sm:pl-0 sm:pr-2 mt-2 sm:mt-0">
                       <p className="font-black text-slate-900">₹{item.price}</p>
                     </div>
                     
@@ -426,7 +444,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               </div>
 
               {/* --- PAYMENT DETAILS & TOTAL SECTION --- */}
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
                 
                 {/* Transaction ID Display */}
                 <div className="w-full sm:w-auto flex flex-col gap-1">

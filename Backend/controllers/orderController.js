@@ -35,7 +35,7 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'Payment verification failed. Razorpay ID missing.' });
         }
 
-        // --- CHANGES MADE HERE: Fetch specific color image for each order item ---
+        // --- Fetch specific color image for each order item ---
         const processedOrderItems = await Promise.all(orderItems.map(async (item) => {
             const productDetails = await Product.findById(item.product);
             let finalImage = item.image; 
@@ -48,7 +48,7 @@ const addOrderItems = async (req, res) => {
             }
             
             return {
-                ...item,
+                ...item, // --- CHANGES MADE HERE: This automatically includes item.customization (text, font, and the new photoUrl) ---
                 image: finalImage
             };
         }));
@@ -57,7 +57,7 @@ const addOrderItems = async (req, res) => {
         // 1. Create the Order
         const order = new Order({
             customer: req.user._id,
-            items: processedOrderItems, // --- CHANGES MADE HERE: Using processed items ---
+            items: processedOrderItems, // Using processed items
             shippingAddress,   
             paymentInfo: {
                 method: 'Online',

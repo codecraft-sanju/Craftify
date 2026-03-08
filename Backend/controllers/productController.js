@@ -122,6 +122,7 @@ const createProduct = async (req, res) => {
             sizes,
             sku: finalSku, 
             customizationAvailable, 
+            // --- CHANGES MADE HERE: This will now naturally accept 'both' along with other types from frontend ---
             customizationType,
             rating: 0,
             numReviews: 0
@@ -224,6 +225,8 @@ const updateProduct = async (req, res) => {
 
             product.sizes = sizes || product.sizes;
             product.customizationAvailable = customizationAvailable ?? product.customizationAvailable;
+            
+            // --- CHANGES MADE HERE: Ensures updated customization type ('both', 'upload', etc.) is saved ---
             product.customizationType = customizationType || product.customizationType;
 
             const updatedProduct = await product.save();
@@ -453,6 +456,6 @@ module.exports = {
     createProductReview,
     getTopProducts,
     getProductsByShop,
-    deleteProductsBatch ,
+    deleteProductsBatch,
     getRelatedProducts
 };

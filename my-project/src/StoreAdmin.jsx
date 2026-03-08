@@ -442,7 +442,10 @@ export default function StoreAdmin({ currentUser }) {
             coverImage: images[0].url, 
             sizes: sizesArray,
             // CHANGES MADE: Appending the dynamic product colors array
-            colors: productColors 
+            colors: productColors,
+            // --- CHANGES MADE HERE: Extracting Customization Flags ---
+            customizationAvailable: formData.get('customizationAvailable') === 'true',
+            customizationType: formData.get('customizationType') || 'none'
         };
 
         try {
@@ -953,7 +956,6 @@ export default function StoreAdmin({ currentUser }) {
                 ))}
             </div>
 
-            {/* CHANGES MADE: Passed colors state logic into ProductModal */}
             <ProductModal 
                 isOpen={isAddModalOpen} 
                 onClose={() => setIsAddModalOpen(false)} 

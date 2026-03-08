@@ -20,7 +20,9 @@ const orderItemSchema = new mongoose.Schema({
     selectedSize: { type: String },
     customization: {
         text: { type: String },
-        font: { type: String }
+        font: { type: String },
+        // --- CHANGES MADE HERE: Added photoUrl to pass the uploaded image to the seller ---
+        photoUrl: { type: String }
     },
     status: {
         type: String,

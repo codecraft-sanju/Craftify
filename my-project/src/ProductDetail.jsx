@@ -6,7 +6,10 @@ import {
   MessageSquare,
   Store,
   Palette,
-  Heart
+  Heart,
+  UploadCloud, // --- CHANGES MADE HERE: Added Icon for upload
+  X,            // --- CHANGES MADE HERE: Added Icon for clear image
+  Loader2       // --- CHANGES MADE HERE: Added Icon for loading state
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -14,6 +17,9 @@ import ProductCard from './ProductCard';
 import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_API_URL;
+// --- CHANGES MADE HERE: Added Cloudinary Credentials ---
+const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
 const LiveCustomizer = ({ product, customText, activeImage, isMobileView }) => (
   <div className={`relative w-full aspect-square bg-slate-50 ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
@@ -34,6 +40,12 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
   const { id } = useParams();
   const product = products.find((p) => p._id === id);
   const [customText, setCustomText] = useState('');
+  
+  // --- CHANGES MADE HERE: States for Custom Image Upload ---
+  const [customPhotoUrl, setCustomPhotoUrl] = useState('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [customPhotoError, setCustomPhotoError] = useState(false);
+  // ---------------------------------------------------------
   
   const [activeImage, setActiveImage] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -87,6 +99,8 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
         setSelectedColor(null); // Reset color on load
         setColorError(false);
         setCustomText('');
+        setCustomPhotoUrl(''); // --- CHANGES MADE HERE: Reset photo on product change ---
+        setCustomPhotoError(false); 
         setActiveIndex(0);
         if (scrollRef.current) scrollRef.current.scrollLeft = 0;
     }
@@ -111,6 +125,39 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
     }
   };
 
+  // --- CHANGES MADE HERE: Handle Cloudinary Upload for Custom Photo ---
+  const handleCustomPhotoUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setIsUploadingPhoto(true);
+      setCustomPhotoError(false);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+      formData.append('cloud_name', CLOUD_NAME);
+
+      try {
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+              method: 'POST', body: formData
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+              setCustomPhotoUrl(data.secure_url);
+          } else {
+              alert('Failed to upload image. Please try again.');
+          }
+      } catch (error) {
+          console.error(error);
+          alert('Error connecting to image server.');
+      } finally {
+          setIsUploadingPhoto(false);
+      }
+  };
+  // --------------------------------------------------------------------
+
   const handleAddToCart = () => {
       if (hasSizes && !selectedSize) {
           setSizeError(true);
@@ -121,12 +168,19 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
           setColorError(true);
           return;
       }
+
+      // --- CHANGES MADE HERE: Validation for Custom Photo if Required ---
+      const needsPhoto = product.customizationAvailable && (product.customizationType === 'upload' || product.customizationType === 'both');
+      if (needsPhoto && !customPhotoUrl) {
+          setCustomPhotoError(true);
+          return;
+      }
       
-      // --- FIX: Separated product and options arguments ---
+      // --- FIX: Separated product and options arguments AND ADDED customPhotoUrl ---
       addToCart(product, {
         selectedSize: selectedSize,
         selectedColor: selectedColor ? (typeof selectedColor === 'object' ? selectedColor.name : selectedColor) : null,
-        customization: customText ? { text: customText } : null,
+        customization: (customText || customPhotoUrl) ? { text: customText, photoUrl: customPhotoUrl } : null,
       });
   };
 
@@ -217,18 +271,59 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                   <Palette className="w-4 h-4 text-indigo-500" />
                   Personalize Your Item
                 </h3>
-                <div className="relative">
-                  <input
-                    type="text"
-                    maxLength={20}
-                    value={customText}
-                    onChange={(e) => setCustomText(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-semibold outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all text-slate-900 placeholder:text-slate-400"
-                    placeholder="Enter name or short text..."
-                  />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 tracking-tighter">
-                    {customText.length}/20
-                  </span>
+
+                <div className="space-y-4">
+                    {/* Text Customization Input */}
+                    {(product.customizationType === 'text' || product.customizationType === 'both') && (
+                        <div className="relative">
+                        <input
+                            type="text"
+                            maxLength={20}
+                            value={customText}
+                            onChange={(e) => setCustomText(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-semibold outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all text-slate-900 placeholder:text-slate-400"
+                            placeholder="Enter name or short text..."
+                        />
+                        <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 tracking-tighter">
+                            {customText.length}/20
+                        </span>
+                        </div>
+                    )}
+
+                    {/* --- CHANGES MADE HERE: Photo Customization Input --- */}
+                    {(product.customizationType === 'upload' || product.customizationType === 'both') && (
+                        <div>
+                            {customPhotoUrl ? (
+                                <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-2xl bg-slate-50">
+                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
+                                        <img src={customPhotoUrl} alt="Custom Upload" className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-slate-800">Photo Uploaded</p>
+                                        <p className="text-xs text-slate-500">This image will be printed.</p>
+                                    </div>
+                                    <button onClick={() => setCustomPhotoUrl('')} className="p-2 bg-white rounded-full shadow-sm text-red-500 hover:bg-red-50 transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${customPhotoError ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-indigo-300'}`}>
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        {isUploadingPhoto ? (
+                                            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                                        ) : (
+                                            <UploadCloud className={`w-8 h-8 mb-2 ${customPhotoError ? 'text-red-400' : 'text-slate-400'}`} />
+                                        )}
+                                        <p className={`text-sm font-bold ${customPhotoError ? 'text-red-500' : 'text-slate-600'}`}>
+                                            {isUploadingPhoto ? 'Uploading...' : 'Click to upload your photo'}
+                                        </p>
+                                    </div>
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleCustomPhotoUpload} disabled={isUploadingPhoto} />
+                                </label>
+                            )}
+                        </div>
+                    )}
+                    {/* -------------------------------------------------------- */}
                 </div>
               </div>
             )}
