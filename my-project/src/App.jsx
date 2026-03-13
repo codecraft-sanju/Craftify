@@ -261,6 +261,10 @@ const CraftifyContent = () => {
   const [orders, setOrders] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeChatProduct, setActiveChatProduct] = useState(null);
+  
+  // --- CHANGES MADE HERE: Added state for Category and Search filtering ---
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -565,7 +569,8 @@ const CraftifyContent = () => {
           <Route path="/delete-account" element={<DeleteAccount />} />
 
           {/* Buyer Routes */}
-          <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery="" setSearchQuery={()=>{}} activeCategory="All" setActiveCategory={()=>{}} /></BuyerOnlyRoute>} />
+          {/* --- CHANGES MADE HERE: Passed down state correctly to ShopView --- */}
+          <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery={searchQuery} setSearchQuery={setSearchQuery} activeCategory={activeCategory} setActiveCategory={setActiveCategory} /></BuyerOnlyRoute>} />
           <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} openChat={(p)=>{setActiveChatProduct(p); setIsChatOpen(true);}} />} />
           
