@@ -302,13 +302,14 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
-                  // --- CHANGES MADE HERE: Modified animation logic to wait for the loader to finish ---
+                  // --- CHANGES MADE HERE: Added whileInView and viewport to trigger animations on scroll, matching product behavior ---
                   <motion.button 
                       key={idx} 
                       onClick={() => setActiveCategory(cat)} 
-                      initial={{ opacity: 0, y: 40 }}
-                      animate={showPageLoader ? { opacity: 0, y: 40 } : { opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: idx * 0.08, ease: "easeOut" }}
+                      initial={{ opacity: 0, scale: 0.8, y: 40 }}
+                      whileInView={!showPageLoader ? { opacity: 1, scale: 1, y: 0 } : {}}
+                      viewport={{ once: true, amount: 0.1 }}
+                      transition={{ duration: 0.4, delay: idx * 0.05, ease: "easeOut" }}
                       whileHover={{ y: -5 }}
                       className="group flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
                   >
