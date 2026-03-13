@@ -125,6 +125,31 @@ const MarqueeStrip = () => {
     );
 };
 
+// --- CHANGES MADE HERE: Added a dedicated component to handle image loading state for the carousel ---
+const CarouselImage = ({ offer }) => {
+    const [isImgLoaded, setIsImgLoaded] = useState(false);
+    return (
+        <div className="w-full h-full relative bg-slate-900">
+            {!isImgLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 border-4 border-white/20 border-t-pink-500 rounded-full animate-spin"></div>
+                </div>
+            )}
+            <picture>
+                {offer.mobileImage && (
+                    <source media="(max-width: 768px)" srcSet={offer.mobileImage} />
+                )}
+                <img 
+                    src={offer.image} 
+                    alt={offer.title} 
+                    onLoad={() => setIsImgLoaded(true)}
+                    className={`w-full h-full object-cover object-center transition-opacity duration-700 ${isImgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+            </picture>
+        </div>
+    );
+};
+
 // --- COMPONENT: OFFER CAROUSEL ---
 const OfferCarousel = ({ bannerData }) => {
     if (bannerData && bannerData.isVisible === false) return null; 
@@ -190,13 +215,8 @@ const OfferCarousel = ({ bannerData }) => {
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
             
-            {/* --- CHANGES MADE HERE: Responsive Art Direction --- */}
-            <picture>
-              {offer.mobileImage && (
-                <source media="(max-width: 768px)" srcSet={offer.mobileImage} />
-              )}
-              <img src={offer.image} alt={offer.title} className="w-full h-full object-cover object-center"/>
-            </picture>
+            {/* --- CHANGES MADE HERE: Replaced direct image with CarouselImage component for loader --- */}
+            <CarouselImage offer={offer} />
 
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
@@ -221,8 +241,28 @@ const OfferCarousel = ({ bannerData }) => {
     );
 };
 
+// --- CHANGES MADE HERE: Added a dedicated component to handle image loading state for Categories ---
+const CategoryImage = ({ src, alt, isActive }) => {
+    const [isImgLoaded, setIsImgLoaded] = useState(false);
+    return (
+        <div className="w-full h-full relative bg-slate-100 flex items-center justify-center">
+            {!isImgLoaded && (
+                <div className="w-6 h-6 border-2 border-slate-300 border-t-pink-400 rounded-full animate-spin absolute"></div>
+            )}
+            <img 
+                src={src} 
+                alt={alt} 
+                onLoad={() => setIsImgLoaded(true)}
+                className={`w-full h-full object-cover transition-all duration-500 ${isImgLoaded ? 'opacity-100' : 'opacity-0'} group-hover:scale-110`}
+            />
+            <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
+        </div>
+    );
+};
+
 // --- COMPONENT: VISUAL CATEGORIES ---
-const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] }) => {
+// --- CHANGES MADE HERE: Added showPageLoader as a prop to delay animations ---
+const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], showPageLoader }) => {
   const [visualMap, setVisualMap] = useState({
     "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
     "Clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
@@ -262,23 +302,20 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
-                  // --- CHANGES MADE HERE: Converted to motion.button and added entrance animations ---
+                  // --- CHANGES MADE HERE: Modified animation logic to wait for the loader to finish ---
                   <motion.button 
                       key={idx} 
                       onClick={() => setActiveCategory(cat)} 
                       initial={{ opacity: 0, y: 40 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "50px" }}
+                      animate={showPageLoader ? { opacity: 0, y: 40 } : { opacity: 1, y: 0 }}
                       transition={{ duration: 0.6, delay: idx * 0.08, ease: "easeOut" }}
                       whileHover={{ y: -5 }}
                       className="group flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
                   >
                       {/* --- CHANGES MADE HERE: Removed borders and padding from the circular image container --- */}
                       <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden shadow-md transition-all duration-300 ${isActive ? 'scale-105' : ''}`}>
-                          <div className="w-full h-full rounded-full overflow-hidden relative">
-                             <img src={image} alt={cat} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
-                             <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
-                          </div>
+                          {/* --- CHANGES MADE HERE: Replaced direct image with CategoryImage component --- */}
+                          <CategoryImage src={image} alt={cat} isActive={isActive} />
                       </div>
                       <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
                   </motion.button>
@@ -355,7 +392,14 @@ const ShopView = ({
             {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
-                <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
+                
+                {/* --- CHANGES MADE HERE: Passed showPageLoader state to CategoryHighlight --- */}
+                <CategoryHighlight 
+                    activeCategory={activeCategory} 
+                    setActiveCategory={setActiveCategory} 
+                    products={products} 
+                    showPageLoader={showPageLoader} 
+                />
 
                 {/* --- CHANGES MADE HERE: Added motion.div and AnimatePresence for the grid filter layout animations --- */}
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
@@ -389,9 +433,10 @@ const ShopView = ({
                             <motion.div
                                 layout
                                 initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                // --- CHANGES MADE HERE: Bound the entrance animation to the showPageLoader state ---
+                                animate={showPageLoader ? { opacity: 0, scale: 0.8 } : { opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8, filter: "blur(5px)" }}
-                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }} // Added index delay for a cool cascade effect
                                 key={product._id || product.id}
                             >
                                 <ProductCard 
