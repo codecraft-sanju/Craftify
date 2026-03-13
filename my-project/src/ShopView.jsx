@@ -1,6 +1,8 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+// --- CHANGES MADE HERE: Added motion back for the category animations ---
+import { motion } from 'framer-motion';
 // --- CHANGES MADE HERE: Removed Quote and BadgeCheck from lucide-react imports ---
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
@@ -214,22 +216,31 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [] })
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        <div className="flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6">
+        <div className="flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible">
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
-                  <button key={idx} onClick={() => setActiveCategory(cat)} className="group flex flex-col items-center gap-3 min-w-[80px] md:min-w-[100px] snap-center transition-transform hover:-translate-y-1">
-                      {/* --- CHANGES MADE HERE: Updated border colors to pink and light pink --- */}
-                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-[3px] p-1 transition-all duration-300 shadow-md ${isActive ? 'border-pink-400 scale-105' : 'border-white group-hover:border-pink-200'}`}>
+                  // --- CHANGES MADE HERE: Converted to motion.button and added entrance animations ---
+                  <motion.button 
+                      key={idx} 
+                      onClick={() => setActiveCategory(cat)} 
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "50px" }}
+                      transition={{ duration: 0.6, delay: idx * 0.08, ease: "easeOut" }}
+                      whileHover={{ y: -5 }}
+                      className="group flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
+                  >
+                      {/* --- CHANGES MADE HERE: Removed borders and padding from the circular image container --- */}
+                      <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden shadow-md transition-all duration-300 ${isActive ? 'scale-105' : ''}`}>
                           <div className="w-full h-full rounded-full overflow-hidden relative">
                              <img src={image} alt={cat} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
                              <div className={`absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors ${isActive ? 'bg-black/0' : ''}`} />
                           </div>
                       </div>
-                      {/* --- CHANGES MADE HERE: Updated text color to pink --- */}
                       <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
-                  </button>
+                  </motion.button>
                 );
             })}
         </div>
@@ -277,7 +288,7 @@ const ShopView = ({
   });
 
   return (
-      <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col">
+      <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden">
             
             {/* MARQUEE STRIP */}
             <MarqueeStrip />
