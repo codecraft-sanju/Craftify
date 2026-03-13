@@ -1,8 +1,8 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// --- CHANGES MADE HERE: Added motion back for the category animations ---
-import { motion } from 'framer-motion';
+// --- CHANGES MADE HERE: Added AnimatePresence for the loader exit animation ---
+import { motion, AnimatePresence } from 'framer-motion';
 // --- CHANGES MADE HERE: Removed Quote and BadgeCheck from lucide-react imports ---
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
@@ -18,6 +18,47 @@ import ReviewsSection from './ReviewsSection';
 
 // API URL definition (Fallback to localhost if env not set)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// --- CHANGES MADE HERE: Added a new full-screen PageLoader component ---
+const PageLoader = () => (
+    <motion.div
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0, y: -40 }}
+        transition={{ duration: 0.6, ease: "easeInOut" }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FFFBF0]"
+    >
+        <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center gap-4"
+        >
+            <div className="relative">
+                <motion.div 
+                    animate={{ rotate: [0, 10, -10, 0] }} 
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                    <Gift className="w-16 h-16 text-pink-500" />
+                </motion.div>
+                <motion.div 
+                    className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-10 h-2 bg-pink-500/20 rounded-full blur-[2px]"
+                    animate={{ scale: [1, 0.8, 1], opacity: [0.5, 0.2, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                />
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-widest font-serif mt-2">
+                GIFTOMIZE
+            </h1>
+            
+            <div className="flex gap-1.5 mt-2">
+                <motion.div className="w-2 h-2 rounded-full bg-pink-400" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                <motion.div className="w-2 h-2 rounded-full bg-indigo-400" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
+                <motion.div className="w-2 h-2 rounded-full bg-pink-400" animate={{ y: [0, -8, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+            </div>
+        </motion.div>
+    </motion.div>
+);
 
 // --- COMPONENT: PRODUCT SKELETON ---
 const ProductSkeleton = () => (
@@ -262,8 +303,18 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
+  // --- CHANGES MADE HERE: Added state to manage the initial page loader ---
+  const [showPageLoader, setShowPageLoader] = useState(true);
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
+
+  // --- CHANGES MADE HERE: Added useEffect to dismiss the loader after 2 seconds ---
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          setShowPageLoader(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -288,8 +339,13 @@ const ShopView = ({
   });
 
   return (
-      <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden">
+      <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
             
+            {/* --- CHANGES MADE HERE: Added AnimatePresence and the PageLoader component --- */}
+            <AnimatePresence>
+                {showPageLoader && <PageLoader />}
+            </AnimatePresence>
+
             {/* MARQUEE STRIP */}
             <MarqueeStrip />
 
