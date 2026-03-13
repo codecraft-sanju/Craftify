@@ -4,7 +4,6 @@ import { motion, useInView } from 'framer-motion';
 import { 
   Heart, 
   ShoppingBag, 
-  Palette, 
   Check 
 } from 'lucide-react'; 
 
@@ -83,17 +82,11 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
 
              {/* --- BADGES (Top Left) --- */}
              <div className="absolute top-3 left-3 flex flex-col gap-2 items-start z-10">
-                 {/* Custom Badge */}
-                 {product.customizationAvailable && (
-                     <div className="bg-purple-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
-                         <Palette className="w-3 h-3" /> Custom
-                     </div>
-                 )}
                  
                  {/* Low Stock Alert */}
                  {!isOutOfStock && product.stock <= 10 && (
                      <div className="bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md shadow-sm animate-pulse">
-                         🔥 Only {product.stock} Left
+                         Only {product.stock} Left
                      </div>
                  )}
              </div>
