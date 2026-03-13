@@ -1,7 +1,7 @@
 // src/ShopView.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// --- CHANGES MADE HERE: Added AnimatePresence for the loader exit animation ---
+// --- CHANGES MADE HERE: Added AnimatePresence for the loader exit animation AND product filtering animations ---
 import { motion, AnimatePresence } from 'framer-motion';
 // --- CHANGES MADE HERE: Removed Quote and BadgeCheck from lucide-react imports ---
 import { 
@@ -334,7 +334,10 @@ const ShopView = ({
       const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
       const descMatch = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const searchPass = nameMatch || descMatch;
-      const categoryPass = activeCategory === "All" || p.category === activeCategory;
+      
+      // --- CHANGES MADE HERE: Made the category filter case-insensitive and robust ---
+      const categoryPass = activeCategory === "All" || (p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
+      
       return searchPass && categoryPass;
   });
 
@@ -354,40 +357,54 @@ const ShopView = ({
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
                 <CategoryHighlight activeCategory={activeCategory} setActiveCategory={setActiveCategory} products={products} />
 
-                {/* PRODUCT GRID */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
-                    {isLoading && [...Array(8)].map((_, i) => <ProductSkeleton key={i} />)}
-                    
-                    {!isLoading && products.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
-                            <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100"><PackageOpen className="w-10 h-10 text-indigo-500"/></div>
-                            <h3 className="text-2xl font-black text-slate-900">Marketplace is Empty</h3>
-                            <p className="text-slate-500 mt-2 max-w-md mx-auto">Be the first to list a product and start selling to millions.</p>
-                            <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group"><Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></Link>
-                        </div>
-                    )}
-                    
-                    {!isLoading && products.length > 0 && filteredProducts.length === 0 && (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-center animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
-                            <h3 className="text-xl font-bold text-slate-900">No matches found</h3>
-                            <p className="text-slate-500 mt-1">We couldn't find any "{activeCategory !== 'All' ? activeCategory : ''}" products matching "{searchQuery}"</p>
-                            <button onClick={() => { setSearchQuery(""); if(setActiveCategory) setActiveCategory("All"); }} className="mt-6 flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-5 py-2.5 rounded-xl transition-colors"><XCircle className="w-4 h-4"/> Clear All Filters</button>
-                        </div>
-                    )}
-                    
-                    {/* PRODUCT CARDS - IMPORTED COMPONENT */}
-                    {!isLoading && filteredProducts.map((product, index) => (
-                        <ProductCard 
-                            key={product._id || product.id} 
-                            product={product} 
-                            index={index}
-                            wishlist={wishlist} 
-                            toggleWishlist={toggleWishlist} 
-                            addToCart={addToCart} 
-                        />
-                    ))}
-                </div>
+                {/* --- CHANGES MADE HERE: Added motion.div and AnimatePresence for the grid filter layout animations --- */}
+                <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
+                    <AnimatePresence>
+                        {isLoading && [...Array(8)].map((_, i) => (
+                            <motion.div key={`skeleton-${i}`} layout exit={{ opacity: 0, scale: 0.9 }}>
+                                <ProductSkeleton />
+                            </motion.div>
+                        ))}
+                        
+                        {!isLoading && products.length === 0 && (
+                            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
+                                <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100"><PackageOpen className="w-10 h-10 text-indigo-500"/></div>
+                                <h3 className="text-2xl font-black text-slate-900">Marketplace is Empty</h3>
+                                <p className="text-slate-500 mt-2 max-w-md mx-auto">Be the first to list a product and start selling to millions.</p>
+                                <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group"><Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></Link>
+                            </motion.div>
+                        )}
+                        
+                        {!isLoading && products.length > 0 && filteredProducts.length === 0 && (
+                            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
+                                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
+                                <h3 className="text-xl font-bold text-slate-900">No matches found</h3>
+                                <p className="text-slate-500 mt-1">We couldn't find any "{activeCategory !== 'All' ? activeCategory : ''}" products matching "{searchQuery}"</p>
+                                <button onClick={() => { setSearchQuery(""); if(setActiveCategory) setActiveCategory("All"); }} className="mt-6 flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-5 py-2.5 rounded-xl transition-colors"><XCircle className="w-4 h-4"/> Clear All Filters</button>
+                            </motion.div>
+                        )}
+                        
+                        {/* PRODUCT CARDS - WRAPPED IN MOTION.DIV FOR LAYOUT ANIMATION */}
+                        {!isLoading && filteredProducts.map((product, index) => (
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8, filter: "blur(5px)" }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                key={product._id || product.id}
+                            >
+                                <ProductCard 
+                                    product={product} 
+                                    index={index}
+                                    wishlist={wishlist} 
+                                    toggleWishlist={toggleWishlist} 
+                                    addToCart={addToCart} 
+                                />
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
             </div>
 
             {/* --- NEW PREMIUM REVIEWS SECTION --- */}
