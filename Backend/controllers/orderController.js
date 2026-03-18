@@ -35,29 +35,10 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'Payment verification failed. Razorpay ID missing.' });
         }
 
-        // --- Fetch specific color image for each order item ---
-        const processedOrderItems = await Promise.all(orderItems.map(async (item) => {
-            const productDetails = await Product.findById(item.product);
-            let finalImage = item.image; 
-            
-            if (productDetails && item.selectedColor && productDetails.colors && productDetails.colors.length > 0) {
-                const matchedColor = productDetails.colors.find(c => c.name === item.selectedColor);
-                if (matchedColor && matchedColor.imageUrl) {
-                    finalImage = matchedColor.imageUrl;
-                }
-            }
-            
-            return {
-                ...item, // --- CHANGES MADE HERE: This automatically includes item.customization (text, font, and the new photoUrl) ---
-                image: finalImage
-            };
-        }));
-        // -------------------------------------------------------------------------
-
-        // 1. Create the Order
+        // 1. Create the Order (Directly using orderItems, customization/colors removed)
         const order = new Order({
             customer: req.user._id,
-            items: processedOrderItems, // Using processed items
+            items: orderItems, 
             shippingAddress,   
             paymentInfo: {
                 method: 'Online',
@@ -110,26 +91,21 @@ const addOrderItems = async (req, res) => {
 
 Hello ${customerName},
 
-Thank you for shopping with Craftify! Your payment has been received and your order is confirmed.
+Thank you for shopping with Giftomize! Your payment has been received and your order is confirmed.
 
 *Order Details:*
 ${productDetails}
 *Total Amount:* ₹${totalPrice}
-*Current Status:* Processing 🚀
-
-The seller will begin processing your order shortly.
-
+The seller will contact you shortly on WhatsApp for any customization details or order updates.
 Best Regards,
-*Team Craftify*`;
+*Team Giftomize*`;
 
                 sendWhatsApp(req.user.phone, message).catch(() => {});
 
             } catch (msgError) {
-                // Ignore message generation errors
+              
             }
         }
-
-        // --- NOTIFY SELLERS IMMEDIATELY ---
         const involvedShops = [...new Set(orderItems.map(item => item.shop.toString()))];
         
         try {
@@ -138,7 +114,20 @@ Best Regards,
             for (const shop of shopsToNotify) {
                 if (shop.phone) {
                     const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();
-                    const sellerMsg = `Hello ${shop.name}, great news! You have received a new paid order (ID: #${shortOrderId}) on Craftify. Please check your seller dashboard for more details. Happy Selling!`;
+                    
+                    // Filter items specific to this shop
+                    const shopItems = orderItems.filter(item => item.shop.toString() === shop._id.toString());
+                    let shopProductDetails = "";
+                    shopItems.forEach(item => {
+                        shopProductDetails += `• ${item.name} (Qty: ${item.qty}) - ₹${item.price}\n`;
+                    });
+
+                    const customerName = req.user.name;
+                    const customerPhone = shippingAddress.phone || req.user.phone || 'Not provided';
+                    const fullAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.postalCode}`;
+
+                const sellerMsg = `🎉 New Order on Giftomize! (Order ID: #${shortOrderId})\n\n*Customer Note:* "Hello, I have successfully placed an order on the Giftomize website. Please process my order."\n\n*🛍️ Order Details:*\n${shopProductDetails}\n*👤 Customer Information:*\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${fullAddress}\n\nPlease reach out to the customer directly via WhatsApp for any photos, sizes, or specific customization details required. Happy Selling!`;
+                    
                     sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                 }
                 
@@ -146,8 +135,8 @@ Best Regards,
                 const shopOwner = await User.findById(shop.owner);
                 if (shopOwner && shopOwner.pushSubscriptions && shopOwner.pushSubscriptions.length > 0) {
                     const payload = JSON.stringify({
-                        title: 'New Paid Order! 🎉',
-                        body: `Aapke shop (${shop.name}) ke liye ek naya order aaya hai.`,
+                        title: 'New Paid Order!',
+                        body: `A new order has arrived for your shop (${shop.name}).`,
                         url: '/my-shop' 
                     });
 
@@ -241,13 +230,10 @@ const verifyOrderPayment = async (req, res) => {
                 for (const shop of shopsToNotify) {
                     if (shop.phone) {
                         const shortOrderId = updatedOrder._id.toString().slice(-6).toUpperCase();
-                        const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Craftify. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
+                        const sellerMsg = `Hello ${shop.name}, great news! You have received a new verified order (ID: #${shortOrderId}) on Giftomize. The payment is approved, and it is ready for processing. Please check your seller dashboard for more details. Happy Selling!`;
                         
                         sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
                     }
-                    
-                    // Push Notification Logic Start
-                    // Send Web Push Notification to the shop owner
                     const shopOwner = await User.findById(shop.owner);
                     if (shopOwner && shopOwner.pushSubscriptions && shopOwner.pushSubscriptions.length > 0) {
                         const payload = JSON.stringify({

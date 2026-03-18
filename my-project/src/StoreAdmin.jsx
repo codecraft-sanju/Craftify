@@ -5,7 +5,7 @@ import {
     DollarSign, Star, Settings, RefreshCcw, Store,
     LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
-    ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert
+    ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2
 } from 'lucide-react';
 import io from 'socket.io-client';
 
