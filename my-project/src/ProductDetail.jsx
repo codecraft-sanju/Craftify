@@ -3,13 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ShoppingBag,
-  MessageSquare,
   Store,
-  Palette,
-  Heart,
-  UploadCloud, // --- CHANGES MADE HERE: Added Icon for upload
-  X,            // --- CHANGES MADE HERE: Added Icon for clear image
-  Loader2       // --- CHANGES MADE HERE: Added Icon for loading state
+  Heart
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -17,45 +12,22 @@ import ProductCard from './ProductCard';
 import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_API_URL;
-// --- CHANGES MADE HERE: Added Cloudinary Credentials ---
-const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
-const LiveCustomizer = ({ product, customText, activeImage, isMobileView }) => (
+const ProductImagePreview = ({ activeImage, isMobileView }) => (
   <div className={`relative w-full aspect-square bg-slate-50 ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
     <PremiumImage
-      src={activeImage || product.coverImage || product.image}
+      src={activeImage}
       className="w-full h-full object-cover"
       alt="Product Preview"
     />
-    {customText && (
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl md:text-3xl font-bold text-white drop-shadow-lg pointer-events-none text-center px-4 w-full break-words tracking-tight">
-        {customText}
-      </div>
-    )}
   </div>
 );
 
-const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, toggleWishlist }) => {
+const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
   const product = products.find((p) => p._id === id);
-  const [customText, setCustomText] = useState('');
-  
-  // --- CHANGES MADE HERE: States for Custom Image Upload ---
-  const [customPhotoUrl, setCustomPhotoUrl] = useState('');
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [customPhotoError, setCustomPhotoError] = useState(false);
-  // ---------------------------------------------------------
   
   const [activeImage, setActiveImage] = useState(null);
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [sizeError, setSizeError] = useState(false);
-  
-  // --- NAYA CODE: Colors ke liye state ---
-  const [selectedColor, setSelectedColor] = useState(null);
-  const [colorError, setColorError] = useState(false);
-  // ---------------------------------------
-
   const [activeIndex, setActiveIndex] = useState(0);
 
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -88,29 +60,16 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
 
   useEffect(() => {
     if (product) {
-        // DEBUGGING LOG: Browser console me dikhega ki product me kya data aaya hai
         console.log("🔥 DEBUG - Product Data in Detail Page:", product);
-        console.log("🎨 DEBUG - Product Colors:", product.colors);
 
         const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
         setActiveImage(initialImage);
-        setSelectedSize(null);
-        setSizeError(false);
-        setSelectedColor(null); // Reset color on load
-        setColorError(false);
-        setCustomText('');
-        setCustomPhotoUrl(''); // --- CHANGES MADE HERE: Reset photo on product change ---
-        setCustomPhotoError(false); 
         setActiveIndex(0);
         if (scrollRef.current) scrollRef.current.scrollLeft = 0;
     }
   }, [product]);
 
   const isInWishlist = wishlist && wishlist.some(item => item._id === product?._id);
-  const hasSizes = product?.sizes && product.sizes.length > 0;
-  
-  // --- NAYA CODE: Check karna ki colors hain ya nahi ---
-  const hasColors = product?.colors && product.colors.length > 0;
   
   const allImages = product?.images?.length > 0 
     ? product.images 
@@ -125,63 +84,8 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
     }
   };
 
-  // --- CHANGES MADE HERE: Handle Cloudinary Upload for Custom Photo ---
-  const handleCustomPhotoUpload = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      setIsUploadingPhoto(true);
-      setCustomPhotoError(false);
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', UPLOAD_PRESET);
-      formData.append('cloud_name', CLOUD_NAME);
-
-      try {
-          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-              method: 'POST', body: formData
-          });
-          const data = await res.json();
-          
-          if (res.ok) {
-              setCustomPhotoUrl(data.secure_url);
-          } else {
-              alert('Failed to upload image. Please try again.');
-          }
-      } catch (error) {
-          console.error(error);
-          alert('Error connecting to image server.');
-      } finally {
-          setIsUploadingPhoto(false);
-      }
-  };
-  // --------------------------------------------------------------------
-
   const handleAddToCart = () => {
-      if (hasSizes && !selectedSize) {
-          setSizeError(true);
-          return;
-      }
-      // --- NAYA CODE: Color validation ---
-      if (hasColors && !selectedColor) {
-          setColorError(true);
-          return;
-      }
-
-      // --- CHANGES MADE HERE: Validation for Custom Photo if Required ---
-      const needsPhoto = product.customizationAvailable && (product.customizationType === 'upload' || product.customizationType === 'both');
-      if (needsPhoto && !customPhotoUrl) {
-          setCustomPhotoError(true);
-          return;
-      }
-      
-      // --- FIX: Separated product and options arguments AND ADDED customPhotoUrl ---
-      addToCart(product, {
-        selectedSize: selectedSize,
-        selectedColor: selectedColor ? (typeof selectedColor === 'object' ? selectedColor.name : selectedColor) : null,
-        customization: (customText || customPhotoUrl) ? { text: customText, photoUrl: customPhotoUrl } : null,
-      });
+      addToCart(product);
   };
 
   if (!product)
@@ -207,9 +111,7 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
               >
                 {allImages.map((img, idx) => (
                   <div key={idx} className="min-w-full snap-center">
-                    <LiveCustomizer
-                      product={product}
-                      customText={customText}
+                    <ProductImagePreview
                       activeImage={img.url}
                       isMobileView={true}
                     />
@@ -218,9 +120,7 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
               </div>
 
               <div className="hidden md:block">
-                <LiveCustomizer
-                  product={product}
-                  customText={customText}
+                <ProductImagePreview
                   activeImage={activeImage}
                   isMobileView={false}
                 />
@@ -264,69 +164,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                   ))}
               </div>
             )}
-
-            {product.customizationAvailable && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm mx-4 md:mx-0">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
-                  <Palette className="w-4 h-4 text-indigo-500" />
-                  Personalize Your Item
-                </h3>
-
-                <div className="space-y-4">
-                    {/* Text Customization Input */}
-                    {(product.customizationType === 'text' || product.customizationType === 'both') && (
-                        <div className="relative">
-                        <input
-                            type="text"
-                            maxLength={20}
-                            value={customText}
-                            onChange={(e) => setCustomText(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 font-semibold outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all text-slate-900 placeholder:text-slate-400"
-                            placeholder="Enter name or short text..."
-                        />
-                        <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 tracking-tighter">
-                            {customText.length}/20
-                        </span>
-                        </div>
-                    )}
-
-                    {/* --- CHANGES MADE HERE: Photo Customization Input --- */}
-                    {(product.customizationType === 'upload' || product.customizationType === 'both') && (
-                        <div>
-                            {customPhotoUrl ? (
-                                <div className="flex items-center gap-4 p-3 border border-slate-200 rounded-2xl bg-slate-50">
-                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
-                                        <img src={customPhotoUrl} alt="Custom Upload" className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-slate-800">Photo Uploaded</p>
-                                        <p className="text-xs text-slate-500">This image will be printed.</p>
-                                    </div>
-                                    <button onClick={() => setCustomPhotoUrl('')} className="p-2 bg-white rounded-full shadow-sm text-red-500 hover:bg-red-50 transition-colors">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${customPhotoError ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-indigo-300'}`}>
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        {isUploadingPhoto ? (
-                                            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
-                                        ) : (
-                                            <UploadCloud className={`w-8 h-8 mb-2 ${customPhotoError ? 'text-red-400' : 'text-slate-400'}`} />
-                                        )}
-                                        <p className={`text-sm font-bold ${customPhotoError ? 'text-red-500' : 'text-slate-600'}`}>
-                                            {isUploadingPhoto ? 'Uploading...' : 'Click to upload your photo'}
-                                        </p>
-                                    </div>
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleCustomPhotoUpload} disabled={isUploadingPhoto} />
-                                </label>
-                            )}
-                        </div>
-                    )}
-                    {/* -------------------------------------------------------- */}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* --- RIGHT COLUMN: DETAILS --- */}
@@ -367,74 +204,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
                 </div>
               </div>
 
-              {/* --- NAYA CODE: CHOOSE COLOR UI --- */}
-              {hasColors && (
-                  <div className="mb-8">
-                      <h3 className={`font-bold text-xs uppercase tracking-widest mb-4 ${colorError ? 'text-red-600' : 'text-slate-400'}`}>
-                          Choose Color {colorError && <span className="text-red-500 font-medium ml-1">— Required</span>}
-                      </h3>
-                      <div className="flex flex-wrap gap-3">
-                          {product.colors.map((color, idx) => {
-                              const colorName = typeof color === 'string' ? color : color.name;
-                              const colorHex = typeof color === 'string' ? color.toLowerCase() : color.hexCode;
-                              const colorImage = typeof color === 'object' ? color.imageUrl : null;
-
-                              return (
-                                  <button
-                                      key={idx}
-                                      onClick={() => {
-                                          setSelectedColor(color);
-                                          setColorError(false);
-                                          // Image swap logic
-                                          if (colorImage) setActiveImage(colorImage);
-                                      }}
-                                      className={`h-12 px-4 rounded-xl font-bold border-2 transition-all active:scale-95 flex items-center gap-2 ${
-                                          selectedColor === color
-                                          ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-200'
-                                          : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'
-                                      }`}
-                                  >
-                                      {colorHex && (
-                                          <span 
-                                              className="w-4 h-4 rounded-full shadow-inner border border-black/10" 
-                                              style={{ backgroundColor: colorHex }}
-                                          ></span>
-                                      )}
-                                      {colorName}
-                                  </button>
-                              );
-                          })}
-                      </div>
-                  </div>
-              )}
-              {/* --------------------------------- */}
-
-              {hasSizes && (
-                  <div className="mb-10">
-                      <h3 className={`font-bold text-xs uppercase tracking-widest mb-4 ${sizeError ? 'text-red-600' : 'text-slate-400'}`}>
-                          Choose Size {sizeError && <span className="text-red-500 font-medium ml-1">— Required</span>}
-                      </h3>
-                      <div className="flex flex-wrap gap-3">
-                          {product.sizes.map((size) => (
-                              <button
-                                  key={size}
-                                  onClick={() => {
-                                      setSelectedSize(size);
-                                      setSizeError(false);
-                                  }}
-                                  className={`min-w-[3.5rem] h-12 px-4 rounded-xl font-bold border-2 transition-all active:scale-95 ${
-                                      selectedSize === size
-                                      ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-200'
-                                      : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'
-                                  }`}
-                              >
-                                  {size}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
-              )}
-
               <div className="prose prose-slate mb-10">
                 <p className="text-slate-600 leading-relaxed text-lg font-medium">
                   {product.description}
@@ -442,13 +211,6 @@ const ProductDetail = ({ addToCart, openChat, currentUser, products, wishlist, t
               </div>
               
               <div className="flex gap-4 mb-8">
-                <button
-                  onClick={() => openChat(product)}
-                  className="flex-[3] flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm bg-indigo-50/50 px-6 py-4 rounded-2xl hover:bg-indigo-50 transition-all border border-indigo-100 active:scale-95"
-                >
-                  <MessageSquare className="w-5 h-5" /> <span>Inquire Now</span>
-                </button>
-                
                 <button 
                   onClick={() => toggleWishlist(product)}
                   className={`p-4 rounded-2xl border transition-all active:scale-95 ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500 shadow-sm' : 'border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}

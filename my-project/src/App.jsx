@@ -4,9 +4,9 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
   useNavigate,
   useLocation,
-  Navigate,
   Outlet,
 } from 'react-router-dom';
 import NotFound from './NotFound';
@@ -39,7 +39,6 @@ import StoreAdmin from './StoreAdmin';
 import ShopView from './ShopView';
 import SearchPage from './SearchPage';
 import SellerRegister from './SellerRegister';
-import CustomizationChat from './CustomizationChat';
 import CustomerAuth from './CustomerAuth';
 import CheckoutModal from './CheckoutModal';
 import ProfileView from './ProfileView'; 
@@ -259,8 +258,6 @@ const CraftifyContent = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orders, setOrders] = useState([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeChatProduct, setActiveChatProduct] = useState(null);
   
   // --- CHANGES MADE HERE: Added state for Category and Search filtering ---
   const [activeCategory, setActiveCategory] = useState("All");
@@ -500,7 +497,6 @@ const CraftifyContent = () => {
            }
         },
         "prefill": {
-          // --- FIX: Using orderData.shippingAddress here ---
           "name": currentUser?.name || orderData.shippingAddress?.fullName || "",
           "email": currentUser?.email || "",
           "contact": orderData.shippingAddress?.phone || ""
@@ -572,7 +568,7 @@ const CraftifyContent = () => {
           {/* --- CHANGES MADE HERE: Passed down state correctly to ShopView --- */}
           <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery={searchQuery} setSearchQuery={setSearchQuery} activeCategory={activeCategory} setActiveCategory={setActiveCategory} /></BuyerOnlyRoute>} />
           <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
-          <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} openChat={(p)=>{setActiveChatProduct(p); setIsChatOpen(true);}} />} />
+          <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           
           {/* Protected Routes */}
           <Route path="/wishlist" element={<ProtectedRoute user={currentUser}><WishlistView wishlist={wishlist} addToCart={addToCart} removeFromWishlist={(id) => toggleWishlist({_id: id})} /></ProtectedRoute>} />
@@ -590,7 +586,6 @@ const CraftifyContent = () => {
       {/* Overlays */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
-      {activeChatProduct && <CustomizationChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} product={activeChatProduct} currentUser={currentUser} socket={socket} API_URL={API_URL} />}
     </div>
   );
 };

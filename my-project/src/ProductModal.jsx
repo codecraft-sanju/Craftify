@@ -17,23 +17,10 @@ export default function ProductModal({
     setCategoryInput,
     showCategoryDropdown,
     setShowCategoryDropdown,
-    getAvailableCategories,
-    colors,
-    setColors
+    getAvailableCategories
+    // Prop Changes: colors aur setColors props ko yahan se hata diya gaya hai
 }) {
-    const handleAddColor = () => {
-        setColors([...colors, { name: '', hexCode: '#000000', imageUrl: '' }]);
-    };
-
-    const handleRemoveColor = (index) => {
-        setColors(colors.filter((_, i) => i !== index));
-    };
-
-    const handleColorChange = (index, field, value) => {
-        const newColors = [...colors];
-        newColors[index][field] = value;
-        setColors(newColors);
-    };
+    // Function Changes: handleAddColor, handleRemoveColor, aur handleColorChange functions ko hata diya gaya hai
 
     return (
         <>
@@ -112,89 +99,8 @@ export default function ProductModal({
                             </div>
                         </div>
 
-                        {/* --- CHANGES MADE HERE: CUSTOMIZATION SECTION --- */}
-                        <div className="space-y-4 border-t border-b border-slate-800 py-6 my-4">
-                            <div className="flex justify-between items-center">
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Customization Settings</label>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors cursor-pointer" onClick={() => document.getElementById('customizationAvailable').click()}>
-                                <input 
-                                    type="checkbox" 
-                                    id="customizationAvailable" 
-                                    name="customizationAvailable" 
-                                    value="true" 
-                                    defaultChecked={editingProduct?.customizationAvailable}
-                                    className="w-5 h-5 accent-rose-500 cursor-pointer"
-                                />
-                                <div className="flex-1">
-                                    <p className="text-sm font-bold text-white">Enable Customization</p>
-                                    <p className="text-[10px] text-slate-500">Allow customers to add text or images</p>
-                                </div>
-                            </div>
+                        {/* JSX Changes: Customization Settings, Colors, aur Sizes ke sections ko yahan se puri tarah hata diya gaya hai */}
 
-                            <div className="space-y-1 relative">
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Customization Type</label>
-                                <div className="relative">
-                                    <select name="customizationType" defaultValue={editingProduct?.customizationType || 'none'} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white appearance-none cursor-pointer">
-                                        <option value="none">None</option>
-                                        <option value="text">Text Only</option>
-                                        <option value="upload">Image Upload Only</option>
-                                        <option value="both">Both (Text + Image)</option>
-                                        <option value="selection">Selection</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 border-t border-b border-slate-800 py-6 my-4">
-                            <div className="flex justify-between items-center">
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Colors (Optional)</label>
-                                <button type="button" onClick={handleAddColor} className="text-xs font-bold text-rose-500 hover:text-rose-400 flex items-center gap-1 transition-colors">
-                                    <Plus className="w-3 h-3"/> Add Color
-                                </button>
-                            </div>
-                            
-                            {colors.map((color, index) => (
-                                <div key={index} className="flex flex-col gap-3 p-4 bg-slate-950 border border-slate-800 rounded-xl relative group animate-in fade-in duration-200">
-                                    <button type="button" onClick={() => handleRemoveColor(index)} className="absolute top-2 right-2 p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
-                                        <X className="w-4 h-4"/>
-                                    </button>
-                                    
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pr-8">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Color Name</label>
-                                            <input value={color.name} onChange={e => handleColorChange(index, 'name', e.target.value)} required placeholder="e.g. Midnight Black" className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white placeholder:text-slate-600" />
-                                        </div>
-                                        
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Hex Code</label>
-                                            <div className="flex items-center gap-2">
-                                                <input type="color" value={color.hexCode || '#000000'} onChange={e => handleColorChange(index, 'hexCode', e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer bg-slate-900 border border-slate-700 p-0.5" />
-                                                <input value={color.hexCode || '#000000'} onChange={e => handleColorChange(index, 'hexCode', e.target.value)} placeholder="#000000" className="flex-1 p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white uppercase" />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="space-y-1 sm:col-span-2">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Link an Image</label>
-                                            <select value={color.imageUrl || ''} onChange={e => handleColorChange(index, 'imageUrl', e.target.value)} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm font-bold text-white appearance-none">
-                                                <option value="">No specific image (Use default)</option>
-                                                {images.map((img, i) => (
-                                                    <option key={i} value={img.url}>Image {i + 1} (Uploaded Preview)</option>
-                                                ))}
-                                            </select>
-                                            <p className="text-[10px] text-slate-500 ml-1">Optional: Select an image uploaded above to show when this color is clicked.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {colors.length === 0 && (
-                                <p className="text-xs text-slate-500 italic ml-1">No colors added yet.</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Sizes (Optional)</label><input name="sizes" defaultValue={editingProduct?.sizes ? editingProduct.sizes.join(', ') : ''} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="S, M, L, XL" /></div>
                         <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Description</label><textarea name="description" defaultValue={editingProduct?.description} className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" rows="3" placeholder="Product details..."/></div>
                     </form>
                 </div>

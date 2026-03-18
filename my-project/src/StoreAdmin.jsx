@@ -1,11 +1,10 @@
 // src/StoreAdmin.jsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
     LayoutDashboard, ShoppingBag, Package, Plus, X, 
-    DollarSign, Star, Settings, Menu, RefreshCcw, Store,
-    MessageSquare, Send, User, Edit, Trash2, LogOut,
-    ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
-    Image as ImageIcon, MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, AlertTriangle, Loader2,
+    DollarSign, Star, Settings, RefreshCcw, Store,
+    LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
+    MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
     ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert
 } from 'lucide-react';
 import io from 'socket.io-client';
@@ -115,24 +114,14 @@ export default function StoreAdmin({ currentUser }) {
     const [images, setImages] = useState([]); 
     const [uploading, setUploading] = useState(false);
 
-    // Category & Color States
+    // Category States
     const [categoryInput, setCategoryInput] = useState("");
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-    // CHANGES MADE: State to handle dynamic colors array in modal
-    const [productColors, setProductColors] = useState([]); 
 
     // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
     
-    // Chat States
-    const [chats, setChats] = useState([]); 
-    const [selectedChat, setSelectedChat] = useState(null); 
-    const [messages, setMessages] = useState([]); 
-    const [newMessage, setNewMessage] = useState("");
-    const [chatError, setChatError] = useState(""); 
-    const scrollRef = useRef();
-
     useEffect(() => {
         socket = io(ENDPOINT, { withCredentials: true });
         if(currentUser) {
@@ -181,27 +170,6 @@ export default function StoreAdmin({ currentUser }) {
         return () => { socket.disconnect(); }
     }, [currentUser]); 
 
-    // Chat Listeners
-    useEffect(() => {
-        if(!socket) return;
-        const messageHandler = (newMessageReceived) => {
-            if (selectedChat && selectedChat._id === newMessageReceived.chatId) {
-                const incomingMsg = newMessageReceived.message;
-                const isMe = incomingMsg.sender._id === currentUser._id || incomingMsg.sender === currentUser._id;
-                
-                if (!isMe) {
-                    setMessages(prev => [...prev, incomingMsg]);
-                    setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-                }
-            }
-            if(activeTab === 'messages') fetchChats(); 
-        };
-        socket.on("new_message_received", messageHandler);
-        return () => { socket.off("new_message_received", messageHandler); };
-    }, [selectedChat, activeTab, currentUser]); 
-
-    useEffect(() => { if(activeTab === 'messages') fetchChats(); }, [activeTab]);
-
     const fetchStoreData = async () => {
         if(!currentUser) return;
         try {
@@ -226,63 +194,6 @@ export default function StoreAdmin({ currentUser }) {
             } else { setShop(null); }
         } catch (error) { console.error("Store Data Error:", error); } 
         finally { setLoading(false); }
-    };
-
-    const fetchChats = async () => {
-        try {
-            const res = await fetch(`${API_URL}/api/chats/shop-chats`, { credentials: 'include' });
-            if (res.ok) setChats(await res.json());
-        } catch (error) { console.error("Fetch Chats Error", error); }
-    };
-
-    const openChat = async (chat) => {
-        setSelectedChat(chat); setMessages([]); setChatError("");
-        socket.emit("join_chat", chat._id);
-        try {
-            const res = await fetch(`${API_URL}/api/chats/${chat._id}`, { credentials: 'include' });
-            const data = await res.json();
-            setMessages(data.messages || []);
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        } catch (error) { console.error(error); }
-    };
-
-    const isMessageSafe = (text) => {
-        const lowerText = text.toLowerCase();
-        const cleanText = text.replace(/[\s-]/g, ''); 
-        const phoneRegex = /(?:\+?91|0)?[6789]\d{9}/; 
-        if (phoneRegex.test(cleanText)) return false;
-        const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-        if (emailRegex.test(text)) return false;
-        const forbiddenWords = ['call me', 'contact number', 'whatsapp', 'paytm', 'gpay', 'phonepe', 'upi', 'mobile no', 'instagram', 'snapchat'];
-        for (let word of forbiddenWords) {
-            if (lowerText.includes(word)) return false;
-        }
-        return true;
-    };
-
-    const sendMessage = async (e) => {
-        e.preventDefault();
-        if(!newMessage.trim() || !selectedChat) return;
-        if (!isMessageSafe(newMessage)) {
-            setChatError("Sharing contact/social details is restricted.");
-            setTimeout(() => setChatError(""), 4000);
-            return;
-        }
-        setChatError(""); 
-
-        try {
-            const tempMsg = { text: newMessage, sender: { _id: currentUser._id }, createdAt: new Date().toISOString() };
-            setMessages([...messages, tempMsg]);
-            
-            const msgToSend = newMessage; 
-            setNewMessage("");
-            
-            await fetch(`${API_URL}/api/chats/message`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', body: JSON.stringify({ chatId: selectedChat._id, content: msgToSend, type: 'text' })
-            });
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        } catch (error) { console.error("Send Error", error); }
     };
 
     const handleCreateShop = async (e) => {
@@ -398,16 +309,6 @@ export default function StoreAdmin({ currentUser }) {
             setImages([]);
         }
 
-        // CHANGES MADE: Populate colors if editing, handle legacy string arrays mapping to new object arrays
-        if (product && product.colors && product.colors.length > 0) {
-            const formattedColors = product.colors.map(c => 
-                typeof c === 'string' ? { name: c, hexCode: '#000000', imageUrl: '' } : c
-            );
-            setProductColors(formattedColors);
-        } else {
-            setProductColors([]);
-        }
-
         setCategoryInput(product ? product.category : "");
         setShowCategoryDropdown(false);
         setIsAddModalOpen(true); 
@@ -440,12 +341,7 @@ export default function StoreAdmin({ currentUser }) {
             description: formData.get('description'), 
             images: images, 
             coverImage: images[0].url, 
-            sizes: sizesArray,
-            // CHANGES MADE: Appending the dynamic product colors array
-            colors: productColors,
-            // --- CHANGES MADE HERE: Extracting Customization Flags ---
-            customizationAvailable: formData.get('customizationAvailable') === 'true',
-            customizationType: formData.get('customizationType') || 'none'
+            sizes: sizesArray
         };
 
         try {
@@ -618,7 +514,6 @@ export default function StoreAdmin({ currentUser }) {
                     <SidebarItem id="dashboard" icon={LayoutDashboard} label="Overview" />
                     <SidebarItem id="products" icon={ShoppingBag} label="Products" />
                     <SidebarItem id="orders" icon={Package} label="Orders" />
-                    <SidebarItem id="messages" icon={MessageSquare} label="Messages" badge={chats.length > 0 ? chats.length : null} />
                     
                     <p className="text-xs font-extrabold text-slate-500 uppercase px-4 mb-3 mt-8 tracking-widest relative z-10">System</p>
                     <SidebarItem id="settings" icon={Settings} label="Settings" />
@@ -845,61 +740,6 @@ export default function StoreAdmin({ currentUser }) {
                             </div>
                         )}
 
-                        {activeTab === 'messages' && (
-                            <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] gap-6 animate-in fade-in duration-300">
-                                <Card className={`w-full md:w-80 flex flex-col border border-white/5 shadow-xl shadow-black/30 overflow-hidden bg-slate-900/80 ${selectedChat ? 'hidden md:flex' : 'flex'}`}>
-                                    <div className="p-5 border-b border-white/5 bg-slate-900/50 flex justify-between items-center">
-                                        <h3 className="font-black text-white text-lg">Inbox</h3>
-                                        <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{chats.length}</span>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                        {chats.length === 0 ? <div className="p-10 text-center text-slate-500 text-sm flex flex-col items-center"><MessageSquare className="w-10 h-10 mb-2 opacity-20"/><p>No messages yet.</p></div> : chats.map(c => (
-                                            <div key={c._id} onClick={() => openChat(c)} className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-all relative group ${selectedChat?._id===c._id ? 'bg-rose-500/10' : ''}`}>
-                                                {selectedChat?._id===c._id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500"></div>}
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <h4 className={`font-bold text-sm ${selectedChat?._id===c._id ? 'text-white' : 'text-slate-300'}`}>{c.customer?.name}</h4>
-                                                    <span className="text-[10px] text-slate-500 font-bold">Now</span>
-                                                </div>
-                                                <p className="text-xs text-slate-500 truncate pr-4 font-medium flex items-center gap-1"><ShoppingBag className="w-3 h-3"/> {c.product?.name}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                                
-                                <Card className={`flex-1 flex-col border border-white/5 shadow-2xl overflow-hidden bg-slate-950 ${selectedChat ? 'flex' : 'hidden md:flex'}`}>
-                                    {selectedChat ? (
-                                        <>
-                                            <div className="p-4 bg-slate-900/90 backdrop-blur border-b border-white/5 flex items-center gap-4 shadow-sm z-10 sticky top-0">
-                                                <button onClick={() => setSelectedChat(null)} className="md:hidden p-2 hover:bg-white/5 rounded-full transition-colors"><ArrowLeft className="w-6 h-6 text-slate-400"/></button>
-                                                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-rose-400 font-bold text-sm shadow-md ring-1 ring-white/10">{selectedChat.customer?.name.charAt(0)}</div>
-                                                <div><h3 className="font-bold text-white leading-tight">{selectedChat.customer?.name}</h3><p className="text-[10px] text-rose-400 uppercase font-extrabold tracking-wide">Product: {selectedChat.product?.name}</p></div>
-                                            </div>
-                                            
-                                            <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4 custom-scrollbar relative bg-slate-950">
-                                                {chatError && (
-                                                    <div className="sticky top-0 z-20 bg-red-500/90 backdrop-blur text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center justify-center gap-2 animate-in slide-in-from-top-2 mx-auto w-fit mb-4">
-                                                        <AlertTriangle className="w-4 h-4" /> {chatError}
-                                                    </div>
-                                                )}
-                                                {messages.map((m,i) => {
-                                                    const isMe = m.sender._id === currentUser._id || m.sender === currentUser._id;
-                                                    return (<div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[80%] px-5 py-3.5 rounded-2xl shadow-sm text-sm font-medium leading-relaxed ${isMe ? 'bg-gradient-to-br from-rose-600 to-pink-600 text-white rounded-tr-none shadow-lg shadow-rose-900/20' : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'}`}>{m.text}</div></div>);
-                                                })}
-                                                <div ref={scrollRef}/>
-                                            </div>
-                                            
-                                            <form onSubmit={sendMessage} className="p-4 bg-slate-900 border-t border-white/5 flex gap-3 relative pb-6 md:pb-4">
-                                                <input value={newMessage} onChange={e => { setNewMessage(e.target.value); if(chatError) setChatError(""); }} className={`flex-1 p-3.5 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:bg-slate-900 transition-all outline-none font-medium text-sm text-white placeholder:text-slate-600 ${chatError ? 'ring-2 ring-red-500 bg-red-900/10' : 'focus:ring-rose-500'}`} placeholder="Type your message..." />
-                                                <Button type="submit" className="rounded-2xl aspect-square px-0 w-12 shadow-rose-900/20"><Send className="w-5 h-5"/></Button>
-                                            </form>
-                                        </>
-                                    ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-slate-600"><MessageSquare className="w-20 h-20 opacity-20 mb-4"/><p className="font-bold text-lg text-slate-500">Select a conversation</p></div>
-                                    )}
-                                </Card>
-                            </div>
-                        )}
-
                         {activeTab === 'settings' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-300 pb-24">
                                 <div>
@@ -942,7 +782,6 @@ export default function StoreAdmin({ currentUser }) {
                     { id: 'dashboard', icon: LayoutDashboard },
                     { id: 'orders', icon: Package, badge: orders.some(o => o.orderStatus === 'Processing') },
                     { id: 'products', icon: ShoppingBag },
-                    { id: 'messages', icon: MessageSquare, badge: chats.length > 0 },
                     { id: 'settings', icon: Settings }
                 ].map((item) => (
                     <button 
@@ -971,8 +810,6 @@ export default function StoreAdmin({ currentUser }) {
                 showCategoryDropdown={showCategoryDropdown} 
                 setShowCategoryDropdown={setShowCategoryDropdown} 
                 getAvailableCategories={getAvailableCategories}
-                colors={productColors}
-                setColors={setProductColors} 
             />
 
             <OrderDetailsModal 
