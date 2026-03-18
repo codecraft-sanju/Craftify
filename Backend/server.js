@@ -37,8 +37,8 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 // CHANGES MADE: Initialize Razorpay instance
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_SKUDOOica8z6I6',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || '5kLAXLkhmIuGv1S2e7e5qURB',
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 const app = express();
