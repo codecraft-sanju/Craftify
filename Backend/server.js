@@ -21,8 +21,6 @@ const Razorpay = require('razorpay');
 // Config
 dotenv.config();
 connectDB();
-
-// CHANGES MADE: Initialize Web Push with VAPID keys from environment variables
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(
         `mailto:${process.env.VAPID_EMAIL || 'sanjaychoudhury693@gmail.com'}`,
@@ -104,7 +102,7 @@ app.post('/api/razorpay/verify-payment', (req, res) => {
         const sign = razorpay_order_id + "|" + razorpay_payment_id;
         
         const expectedSign = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "5kLAXLkhmIuGv1S2e7e5qURB")
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
             .update(sign.toString())
             .digest("hex");
 
@@ -117,8 +115,6 @@ app.post('/api/razorpay/verify-payment', (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
-// --- NEW: HEALTH CHECK ROUTE (For Founder Dashboard) ---
 app.get('/api/health', (req, res) => {
     const healthcheck = {
         uptime: process.uptime(),
