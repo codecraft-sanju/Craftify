@@ -6,11 +6,12 @@ import {
     Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
     Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon, 
     Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3,
-    Server, FileText,
-    // CHANGES MADE HERE: Added icons for order details
-    MapPin, Phone, Package, Mail
+    Server, FileText, Package, Mail, MapPin, ShoppingBag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+// --- NEW IMPORT: Bring in the Product Modal ---
+import ProductModal from './ProductModal';
 
 // --- CONFIGURATION FROM .ENV ---
 const API_URL = import.meta.env.VITE_API_URL;
@@ -33,7 +34,7 @@ const Badge = ({ children, color = "slate", icon: Icon }) => {
     purple: "bg-violet-500/10 text-violet-600 border-violet-200/50",
     red: "bg-rose-500/10 text-rose-600 border-rose-200/50",
     amber: "bg-amber-500/10 text-amber-600 border-amber-200/50",
-    pink: "bg-pink-500/10 text-pink-600 border-pink-200/50", // Added pink for colors
+    pink: "bg-pink-500/10 text-pink-600 border-pink-200/50", 
   };
   return (
     <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${styles[color] || styles.slate} flex items-center gap-1.5 w-fit`}>
@@ -73,7 +74,6 @@ const DEFAULT_CATEGORY_IMAGES = {
     "Books": "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=2070&auto=format&fit=crop"
 };
 
-// Yahan onLogout prop add kiya
 export default function FounderAccess({ currentUser, onLogout }) {
     // --- STATE MANAGEMENT ---
     const [activeTab, setActiveTab] = useState('overview');
@@ -97,7 +97,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
     const [banners, setBanners] = useState([]); 
     const [isBannerVisible, setIsBannerVisible] = useState(true); 
     const [newBannerFile, setNewBannerFile] = useState(null);
-    const [newMobileBannerFile, setNewMobileBannerFile] = useState(null); // <-- Added Mobile Banner File State
+    const [newMobileBannerFile, setNewMobileBannerFile] = useState(null); 
     const [newBannerTitle, setNewBannerTitle] = useState("");
     const [newBannerSubtitle, setNewBannerSubtitle] = useState("");
     const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -107,11 +107,20 @@ export default function FounderAccess({ currentUser, onLogout }) {
     const [deleteProgress, setDeleteProgress] = useState(0);
     const [deleteStatus, setDeleteStatus] = useState("");
 
-    // --- PAYOUT MODAL STATE (NEW) ---
+    // Payout Modal
     const [selectedOrderForPayout, setSelectedOrderForPayout] = useState(null);
-    const [payoutFile, setPayoutFile] = useState(null); // Screenshot File
-    const [payoutTxnId, setPayoutTxnId] = useState(""); // Founder's Payment UTR
+    const [payoutFile, setPayoutFile] = useState(null); 
+    const [payoutTxnId, setPayoutTxnId] = useState(""); 
     const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
+
+    // --- NEW: Product Edit States ---
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [productImages, setProductImages] = useState([]);
+    const [productUploading, setProductUploading] = useState(false);
+    const [productCategoryInput, setProductCategoryInput] = useState("");
+    const [showProductCategoryDropdown, setShowProductCategoryDropdown] = useState(false);
+    const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
 
     // Server Health
     const [serverStatus, setServerStatus] = useState('Checking...');
@@ -199,12 +208,12 @@ export default function FounderAccess({ currentUser, onLogout }) {
 
     const filteredShops = shops.filter(shop => shop.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     const filteredUsers = users.filter(user => user.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    // Product Search Filter
+    const filteredProducts = products.filter(product => product.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const totalPlatformRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
     const platformProfit = Math.round(totalPlatformRevenue * 0.10); 
 
-    // --- ORDER FILTERING ---
-    // 2. Payout Queue: Delivered but not settled
     const pendingPayouts = orders.filter(o => o.orderStatus === 'Delivered' && o.payoutInfo?.status !== 'Settled');
 
     // --- HANDLERS ---
@@ -218,6 +227,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
         return cloudData.secure_url;
     };
 
+    // ... [Previous Handlers: Category, Banner, Verification, Payout, Batch Delete - remain unchanged] ...
     const handleCategoryUpload = async () => {
         if (!newCategoryFile || !editingCategory) return;
         setUploadingCatImg(true);
@@ -254,7 +264,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
         try {
             const imageUrl = await uploadToCloudinary(newBannerFile);
             
-            // <-- NEW MOBILE IMAGE UPLOAD LOGIC -->
             let mobileImageUrl = "";
             if (newMobileBannerFile) {
                 mobileImageUrl = await uploadToCloudinary(newMobileBannerFile);
@@ -262,7 +271,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
 
             const newSlide = { 
                 image: imageUrl, 
-                mobileImage: mobileImageUrl, // <-- Assign Mobile Image
+                mobileImage: mobileImageUrl,
                 title: newBannerTitle, 
                 subtitle: newBannerSubtitle, 
                 isActive: true 
@@ -272,9 +281,8 @@ export default function FounderAccess({ currentUser, onLogout }) {
             setBanners(updatedBanners);
             await saveBannerSettings(updatedBanners, isBannerVisible);
             
-            // Clear all states after upload
             setNewBannerFile(null); 
-            setNewMobileBannerFile(null); // <-- Clear Mobile File
+            setNewMobileBannerFile(null);
             setNewBannerTitle(""); 
             setNewBannerSubtitle("");
         } catch (error) { console.error(error); } finally { setIsBannerUploading(false); }
@@ -304,8 +312,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
         } catch (err) { console.error("Failed to update shop status", err); }
     };
 
-    // --- GATEKEEPER APPROVAL (STEP 2) ---
-    // Kept for backward compatibility with old manual orders
     const handleVerifyPayment = async (orderId) => {
         if(!window.confirm("Verify transaction and unlock order for seller?")) return;
         try {
@@ -320,18 +326,13 @@ export default function FounderAccess({ currentUser, onLogout }) {
         } catch (error) { console.error("Verification failed", error); }
     };
 
-    // --- PAYOUT SETTLEMENT (STEP 4) ---
-    // Uploads proof and marks payout settled (Founder to Seller)
     const handleSettlePayout = async () => {
         if (!payoutFile) return alert("Please upload a payment screenshot.");
         if (!selectedOrderForPayout) return;
 
         setIsSubmittingPayout(true);
         try {
-            // 1. Upload Proof
             const proofUrl = await uploadToCloudinary(payoutFile);
-
-            // 2. Call API
             const res = await fetch(`${API_URL}/api/orders/${selectedOrderForPayout._id}/payout`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -345,7 +346,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
             if (res.ok) {
                 const updatedOrder = await res.json();
                 setOrders(prev => prev.map(o => o._id === updatedOrder._id ? updatedOrder : o));
-                setSelectedOrderForPayout(null); // Close modal
+                setSelectedOrderForPayout(null);
                 setPayoutFile(null);
                 setPayoutTxnId("");
                 alert("Payout settled successfully! Proof saved.");
@@ -380,6 +381,112 @@ export default function FounderAccess({ currentUser, onLogout }) {
             alert("All products deleted."); fetchData(); 
         } catch (error) { alert("Error during batch deletion."); } finally { setIsDeleting(false); }
     };
+
+    // --- NEW: PRODUCT MANAGEMENT HANDLERS ---
+    const handleOpenProductModal = (product = null) => { 
+        setEditingProduct(product); 
+        if (product && product.images && product.images.length > 0) {
+            setProductImages(product.images);
+        } else if (product && (product.image || product.coverImage)) {
+            setProductImages([{ url: product.image || product.coverImage }]);
+        } else {
+            setProductImages([]);
+        }
+        setProductCategoryInput(product ? product.category : "");
+        setShowProductCategoryDropdown(false);
+        setIsProductModalOpen(true); 
+    };
+
+    const handleProductImageUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (productImages.length + files.length > 4) {
+            alert("Maximum 4 images allowed.");
+            return;
+        }
+
+        setProductUploading(true);
+        try {
+            for (const file of files) {
+                const url = await uploadToCloudinary(file);
+                setProductImages(prev => [...prev, { url: url, public_id: 'auto' }]);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Upload error');
+        } finally {
+            setProductUploading(false);
+        }
+    };
+
+    const removeProductImage = (indexToRemove) => {
+        setProductImages(productImages.filter((_, index) => index !== indexToRemove));
+    };
+
+    const handleSaveProduct = async (e) => {
+        e.preventDefault(); 
+        
+        if (productImages.length === 0) {
+            alert("Please upload at least 1 image!");
+            return;
+        }
+
+        setIsSubmittingProduct(true);
+        const formData = new FormData(e.target);
+        
+        const sizesString = formData.get('sizes');
+        let sizesArray = [];
+        if (sizesString && sizesString.trim() !== '') {
+            sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
+        }
+
+        const productData = {
+            shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : null, // Founder cannot create product without selecting shop, so edit only mostly
+            name: formData.get('name'), 
+            category: productCategoryInput, 
+            price: Number(formData.get('price')), 
+            compareAtPrice: Number(formData.get('compareAtPrice')),
+            stock: Number(formData.get('stock')),
+            description: formData.get('description'), 
+            images: productImages, 
+            coverImage: productImages[0]?.url || '', 
+            sizes: sizesArray
+        };
+
+        if(!productData.shop && !editingProduct) {
+             alert("Admin cannot create a new product from here currently. You can only edit existing products.");
+             setIsSubmittingProduct(false);
+             return;
+        }
+
+        try {
+            const url = editingProduct ? `${API_URL}/api/products/${editingProduct._id}` : `${API_URL}/api/products`;
+            const method = editingProduct ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(productData) });
+            const data = await res.json();
+            if(res.ok) {
+                if (editingProduct) {
+                     setProducts(prev => prev.map(p => p._id === data._id ? {...data, shop: editingProduct.shop} : p));
+                } else {
+                     setProducts([data, ...products]);
+                }
+                setIsProductModalOpen(false);
+            } else { alert(data.message || "Failed to update product"); }
+        } catch (error) { alert("Network error."); } finally { setIsSubmittingProduct(false); }
+    };
+
+    const handleDeleteProduct = async (productId) => {
+        if (!window.confirm("Are you sure you want to permanently delete this product?")) return;
+        try {
+            const res = await fetch(`${API_URL}/api/products/${productId}`, { method: 'DELETE', credentials: 'include' });
+            if (res.ok) {
+                setProducts(prev => prev.filter(p => p._id !== productId));
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to delete product");
+            }
+        } catch (error) { console.error(error); alert("Network Error"); }
+    };
+
 
     if (loading) return (
         <div className="flex h-screen items-center justify-center bg-slate-50 relative overflow-hidden">
@@ -449,6 +556,8 @@ export default function FounderAccess({ currentUser, onLogout }) {
                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Operations</p>
                          <Box className="w-3 h-3 text-slate-600"/>
                     </div>
+                    {/* --- NEW: Platform Products Tab --- */}
+                    <NavItem id="all-products" label="Platform Products" icon={ShoppingBag} />
                     <NavItem id="shops" label="Vendors" icon={Store} />
                     <NavItem id="users" label="User Base" icon={Users} />
                     
@@ -473,7 +582,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
                             <p className="text-[10px] text-slate-400 flex items-center gap-1">Super Admin <ShieldCheck className="w-3 h-3 text-emerald-400"/></p>
                         </div>
                     </div>
-                    {/* Yahan onLogout call kiya hai navigate ki jagah */}
                     <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-semibold text-xs border border-white/5">
                         <LogOut className="w-3 h-3" /> Exit Dashboard
                     </button>
@@ -491,7 +599,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                           </button>
                           <div>
                               <h1 className="text-2xl font-black text-slate-900 capitalize tracking-tight flex items-center gap-2">
-                                {activeTab} 
+                                {activeTab.replace('-', ' ')} 
                               </h1>
                               <p className="text-xs text-slate-500 font-medium hidden md:block">
                                   {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -586,7 +694,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                  </div>
 
                                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                                     {/* 1. RECENT TRANSACTIONS (Replaced Gatekeeper) */}
                                      <GlassCard className="xl:col-span-2 flex flex-col min-h-[500px]">
                                          <div className="p-8 border-b border-slate-100 flex justify-between items-center">
                                              <div>
@@ -641,7 +748,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                      {/* Action Alerts */}
                                      <div className="space-y-6">
                                          
-                                         {/* --- NEW: Razorpay Active Box --- */}
+                                         {/* Razorpay Active Box */}
                                          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-[2rem] p-8 text-white shadow-2xl shadow-indigo-900/20 relative overflow-hidden">
                                              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
                                              <div className="relative z-10">
@@ -665,10 +772,56 @@ export default function FounderAccess({ currentUser, onLogout }) {
                              </div>
                          )}
 
+                         {/* === NEW TAB: PLATFORM PRODUCTS === */}
+                         {activeTab === 'all-products' && (
+                             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                     <div>
+                                         <h2 className="text-2xl font-black text-slate-900 tracking-tight">Platform Products</h2>
+                                         <p className="text-slate-500 text-sm font-medium">View and manage all {filteredProducts.length} items across all vendors.</p>
+                                     </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                     {filteredProducts.length === 0 ? (
+                                         <div className="col-span-full py-24 text-center text-slate-500 flex flex-col items-center border-2 border-dashed border-slate-300 rounded-[2.5rem] bg-white">
+                                             <ShoppingBag className="w-16 h-16 mb-4 opacity-20"/>
+                                             <p className="font-bold text-lg text-slate-400">No products found on the platform.</p>
+                                         </div>
+                                     ) : filteredProducts.map(p => {
+                                         const displayImage = p.coverImage || (p.images && p.images[0]?.url) || p.image || "https://via.placeholder.com/300";
+                                         return (
+                                             <div key={p._id} className="group bg-white rounded-2xl border border-slate-200 hover:border-indigo-500/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col relative">
+                                                 <div className="absolute top-2 right-2 z-10">
+                                                     <span className="bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wide text-slate-700 flex items-center gap-1 shadow-sm">
+                                                         <Package className="w-3 h-3"/> {p.stock}
+                                                     </span>
+                                                 </div>
+                                                 <div className="relative aspect-[4/5] overflow-hidden bg-slate-100">
+                                                     <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
+                                                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                         <button onClick={() => handleOpenProductModal(p)} className="p-2 bg-white rounded-full text-slate-900 shadow-lg hover:scale-110 transition-transform" title="Edit Product"><Edit className="w-4 h-4"/></button>
+                                                         <button onClick={() => handleDeleteProduct(p._id)} className="p-2 bg-rose-500 rounded-full text-white shadow-lg hover:scale-110 transition-transform" title="Delete Product"><Trash2 className="w-4 h-4"/></button>
+                                                     </div>
+                                                 </div>
+                                                 <div className="p-3 flex flex-col flex-1">
+                                                     <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{p.name}</h3>
+                                                     <p className="text-[10px] text-slate-500 mt-1 truncate">Shop: <span className="font-bold text-indigo-500">{p.shop?.name || 'Unknown'}</span></p>
+                                                     <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
+                                                         <p className="text-slate-900 font-black text-sm">₹{p.price}</p>
+                                                         <p className="text-[10px] text-slate-400 font-bold uppercase">{p.category}</p>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         );
+                                     })}
+                                 </div>
+                             </div>
+                         )}
+
                          {/* === TAB: PAYMENTS & PAYOUTS === */}
                          {activeTab === 'payments' && (
                              <div className="animate-in slide-in-from-bottom-8 duration-500">
-                                 {/* Payout List (The Ledger) */}
                                  <GlassCard className="flex flex-col h-[800px] p-0 overflow-hidden w-full">
                                      <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-10">
                                          <div>
@@ -850,7 +1003,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                  </div>
 
                                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                     {/* Add Form */}
                                      <GlassCard className="p-6 h-fit border-indigo-100 shadow-xl shadow-indigo-500/5">
                                          <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2 text-lg"><Plus className="w-5 h-5 text-indigo-500"/> Create Promotion</h3>
                                          <div className="space-y-4">
@@ -881,19 +1033,16 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                          </div>
                                      </GlassCard>
 
-                                     {/* List */}
                                      <div className="lg:col-span-2 grid gap-4">
                                          {banners.map((banner, idx) => (
                                              <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5 items-start sm:items-center group">
                                                  
                                                  <div className="flex gap-2">
-                                                     {/* Desktop Image Thumbnail */}
                                                      <div className="w-32 h-16 sm:w-40 sm:h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative border border-slate-200">
                                                          <img src={banner.image} className="w-full h-full object-cover" alt="Desktop" />
                                                          <div className="absolute bottom-0 left-0 bg-black/60 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-tr-lg">Desktop</div>
                                                      </div>
                                                      
-                                                     {/* Mobile Image Thumbnail (If exists) */}
                                                      {banner.mobileImage ? (
                                                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0 relative border border-slate-200">
                                                              <img src={banner.mobileImage} className="w-full h-full object-cover" alt="Mobile" />
@@ -1001,7 +1150,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                      </div>
                                  </div>
 
-                                 {/* --- NEW: Delivery Details --- */}
+                                 {/* Delivery Details */}
                                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
                                      <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
                                          <MapPin className="w-4 h-4 text-blue-500"/> Delivery Details
@@ -1020,7 +1169,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                      </div>
                                  </div>
 
-                                 {/* --- NEW: Ordered Items Details --- */}
+                                 {/* Ordered Items Details */}
                                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
                                      <h4 className="font-extrabold text-slate-500 mb-4 flex items-center gap-2 text-xs uppercase tracking-widest">
                                          <Package className="w-4 h-4 text-rose-500"/> Ordered Items
@@ -1052,7 +1201,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                  <div className="space-y-3">
                                      <h4 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">1. Scan Seller QR</h4>
                                      <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-                                         {/* Show QR for each shop involved if they have one */}
                                          {selectedOrderForPayout.items.map((item, idx) => (
                                              item.shop?.paymentQrCode && (
                                                  <div key={idx} className="flex-shrink-0 bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex flex-col items-center w-36 text-center">
@@ -1115,6 +1263,24 @@ export default function FounderAccess({ currentUser, onLogout }) {
                          </div>
                      </div>
                  )}
+
+                 {/* 3. NEW: Product Edit Modal */}
+                 <ProductModal 
+                    isOpen={isProductModalOpen} 
+                    onClose={() => setIsProductModalOpen(false)} 
+                    editingProduct={editingProduct} 
+                    handleSaveProduct={handleSaveProduct} 
+                    isSubmitting={isSubmittingProduct} 
+                    images={productImages} 
+                    removeImage={removeProductImage} 
+                    uploading={productUploading} 
+                    handleImageUpload={handleProductImageUpload} 
+                    categoryInput={productCategoryInput} 
+                    setCategoryInput={setProductCategoryInput} 
+                    showCategoryDropdown={showProductCategoryDropdown} 
+                    setShowCategoryDropdown={setShowProductCategoryDropdown} 
+                    getAvailableCategories={() => allCategories}
+                 />
 
              </main>
         </div>

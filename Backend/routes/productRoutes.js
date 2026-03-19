@@ -10,18 +10,19 @@ const {
     getTopProducts,
     getRelatedProducts,
     getProductsByShop,
-    deleteProductsBatch // <--- IMPORT ADDED
+    deleteProductsBatch 
 } = require('../controllers/productController');
-const { protect, seller } = require('../middleware/authMiddleware');
+
+// --- CHANGES MADE HERE: Removed 'seller' import since we handle roles in the controller now ---
+const { protect } = require('../middleware/authMiddleware');
 
 // Base Routes
 router.route('/')
     .get(getProducts) // Marketplace Search
-    .post(protect, seller, createProduct); // Add Product
+    // --- CHANGES MADE HERE: Removed 'seller' middleware ---
+    .post(protect, createProduct); // Add Product (Handled in controller for Seller/Founder)
 
 // --- NEW BATCH DELETE ROUTE ---
-// Isko hamesha '/:id' wale route se PEHLE rakhna zaroori hai
-// Humne sirf 'protect' lagaya hai, kyunki controller andar check karega ki user Founder hai ya Seller
 router.route('/batch').delete(protect, deleteProductsBatch); 
 
 // Specific Lists (Static/Distinct Paths)
@@ -34,10 +35,10 @@ router.route('/:id/reviews').post(protect, createProductReview);
 router.route('/:id/related').get(getRelatedProducts);
 
 // Dynamic ID Routes (Last)
-// Note: '/:id' sabse last mein hona chahiye taaki upar wale routes block na hon
 router.route('/:id')
     .get(getProductById)
-    .put(protect, seller, updateProduct)
-    .delete(protect, deleteProduct); // Seller or Founder (handled in controller)
+    // --- CHANGES MADE HERE: Removed 'seller' middleware ---
+    .put(protect, updateProduct) 
+    .delete(protect, deleteProduct); 
 
 module.exports = router;

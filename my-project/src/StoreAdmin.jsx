@@ -332,7 +332,7 @@ export default function StoreAdmin({ currentUser }) {
         }
 
         const productData = {
-            shop: shop?._id, 
+            shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : shop?._id,
             name: formData.get('name'), 
             category: categoryInput, 
             price: Number(formData.get('price')), 

@@ -49,7 +49,7 @@ const getProductById = async (req, res) => {
 
 // @desc    Create a product
 // @route   POST /api/products
-// @access  Private (Seller only)
+// @access  Private (Seller, Founder, Admin)
 const createProduct = async (req, res) => {
     try {
         const {
@@ -67,14 +67,17 @@ const createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Please specify which shop this product belongs to.' });
         }
 
-        // 2. Security: Verify that the Logged-in User OWNS this specific shop
+        // 2. Security: Verify that the Logged-in User OWNS this specific shop OR is Founder/Admin
         const shop = await Shop.findById(shopId);
         if (!shop) {
             return res.status(404).json({ message: 'Shop not found.' });
         }
 
-        // Strict Check: Sirf Shop ka maalik hi product add kar sakta hai
-        if (shop.owner.toString() !== req.user._id.toString()) {
+        // --- CHANGES MADE HERE: Strict Check allowing Founder/Admin too ---
+        const isOwner = shop.owner.toString() === req.user._id.toString();
+        const isFounderOrAdmin = req.user.role === 'founder' || req.user.role === 'admin';
+
+        if (!isOwner && !isFounderOrAdmin) {
             return res.status(403).json({ message: 'You are not authorized to add products to this shop.' });
         }
 
@@ -152,7 +155,7 @@ const createProduct = async (req, res) => {
 
 // @desc    Update a product
 // @route   PUT /api/products/:id
-// @access  Private (Seller only)
+// @access  Private (Seller, Founder, Admin)
 const updateProduct = async (req, res) => {
     try {
         const {
@@ -170,8 +173,11 @@ const updateProduct = async (req, res) => {
             // 1. Fetch the shop associated with this product
             const shop = await Shop.findById(product.shop);
             
-            // 2. Strict Security Check: Does the logged-in user own this shop?
-            if (!shop || shop.owner.toString() !== req.user._id.toString()) {
+            // --- CHANGES MADE HERE: Strict Security Check allowing Founder/Admin too ---
+            const isOwner = shop && shop.owner.toString() === req.user._id.toString();
+            const isFounderOrAdmin = req.user.role === 'founder' || req.user.role === 'admin';
+
+            if (!isOwner && !isFounderOrAdmin) {
                 return res.status(403).json({ message: 'Not authorized to update this product' });
             }
 
@@ -247,7 +253,7 @@ const updateProduct = async (req, res) => {
 
 // @desc    Delete a product
 // @route   DELETE /api/products/:id
-// @access  Private (Seller or Admin)
+// @access  Private (Seller or Founder/Admin)
 const deleteProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -256,11 +262,11 @@ const deleteProduct = async (req, res) => {
             // Fetch Shop to check ownership
             const shop = await Shop.findById(product.shop);
             
-            // Allow if Owner OR Founder (Admin)
+            // --- CHANGES MADE HERE: Allow if Owner OR Founder/Admin ---
             const isOwner = shop && shop.owner.toString() === req.user._id.toString();
-            const isAdmin = req.user.role === 'founder';
+            const isFounderOrAdmin = req.user.role === 'founder' || req.user.role === 'admin';
 
-            if (!isOwner && !isAdmin) {
+            if (!isOwner && !isFounderOrAdmin) {
                 return res.status(403).json({ message: 'Not authorized to delete this product' });
             }
 
@@ -347,7 +353,7 @@ const getProductsByShop = async (req, res) => {
 // --- NEW FEATURE: BATCH DELETE ---
 // @desc    Delete multiple products by IDs (Smart Chunk Deletion)
 // @route   DELETE /api/products/batch
-// @access  Private (Founder or Seller Owner)
+// @access  Private (Founder, Admin or Seller Owner)
 const deleteProductsBatch = async (req, res) => {
     try {
         const { productIds } = req.body; // Array of IDs
@@ -365,9 +371,11 @@ const deleteProductsBatch = async (req, res) => {
         }
 
         // 3. Security Check
-        // Agar user Founder hai, toh woh kuch bhi delete kar sakta hai
-        if (req.user.role !== 'founder') {
-            // Agar Founder nahi hai, toh check karo kya yeh products user ki shop ke hain?
+        // --- CHANGES MADE HERE: Added Admin check alongside Founder ---
+        const isFounderOrAdmin = req.user.role === 'founder' || req.user.role === 'admin';
+        
+        // Agar user Founder/Admin nahi hai, toh check karo kya yeh products user ki shop ke hain?
+        if (!isFounderOrAdmin) {
             // (Hum pehle product se shop ID check kar rahe hain, assuming batch same shop ka hai)
             const firstProduct = products[0];
             const shop = await Shop.findById(firstProduct.shop);
