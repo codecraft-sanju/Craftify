@@ -481,6 +481,8 @@ const CraftifyContent = () => {
                     setCart([]);
                     setIsCheckoutOpen(false);
                     addToast('Success', 'Payment Successful & Order Placed!');
+                    // --- CHANGES MADE HERE: Added fetchOrders() so profile page shows fresh data immediately ---
+                    await fetchOrders(); 
                     navigate('/profile');
                  } else {
                      addToast('Error', 'Order saving failed after payment', 'error');
