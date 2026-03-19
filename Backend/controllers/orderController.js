@@ -100,7 +100,8 @@ The seller will contact you shortly on WhatsApp for any customization details or
 Best Regards,
 *Team Giftomize*`;
 
-                sendWhatsApp(req.user.phone, message).catch(() => {});
+                const customerImageUrl = orderItems[0] ? (orderItems[0].image || orderItems[0].coverImage) : null;
+                sendWhatsApp(req.user.phone, message, customerImageUrl).catch(() => {});
 
             } catch (msgError) {
               
@@ -128,7 +129,8 @@ Best Regards,
 
                 const sellerMsg = `🎉 New Order on Giftomize! (Order ID: #${shortOrderId})\n\n*Customer Note:* "Hello, I have successfully placed an order on the Giftomize website. Please process my order."\n\n*🛍️ Order Details:*\n${shopProductDetails}\n*👤 Customer Information:*\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${fullAddress}\n\nPlease reach out to the customer directly via WhatsApp for any photos, sizes, or specific customization details required. Happy Selling!`;
                     
-                    sendWhatsApp(shop.phone, sellerMsg).catch(() => {}); 
+                    const imageUrl = shopItems[0] ? (shopItems[0].image || shopItems[0].coverImage) : null;
+                    sendWhatsApp(shop.phone, sellerMsg, imageUrl).catch(() => {}); 
                 }
                 
                 // Push Notification Logic
