@@ -158,26 +158,21 @@ const OfferCarousel = ({ bannerData }) => {
       {
         id: 1,
         image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
-        title: "Super Sale Live",
-        subtitle: "Up to 50% Off on Handmade Goods"
+        title: "",
+        subtitle: ""
       },
       {
         id: 2,
         image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
-        title: "New Arrivals",
-        subtitle: "Check out the latest fashion trends"
+        title: "",
+        subtitle: ""
       },
+     
       {
         id: 3,
-        image: "https://images.unsplash.com/photo-1491933382434-500287f9b54b?q=80&w=1964&auto=format&fit=crop",
-        title: "Premium Tech",
-        subtitle: "Upgrade your workspace today"
-      },
-      {
-        id: 4,
         image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
-        title: "Artisan Selection",
-        subtitle: "Curated for the creative soul"
+        title: "",
+        subtitle: ""
       }
     ];
 

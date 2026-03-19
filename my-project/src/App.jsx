@@ -425,8 +425,8 @@ const CraftifyContent = () => {
         "key":"rzp_live_SKUDOOica8z6I6",
         "amount": order.amount,
         "currency": order.currency,
-        "name": "Craftify",
-        "description": "Purchase from Craftify",
+        "name": "Giftomize",
+        "description": "Purchase from Giftomize",
         "order_id": order.id,
         "handler": async function (paymentResponse){
            // Payment is successful! Now verify and place order on our backend.
