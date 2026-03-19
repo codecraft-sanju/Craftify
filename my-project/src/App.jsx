@@ -504,7 +504,7 @@ const CraftifyContent = () => {
           "contact": orderData.shippingAddress?.phone || ""
         },
         "theme": {
-          "color": "#65280E" // Updated Razorpay theme color to match brand
+          "color": "#65280E" 
         }
       };
 

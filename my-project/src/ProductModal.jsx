@@ -74,6 +74,12 @@ export default function ProductModal({
 
                         <div className="space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Product Name</label><input name="name" defaultValue={editingProduct?.name} required className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="e.g. Premium Gift Box"/></div>
                         
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 my-4">
+                            <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                                <span className="text-rose-400 font-bold">Recommendation:</span> For a seamless customer experience, please include your estimated shipping cost within the base price. Offering "Free Delivery" directly builds trust and increases your sales.
+                            </p>
+                        </div>
+
                         <div className="flex gap-4">
                             <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">Price (₹)</label><input name="price" defaultValue={editingProduct?.price} required type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
                             <div className="flex-1 space-y-1"><label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">compareAtPrice (₹)</label><input name="compareAtPrice" defaultValue={editingProduct?.compareAtPrice} type="number" className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600" placeholder="0"/></div>
