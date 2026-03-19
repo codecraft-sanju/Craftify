@@ -422,7 +422,7 @@ const CraftifyContent = () => {
 
       // 2. Open Razorpay Checkout Modal
       const options = {
-        "key":"rzp_live_SKUDOOica8z6I6",
+        "key":"rzp_test_SNwkfTU2QHMrsu",
         "amount": order.amount,
         "currency": order.currency,
         "name": "Giftomize",

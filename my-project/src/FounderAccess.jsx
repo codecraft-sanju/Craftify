@@ -6,7 +6,7 @@ import {
     Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
     Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon, 
     Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3,
-    Server, FileText, Package, Mail, MapPin, ShoppingBag
+    Server, FileText, Package, Mail, MapPin, ShoppingBag,Phone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
