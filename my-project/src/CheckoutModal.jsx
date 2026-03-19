@@ -93,7 +93,7 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
                     <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
                         {/* Personal Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <InputField label="Full Name" icon={User} type="text" name="fullName" placeholder="Sanjay Choudhary" required value={formData.fullName} onChange={handleChange} />
+                            <InputField label="Full Name" icon={User} type="text" name="fullName" placeholder="name" required value={formData.fullName} onChange={handleChange} />
                             <InputField label="Phone Number" icon={Phone} type="tel" name="phone" placeholder="9876543210" maxLength="10" required value={formData.phone} onChange={handleChange} />
                         </div>
 

@@ -502,7 +502,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                                   </p>
                                   <p className="text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-slate-100">
                                       If not received, please email your Order ID and Phone Number to:<br/>
-                                      <span className="font-bold text-indigo-600 select-all">sanjaychoudhury693@gmail.com</span>
+                                      <span className="font-bold text-indigo-600 select-all">giftomizeofficial@gmail.com</span>
                                   </p>
                               </div>
                           </div>
