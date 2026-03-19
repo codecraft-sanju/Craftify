@@ -107,6 +107,7 @@ Best Regards,
               
             }
         }
+        
         const involvedShops = [...new Set(orderItems.map(item => item.shop.toString()))];
         
         try {
@@ -157,6 +158,16 @@ Best Regards,
                     }
                 }
             }
+
+            // CHANGES MADE: Simple notification to Founder after seller gets notified
+            const founder = await User.findOne({ role: 'founder' });
+            if (founder && founder.phone) {
+                const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();
+             const founderMsg = `🚨 *Hey Giftomize Founder, New Order Received!* (ID: #${shortOrderId})\n\nOrder Amount: ₹${totalPrice}.\nThe seller has been notified. Please check it once on the admin panel.`;
+                sendWhatsApp(founder.phone, founderMsg).catch(() => {});
+            }
+          
+
         } catch (notifyError) {
             console.error("Seller Notification Error:", notifyError); 
         }

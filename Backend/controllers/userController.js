@@ -135,7 +135,7 @@ const verifyOtpAndRegister = async (req, res) => {
 
         // 4. --- ROLE ASSIGNMENT ---
         let userRole = 'customer';
-        if (email.toLowerCase() === 'admin@gmail.com') {
+        if (email.toLowerCase() === 'giftomizeofficial@gmail.com') {
             userRole = 'founder';
         } else if (role === 'seller' || shopName) {
             userRole = 'seller';
@@ -233,7 +233,7 @@ const authUser = async (req, res) => {
         if (user && (await user.matchPassword(password))) {
             
             // --- GOD MODE FIX ---
-            if (user.email === 'admin@gmail.com' && user.role !== 'founder') {
+            if (user.email === 'giftomizeofficial@gmail.com' && user.role !== 'founder') {
                 user.role = 'founder';
                 await user.save();
             }
@@ -340,7 +340,6 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-// --- ADMIN / FOUNDER FUNCTIONS ---
 
 const getUsers = async (req, res) => {
     try {
