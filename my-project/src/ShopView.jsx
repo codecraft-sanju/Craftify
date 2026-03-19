@@ -1,25 +1,18 @@
 // src/ShopView.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-// --- CHANGES MADE HERE: Added AnimatePresence for the loader exit animation AND product filtering animations ---
 import { motion, AnimatePresence } from 'framer-motion';
-// --- CHANGES MADE HERE: Removed Quote and BadgeCheck from lucide-react imports ---
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
   ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift 
 } from 'lucide-react'; 
 
-// --- IMPORT THE REUSABLE PRODUCT CARD ---
 import ProductCard from './ProductCard'; 
-import Footer from './Footer'; // Reusable Footer component
-
-// --- CHANGES MADE HERE: Removed framer-motion import and added ReviewsSection import ---
+import Footer from './Footer'; 
 import ReviewsSection from './ReviewsSection';
 
-// API URL definition (Fallback to localhost if env not set)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// --- CHANGES MADE HERE: Added a new full-screen PageLoader component ---
 const PageLoader = () => (
     <motion.div
         initial={{ opacity: 1 }}
@@ -60,7 +53,6 @@ const PageLoader = () => (
     </motion.div>
 );
 
-// --- COMPONENT: PRODUCT SKELETON ---
 const ProductSkeleton = () => (
     <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
         <div className="aspect-[4/5] bg-slate-100 animate-pulse relative">
@@ -78,7 +70,6 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- COMPONENT: MARQUEE STRIP ---
 const MarqueeStrip = () => {
     const items = [
         { text: "Welcome to Giftomize", icon: <Gift className="w-4 h-4" /> },
@@ -125,7 +116,6 @@ const MarqueeStrip = () => {
     );
 };
 
-// --- CHANGES MADE HERE: Added a dedicated component to handle image loading state for the carousel ---
 const CarouselImage = ({ offer }) => {
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     return (
@@ -150,7 +140,6 @@ const CarouselImage = ({ offer }) => {
     );
 };
 
-// --- COMPONENT: OFFER CAROUSEL ---
 const OfferCarousel = ({ bannerData }) => {
     if (bannerData && bannerData.isVisible === false) return null; 
 
@@ -167,7 +156,6 @@ const OfferCarousel = ({ bannerData }) => {
         title: "",
         subtitle: ""
       },
-     
       {
         id: 3,
         image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
@@ -203,16 +191,12 @@ const OfferCarousel = ({ bannerData }) => {
   
     return (
      <div 
-        /* --- HEIGHT YAHAN BADHAI HAI: h-[300px], h-[400px], h-[500px] --- */
         className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[550px] overflow-hidden mb-8 shadow-lg group bg-slate-900 -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl"
         onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
       >
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
-            
-            {/* --- CHANGES MADE HERE: Replaced direct image with CarouselImage component for loader --- */}
             <CarouselImage offer={offer} />
-
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
                    <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>
@@ -236,7 +220,6 @@ const OfferCarousel = ({ bannerData }) => {
     );
 };
 
-// --- CHANGES MADE HERE: Added a dedicated component to handle image loading state for Categories ---
 const CategoryImage = ({ src, alt, isActive }) => {
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     return (
@@ -247,6 +230,7 @@ const CategoryImage = ({ src, alt, isActive }) => {
             <img 
                 src={src} 
                 alt={alt} 
+                draggable="false"
                 onLoad={() => setIsImgLoaded(true)}
                 className={`w-full h-full object-cover transition-all duration-500 ${isImgLoaded ? 'opacity-100' : 'opacity-0'} group-hover:scale-110`}
             />
@@ -255,9 +239,34 @@ const CategoryImage = ({ src, alt, isActive }) => {
     );
 };
 
-// --- COMPONENT: VISUAL CATEGORIES ---
-// --- CHANGES MADE HERE: Added showPageLoader as a prop to delay animations ---
 const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], showPageLoader }) => {
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e) => {
+      setIsDragging(true);
+      setStartX(e.pageX - scrollRef.current.offsetLeft);
+      setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+      setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+      setIsDragging(false);
+  };
+
+  const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - scrollRef.current.offsetLeft;
+      const walk = (x - startX) * 2; 
+      scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   const [visualMap, setVisualMap] = useState({
     "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop",
     "Clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
@@ -292,12 +301,18 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
     <div className="mb-12">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        <div className="flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible">
+        <div 
+            ref={scrollRef}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            className={`flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        >
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
-                  // --- CHANGES MADE HERE: Added whileInView and viewport to trigger animations on scroll, matching product behavior ---
                   <motion.button 
                       key={idx} 
                       onClick={() => setActiveCategory(cat)} 
@@ -308,9 +323,7 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
                       whileHover={{ y: -5 }}
                       className="group flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
                   >
-                      {/* --- CHANGES MADE HERE: Removed borders and padding from the circular image container --- */}
                       <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden shadow-md transition-all duration-300 ${isActive ? 'scale-105' : ''}`}>
-                          {/* --- CHANGES MADE HERE: Replaced direct image with CategoryImage component --- */}
                           <CategoryImage src={image} alt={cat} isActive={isActive} />
                       </div>
                       <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
@@ -321,8 +334,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
     </div>
   );
 };
-
-// --- CHANGES MADE HERE: Removed the review components (FallingText, testimonials, StarIcon, TestimonialCard, ReviewsSection) from this file ---
 
 const ShopView = ({ 
     searchQuery, 
@@ -336,12 +347,10 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
-  // --- CHANGES MADE HERE: Added state to manage the initial page loader ---
   const [showPageLoader, setShowPageLoader] = useState(true);
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
 
-  // --- CHANGES MADE HERE: Added useEffect to dismiss the loader after 2 seconds ---
   useEffect(() => {
       const timer = setTimeout(() => {
           setShowPageLoader(false);
@@ -368,7 +377,6 @@ const ShopView = ({
       const descMatch = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const searchPass = nameMatch || descMatch;
       
-      // --- CHANGES MADE HERE: Made the category filter case-insensitive and robust ---
       const categoryPass = activeCategory === "All" || (p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
       
       return searchPass && categoryPass;
@@ -377,19 +385,15 @@ const ShopView = ({
   return (
       <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
             
-            {/* --- CHANGES MADE HERE: Added AnimatePresence and the PageLoader component --- */}
             <AnimatePresence>
                 {showPageLoader && <PageLoader />}
             </AnimatePresence>
 
-            {/* MARQUEE STRIP */}
             <MarqueeStrip />
 
-            {/* 2. MAIN CONTENT AREA */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
                 {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
                 
-                {/* --- CHANGES MADE HERE: Passed showPageLoader state to CategoryHighlight --- */}
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
                     setActiveCategory={setActiveCategory} 
@@ -397,7 +401,6 @@ const ShopView = ({
                     showPageLoader={showPageLoader} 
                 />
 
-                {/* --- CHANGES MADE HERE: Added motion.div and AnimatePresence for the grid filter layout animations --- */}
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                     <AnimatePresence>
                         {isLoading && [...Array(8)].map((_, i) => (
@@ -424,15 +427,13 @@ const ShopView = ({
                             </motion.div>
                         )}
                         
-                        {/* PRODUCT CARDS - WRAPPED IN MOTION.DIV FOR LAYOUT ANIMATION */}
                         {!isLoading && filteredProducts.map((product, index) => (
                             <motion.div
                                 layout
                                 initial={{ opacity: 0, scale: 0.8 }}
-                                // --- CHANGES MADE HERE: Bound the entrance animation to the showPageLoader state ---
                                 animate={showPageLoader ? { opacity: 0, scale: 0.8 } : { opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8, filter: "blur(5px)" }}
-                                transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }} // Added index delay for a cool cascade effect
+                                transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }} 
                                 key={product._id || product.id}
                             >
                                 <ProductCard 
@@ -448,10 +449,8 @@ const ShopView = ({
                 </motion.div>
             </div>
 
-            {/* --- NEW PREMIUM REVIEWS SECTION --- */}
             <ReviewsSection />
 
-            {/* REUSABLE FOOTER */}
             <Footer />
       </div>
   );

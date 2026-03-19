@@ -4,6 +4,9 @@ const Shop = require('../models/Shop');
 // @desc    Fetch all products (Marketplace View)
 // @route   GET /api/products
 // @access  Public
+// @desc    Fetch all products (Marketplace View)
+// @route   GET /api/products
+// @access  Public
 const getProducts = async (req, res) => {
     try {
         const keyword = req.query.keyword
@@ -19,8 +22,15 @@ const getProducts = async (req, res) => {
             ? { category: req.query.category } 
             : {};
 
-        // Populate shop details so we can show "Sold by [Shop Name]"
-        const products = await Product.find({ ...keyword, ...category }).populate('shop', 'name logo rating');
+        // Fetch products as usual
+        let products = await Product.find({ ...keyword, ...category }).populate('shop', 'name logo rating');
+
+        // --- NEW LOGIC: Shuffle (Randomize) the products array before sending ---
+        // Fisher-Yates algorithm
+        for (let i = products.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [products[i], products[j]] = [products[j], products[i]];
+        }
 
         res.json(products);
     } catch (error) {

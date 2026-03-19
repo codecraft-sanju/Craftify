@@ -14,10 +14,10 @@ import Footer from './Footer';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const ProductImagePreview = ({ activeImage, isMobileView }) => (
-  <div className={`relative w-full aspect-square bg-slate-50 ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
+  <div className={`relative w-full bg-slate-50 flex justify-center items-center ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
     <PremiumImage
       src={activeImage}
-      className="w-full h-full object-cover"
+      className="w-full h-auto max-h-[600px] object-contain"
       alt="Product Preview"
     />
   </div>
@@ -157,7 +157,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                       >
                           <PremiumImage 
                               src={img.url} 
-                              className="w-full h-full object-cover" 
+                              className="w-full h-full object-contain" 
                               alt={`Thumbnail ${index}`} 
                           />
                       </button>
