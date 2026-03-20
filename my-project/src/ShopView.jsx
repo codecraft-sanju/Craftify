@@ -13,6 +13,16 @@ import ReviewsSection from './ReviewsSection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// --- NAYA CODE: Cloudinary Helper yahan bhi dalna hoga ---
+const optimizeCloudinaryUrl = (url) => {
+    if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
+    if (url.includes('/upload/f_auto,q_auto')) return url;
+    const parts = url.split('/upload/');
+    if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+    return url;
+};
+// -----------------------------------------------------------
+
 const PageLoader = () => (
     <motion.div
         initial={{ opacity: 1 }}
@@ -126,11 +136,12 @@ const CarouselImage = ({ offer }) => {
                 </div>
             )}
             <picture>
+                {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai mobileImage aur image dono ke liye --- */}
                 {offer.mobileImage && (
-                    <source media="(max-width: 768px)" srcSet={offer.mobileImage} />
+                    <source media="(max-width: 768px)" srcSet={optimizeCloudinaryUrl(offer.mobileImage)} />
                 )}
                 <img 
-                    src={offer.image} 
+                    src={optimizeCloudinaryUrl(offer.image)} 
                     alt={offer.title} 
                     onLoad={() => setIsImgLoaded(true)}
                     className={`w-full h-full object-cover object-center transition-opacity duration-700 ${isImgLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -227,8 +238,9 @@ const CategoryImage = ({ src, alt, isActive }) => {
             {!isImgLoaded && (
                 <div className="w-6 h-6 border-2 border-slate-300 border-t-pink-400 rounded-full animate-spin absolute"></div>
             )}
+            {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai category images ke liye --- */}
             <img 
-                src={src} 
+                src={optimizeCloudinaryUrl(src)} 
                 alt={alt} 
                 draggable="false"
                 onLoad={() => setIsImgLoaded(true)}

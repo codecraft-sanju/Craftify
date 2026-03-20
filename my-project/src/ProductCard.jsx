@@ -13,6 +13,25 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 // Create a Motion Link component for animation + navigation
 const MotionLink = motion(Link);
 
+// --- NAYA CODE: Cloudinary URL Optimizer Function ---
+const optimizeCloudinaryUrl = (url) => {
+    // Check if it's a valid Cloudinary URL
+    if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) {
+        return url;
+    }
+    // Check if it's already optimized
+    if (url.includes('/upload/f_auto,q_auto')) {
+        return url;
+    }
+    // Inject f_auto,q_auto into the URL
+    const parts = url.split('/upload/');
+    if (parts.length === 2) {
+        return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+    }
+    return url;
+};
+// ---------------------------------------------------
+
 const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToCart }) => {
     // 1. Safe Data Extraction
     const productId = product._id || product.id;
@@ -31,7 +50,8 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
         
         // If external link (Cloudinary/S3/Firebase)
         if (path.startsWith('http') || path.startsWith('https') || path.startsWith('data:')) {
-            return path;
+            // --- CHANGE HERE: Apply optimization to external URLs ---
+            return optimizeCloudinaryUrl(path);
         }
         
         // If local path, append API URL

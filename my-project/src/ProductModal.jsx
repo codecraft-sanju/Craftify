@@ -3,6 +3,16 @@ import React from 'react';
 import { X, Plus, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from './StoreAdmin';
 
+// --- NAYA CODE: Cloudinary Helper ---
+const optimizeCloudinaryUrl = (url) => {
+    if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
+    if (url.includes('/upload/f_auto,q_auto')) return url;
+    const parts = url.split('/upload/');
+    if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+    return url;
+};
+// ------------------------------------
+
 export default function ProductModal({
   isOpen,
   onClose,
@@ -74,8 +84,9 @@ export default function ProductModal({
                     key={idx}
                     className="aspect-square relative rounded-xl overflow-hidden border border-slate-700 group shadow-lg"
                   >
+                    {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use preview images par bhi laga diya hai --- */}
                     <img
-                      src={imgObj.url}
+                      src={optimizeCloudinaryUrl(imgObj.url)}
                       alt="product"
                       className="w-full h-full object-cover"
                     />
@@ -236,8 +247,6 @@ export default function ProductModal({
                 )}
               </div>
             </div>
-
-            {/* JSX Changes: Customization Settings, Colors, aur Sizes ke sections ko yahan se puri tarah hata diya gaya hai */}
 
             <div className="space-y-1">
               <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">

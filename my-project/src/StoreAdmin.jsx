@@ -17,6 +17,16 @@ const ENDPOINT = import.meta.env.VITE_API_URL;
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
+// --- NAYA CODE: Cloudinary Helper ---
+const optimizeCloudinaryUrl = (url) => {
+    if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
+    if (url.includes('/upload/f_auto,q_auto')) return url;
+    const parts = url.split('/upload/');
+    if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+    return url;
+};
+// ------------------------------------
+
 var socket;
 
 function urlBase64ToUint8Array(base64String) {
@@ -647,7 +657,8 @@ export default function StoreAdmin({ currentUser }) {
                                                     </span>
                                                 </div>
                                                 <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
-                                                    <img src={displayImage} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
+                                                    {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai grid thumbnails ke liye --- */}
+                                                    <img src={optimizeCloudinaryUrl(displayImage)} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                         <button onClick={() => handleOpenModal(p)} className="p-2 bg-white rounded-full text-black shadow-lg hover:scale-110 transition-transform"><Edit className="w-4 h-4"/></button>
                                                         <button onClick={() => handleDeleteProduct(p._id)} className="p-2 bg-rose-500 rounded-full text-white shadow-lg hover:scale-110 transition-transform"><Trash2 className="w-4 h-4"/></button>
@@ -757,7 +768,8 @@ export default function StoreAdmin({ currentUser }) {
                                                 <h4 className="font-bold text-slate-300 mb-2 flex items-center gap-2"><QrCode className="w-5 h-5 text-rose-500"/> Payment QR</h4>
                                                 <div className="flex items-center gap-4 mt-4">
                                                     {sellerQrPreview ? (
-                                                        <img src={sellerQrPreview} className="w-24 h-24 object-contain border border-white/10 rounded-xl p-2 bg-white shadow-sm" alt="QR Preview" />
+                                                        /* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai QR Preview ke liye bhi --- */
+                                                        <img src={optimizeCloudinaryUrl(sellerQrPreview)} className="w-24 h-24 object-contain border border-white/10 rounded-xl p-2 bg-white shadow-sm" alt="QR Preview" />
                                                     ) : (
                                                         <div className="w-24 h-24 bg-slate-900 rounded-xl flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-700 font-bold">No QR</div>
                                                     )}

@@ -13,10 +13,20 @@ import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// --- NAYA CODE: Cloudinary Helper ---
+const optimizeCloudinaryUrl = (url) => {
+    if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
+    if (url.includes('/upload/f_auto,q_auto')) return url;
+    const parts = url.split('/upload/');
+    if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
+    return url;
+};
+// ------------------------------------
+
 const ProductImagePreview = ({ activeImage, isMobileView }) => (
   <div className={`relative w-full bg-slate-50 flex justify-center items-center ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
     <PremiumImage
-      src={activeImage}
+      src={optimizeCloudinaryUrl(activeImage)} // <-- IMAGE OPTIMIZED HERE
       className="w-full h-auto max-h-[600px] object-contain"
       alt="Product Preview"
     />
@@ -156,7 +166,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                           className={`flex-shrink-0 w-16 h-16 md:w-full md:aspect-square rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img.url ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}
                       >
                           <PremiumImage 
-                              src={img.url} 
+                              src={optimizeCloudinaryUrl(img.url)} // <-- THUMBNAIL OPTIMIZED HERE
                               className="w-full h-full object-contain" 
                               alt={`Thumbnail ${index}`} 
                           />
