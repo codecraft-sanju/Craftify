@@ -4,7 +4,11 @@ import { useParams } from 'react-router-dom';
 import {
   ShoppingBag,
   Store,
-  Heart
+  Heart,
+  MessageCircle, // WhatsApp icon alternative
+  ShieldCheck, // Trust icon
+  CheckCircle2, // Process step icon
+  Truck // Delivery icon
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -13,7 +17,7 @@ import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// --- NAYA CODE: Cloudinary Helper ---
+// --- Cloudinary Helper ---
 const optimizeCloudinaryUrl = (url) => {
     if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
     if (url.includes('/upload/f_auto,q_auto')) return url;
@@ -26,7 +30,7 @@ const optimizeCloudinaryUrl = (url) => {
 const ProductImagePreview = ({ activeImage, isMobileView }) => (
   <div className={`relative w-full bg-slate-50 flex justify-center items-center ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
     <PremiumImage
-      src={optimizeCloudinaryUrl(activeImage)} // <-- IMAGE OPTIMIZED HERE
+      src={optimizeCloudinaryUrl(activeImage)} 
       className="w-full h-auto max-h-[600px] object-contain"
       alt="Product Preview"
     />
@@ -70,8 +74,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
   useEffect(() => {
     if (product) {
-        console.log("🔥 DEBUG - Product Data in Detail Page:", product);
-
         const initialImage = product.coverImage || (product.images && product.images.length > 0 ? product.images[0].url : product.image);
         setActiveImage(initialImage);
         setActiveIndex(0);
@@ -166,7 +168,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                           className={`flex-shrink-0 w-16 h-16 md:w-full md:aspect-square rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img.url ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}
                       >
                           <PremiumImage 
-                              src={optimizeCloudinaryUrl(img.url)} // <-- THUMBNAIL OPTIMIZED HERE
+                              src={optimizeCloudinaryUrl(img.url)} 
                               className="w-full h-full object-contain" 
                               alt={`Thumbnail ${index}`} 
                           />
@@ -214,11 +216,51 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                 </div>
               </div>
 
-              <div className="prose prose-slate mb-10">
+              <div className="prose prose-slate mb-8">
                 <p className="text-slate-600 leading-relaxed text-lg font-medium">
                   {product.description}
                 </p>
               </div>
+
+              {/* 🔥 NAYA CODE: How Customization Works Section 🔥 */}
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-100 mb-8">
+                  <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-green-500">
+                          <MessageCircle className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">How to Customize? It's simple!</h3>
+                  </div>
+                  
+                  <div className="space-y-4 relative before:absolute before:inset-y-2 before:left-[11px] before:w-0.5 before:bg-indigo-200">
+                      <div className="flex gap-4 relative z-10">
+                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">1</div>
+                          <div>
+                              <p className="font-bold text-slate-800 text-sm">Place your order here</p>
+                              <p className="text-slate-500 text-xs mt-0.5">Secure your product by checking out.</p>
+                          </div>
+                      </div>
+                      <div className="flex gap-4 relative z-10">
+                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">2</div>
+                          <div>
+                              <p className="font-bold text-slate-800 text-sm">We'll text you on WhatsApp</p>
+                              <p className="text-slate-500 text-xs mt-0.5">Our team will reach out to get your photos, names, and design choices.</p>
+                          </div>
+                      </div>
+                      <div className="flex gap-4 relative z-10">
+                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">3</div>
+                          <div>
+                              <p className="font-bold text-slate-800 text-sm">Fast Delivery to your door</p>
+                              <p className="text-slate-500 text-xs mt-0.5">Once you approve the design, we print and ship it immediately.</p>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div className="mt-5 pt-4 border-t border-indigo-100 flex flex-wrap gap-4 text-xs font-bold text-slate-600">
+                      <div className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-green-600"/> 100% Safe</div>
+                      <div className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600"/> Free Cancellation before print</div>
+                  </div>
+              </div>
+              {/* -------------------------------------------------- */}
               
               <div className="flex gap-4 mb-8">
                 <button 
@@ -239,7 +281,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                 variant="primary"
               >
                 <ShoppingBag className="w-6 h-6 mr-2" />
-                {product.stock > 0 ? 'Add to Shopping Bag' : 'Sold Out'}
+                {product.stock > 0 ? 'Place Order & Customize Later' : 'Sold Out'}
               </Button>
             </div>
           </div>
