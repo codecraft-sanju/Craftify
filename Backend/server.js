@@ -12,6 +12,7 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 const webpush = require('web-push'); 
 
 // CHANGES MADE: Added crypto and Razorpay
@@ -31,9 +32,7 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 } else {
     console.warn("VAPID keys not found in .env file. Push notifications will not work.");
 }
-// CHANGES MADE: Push Notification Logic End
 
-// CHANGES MADE: Initialize Razorpay instance
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -79,6 +78,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // --- CHANGES MADE: RAZORPAY ROUTES ---
 app.post('/api/razorpay/create-order', async (req, res) => {

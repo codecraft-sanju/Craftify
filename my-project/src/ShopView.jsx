@@ -363,6 +363,9 @@ const ShopView = ({
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
 
+  const userInfo = localStorage.getItem('userInfo'); 
+  const currentUser = userInfo ? JSON.parse(userInfo) : null;
+
   useEffect(() => {
       const timer = setTimeout(() => {
           setShowPageLoader(false);
@@ -461,7 +464,7 @@ const ShopView = ({
                 </motion.div>
             </div>
 
-            <ReviewsSection />
+           <ReviewsSection currentUser={currentUser} />
 
             <Footer />
       </div>
