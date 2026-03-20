@@ -16,12 +16,12 @@ const AddReviewModal = ({ isOpen, onClose, user, onReviewAdded }) => {
     
     // Basic validation
     if (!quote.trim()) {
-      setError('Kuch toh likho mere bhai! Review khali nahi bhej sakte.');
+      setError('Write something, You can’t submit an empty review.');
       return;
     }
 
     if (!user) {
-      setError('Pehle login kar lo, uske baad hi review de paoge.');
+      setError('Please log in first, then you will be able to submit a review.');
       return;
     }
 
