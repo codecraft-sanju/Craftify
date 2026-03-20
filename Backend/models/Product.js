@@ -126,7 +126,8 @@ const productSchema = new mongoose.Schema({
 productSchema.pre('save', async function() {
     if (!this.isModified('name')) return;
     
-    this.slug = this.name
+    // --- CHANGES MADE HERE: Modified to generate a base slug first ---
+    const baseSlug = this.name
         .toString()
         .toLowerCase()
         .replace(/\s+/g, '-')      
@@ -134,6 +135,10 @@ productSchema.pre('save', async function() {
         .replace(/\-\-+/g, '-')    
         .replace(/^-+/, '')        
         .replace(/-+$/, '');       
+        
+    // --- CHANGES MADE HERE: Added a random string at the end so duplicate product names get unique slugs ---
+    const randomString = Math.random().toString(36).substring(2, 7);
+    this.slug = `${baseSlug}-${randomString}`;
 });
 
 productSchema.methods.calculateRating = function() {
