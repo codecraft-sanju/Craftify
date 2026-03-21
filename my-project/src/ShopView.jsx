@@ -369,7 +369,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   );
 };
 
-// --- NAYA CODE: Trending Slider Component ---
 const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     const scrollRef = useRef(null);
   
@@ -406,7 +405,6 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
               className="flex gap-4 md:gap-6 overflow-x-auto py-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible"
           >
               {trendingProducts.map((product, index) => (
-                  // --- CHANGE HERE: Changed min-w-[240px] to responsive w-[160px] etc. ---
                   <div key={product._id || product.id} className="w-[160px] sm:w-[200px] md:w-[240px] lg:w-[260px] shrink-0 snap-center flex items-stretch">
                       <ProductCard 
                           product={product} 
@@ -428,7 +426,6 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
       </div>
     );
 };
-// ------------------------------------------
 
 const ShopView = ({ 
     searchQuery, 
@@ -442,24 +439,28 @@ const ShopView = ({
     toggleWishlist
 }) => {
   
-  const [showPageLoader, setShowPageLoader] = useState(true);
+  const [showPageLoader, setShowPageLoader] = useState(() => {
+      return !sessionStorage.getItem('hasSeenGiftomizeLoader');
+  });
+
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
   
-  // --- NAYA CODE: Trending State ---
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
-  // ---------------------------------
 
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
 
   useEffect(() => {
-      const timer = setTimeout(() => {
-          setShowPageLoader(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-  }, []);
+      if (showPageLoader) {
+          const timer = setTimeout(() => {
+              setShowPageLoader(false);
+              sessionStorage.setItem('hasSeenGiftomizeLoader', 'true');
+          }, 2000);
+          return () => clearTimeout(timer);
+      }
+  }, [showPageLoader]);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -475,7 +476,6 @@ const ShopView = ({
     fetchBanners();
   }, []); 
 
-  // --- NAYA CODE: Fetch Trending API ---
   useEffect(() => {
     const fetchTrendingProducts = async () => {
         try {
@@ -492,7 +492,6 @@ const ShopView = ({
     };
     fetchTrendingProducts();
   }, []);
-  // -------------------------------------
 
   const filteredProducts = products.filter(p => {
       const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -523,7 +522,6 @@ const ShopView = ({
                     showPageLoader={showPageLoader} 
                 />
 
-                {/* --- NAYA CODE: Rendering Trending Slider --- */}
                 {!isTrendingLoading && trendingProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
                     <TrendingSlider 
                         products={trendingProducts}
@@ -532,7 +530,6 @@ const ShopView = ({
                         addToCart={addToCart}
                     />
                 )}
-                {/* ------------------------------------------ */}
 
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                     <AnimatePresence>
