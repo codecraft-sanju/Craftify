@@ -4,9 +4,6 @@ const Shop = require('../models/Shop');
 // @desc    Fetch all products (Marketplace View)
 // @route   GET /api/products
 // @access  Public
-// @desc    Fetch all products (Marketplace View)
-// @route   GET /api/products
-// @access  Public
 const getProducts = async (req, res) => {
     try {
         const keyword = req.query.keyword
@@ -62,7 +59,8 @@ const getProductById = async (req, res) => {
 // @access  Private (Seller, Founder, Admin)
 const createProduct = async (req, res) => {
     try {
-        const {
+        // --- CHANGES MADE HERE: Changed const to let so we can modify category ---
+        let {
             shop: shopId, 
             name, price, description, category, 
             stock, tags, specs, colors, sizes,
@@ -71,6 +69,11 @@ const createProduct = async (req, res) => {
             images, // --- NEW: Array of images ---
             compareAtPrice // CHANGES MADE: Extracted compareAtPrice
         } = req.body;
+
+        // --- CHANGES MADE HERE: Clean the category string to prevent duplicates ---
+        if (category) {
+            category = category.trim().toLowerCase();
+        }
 
         // 1. Validation: Ensure Shop ID is provided
         if (!shopId) {
@@ -168,7 +171,8 @@ const createProduct = async (req, res) => {
 // @access  Private (Seller, Founder, Admin)
 const updateProduct = async (req, res) => {
     try {
-        const {
+        // --- CHANGES MADE HERE: Changed const to let so we can modify category ---
+        let {
             name, price, description, category,
             stock, tags, specs, colors, sizes,
             customizationAvailable, customizationType,
@@ -176,6 +180,11 @@ const updateProduct = async (req, res) => {
             images, // --- NEW: Handle images update ---
             compareAtPrice // CHANGES MADE: Extracted compareAtPrice
         } = req.body;
+
+        // --- CHANGES MADE HERE: Clean the category string to prevent duplicates ---
+        if (category) {
+            category = category.trim().toLowerCase();
+        }
 
         const product = await Product.findById(req.params.id);
 
