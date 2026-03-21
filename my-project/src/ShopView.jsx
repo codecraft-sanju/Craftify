@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
-  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame // --- NAYA CODE: Added Flame icon ---
+  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame 
 } from 'lucide-react'; 
 
 import ProductCard from './ProductCard'; 
@@ -78,6 +78,15 @@ const ProductSkeleton = () => (
     </div>
 );
 
+// --- NAYA CODE: Carousel Skeleton ---
+const CarouselSkeleton = () => (
+    <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[550px] overflow-hidden mb-8 shadow-lg group bg-slate-800 animate-pulse -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-slate-700 border-t-slate-500 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-600 font-bold tracking-widest text-sm uppercase">Loading Offers...</p>
+    </div>
+);
+// ------------------------------------
+
 const MarqueeStrip = () => {
     const items = [
         { text: "Welcome to Giftomize", icon: <Gift className="w-4 h-4" /> },
@@ -124,7 +133,8 @@ const MarqueeStrip = () => {
     );
 };
 
-const CarouselImage = ({ offer }) => {
+// --- NAYA CODE: isPriority prop added ---
+const CarouselImage = ({ offer, isPriority }) => {
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     return (
         <div className="w-full h-full relative bg-slate-900">
@@ -141,29 +151,32 @@ const CarouselImage = ({ offer }) => {
                     src={optimizeCloudinaryUrl(offer.image)} 
                     alt={offer.title} 
                     onLoad={() => setIsImgLoaded(true)}
+                    fetchpriority={isPriority ? "high" : "auto"}
+                    loading={isPriority ? "eager" : "lazy"}
                     className={`w-full h-full object-cover object-center transition-opacity duration-700 ${isImgLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
             </picture>
         </div>
     );
 };
+// ----------------------------------------
 
 const OfferCarousel = ({ bannerData }) => {
     if (bannerData && bannerData.isVisible === false) return null; 
 
     const defaultOffers = [
-      {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
-        title: "",
-        subtitle: ""
-      },
-      {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
-        title: "",
-        subtitle: ""
-      },
+     {
+  id: 1,
+  image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
+  title: "",
+  subtitle: ""
+},
+{
+  id: 2,
+  image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop",
+  title: "",
+  subtitle: ""
+},
       {
         id: 3,
         image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
@@ -204,7 +217,8 @@ const OfferCarousel = ({ bannerData }) => {
       >
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
-            <CarouselImage offer={offer} />
+            {/* --- CHANGE HERE: Passed isPriority prop --- */}
+            <CarouselImage offer={offer} isPriority={index === 0} />
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
                    <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-md leading-tight">{offer.title}</h2>
@@ -513,7 +527,16 @@ const ShopView = ({
             <MarqueeStrip />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
-                {!isBannersLoading && ( <div className="mt-0"> <OfferCarousel bannerData={bannerData} /> </div> )}
+                
+                {/* --- NAYA CODE: Skeleton Add Kiya Hai --- */}
+                <div className="mt-0">
+                    {isBannersLoading ? (
+                        <CarouselSkeleton />
+                    ) : (
+                        <OfferCarousel bannerData={bannerData} />
+                    )}
+                </div>
+                {/* -------------------------------------- */}
                 
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
