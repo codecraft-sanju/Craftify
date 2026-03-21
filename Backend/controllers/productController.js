@@ -433,44 +433,67 @@ const getRelatedProducts = async (req, res) => {
         const currentProductId = req.params.id;
 
         // 1. Current product find karo taki uski category pata chal sake
-        const product = await Product.findById(currentProductId);
+        const currentProduct = await Product.findById(currentProductId);
         
-        if (!product) {
+        if (!currentProduct) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // 2. Same category ke 4 products nikal lo (current product ko exclude karke)
-        const sameCategoryProducts = await Product.find({
-            category: product.category,
-            _id: { $ne: currentProductId }
-        })
-        .populate('shop', 'name logo rating')
-        .limit(4);
-
-        // 3. Jo products mil gaye hain unki IDs alag kar lo taki random me repeat na ho
-        const excludeIds = sameCategoryProducts.map(p => p._id);
-        excludeIds.push(product._id); 
-
-        // 4. Random 4 products nikal lo pure database se ($sample ka use karke)
-        const randomProducts = await Product.aggregate([
-            { $match: { _id: { $nin: excludeIds } } }, 
-            { $sample: { size: 4 } } 
+        // 2. Same category ke max 6 random products nikal lo (current ko chhodkar)
+        const sameCategoryProducts = await Product.aggregate([
+            { 
+                $match: { 
+                    category: currentProduct.category, 
+                    _id: { $ne: currentProduct._id } 
+                } 
+            },
+            { $sample: { size: 6 } }
         ]);
 
-        // Aggregate me populate direct kaam nahi karta, isliye alag se populate karenge
-        const populatedRandomProducts = await Product.populate(randomProducts, { 
+        // Same category walo ko populate karo
+        const populatedSameCategory = await Product.populate(sameCategoryProducts, { 
             path: 'shop', 
             select: 'name logo rating' 
         });
 
-        // 5. Dono arrays ko merge kar do aur response bhej do
-        const finalRecommendations = [...sameCategoryProducts, ...populatedRandomProducts];
+        // 3. Calculate karo kitne random products aur chahiye 16 ka total pura karne ke liye
+        const remainingLimit = 16 - populatedSameCategory.length;
+
+        // 4. Baki bache hue random products dusri categories se uthao
+        const otherCategoryProducts = await Product.aggregate([
+            { 
+                $match: { 
+                    category: { $ne: currentProduct.category }, 
+                    _id: { $ne: currentProduct._id } 
+                } 
+            },
+            { $sample: { size: remainingLimit } }
+        ]);
+
+        // Dusri category walo ko populate karo
+        const populatedOtherCategory = await Product.populate(otherCategoryProducts, { 
+            path: 'shop', 
+            select: 'name logo rating' 
+        });
+
+        // 5. Dono arrays ko merge kar do
+        let finalRecommendations = [...populatedSameCategory, ...populatedOtherCategory];
+
+        // --- OPTIONAL: Shuffle the final array ---
+        // Agar aap chahte ho ki 6 category wale aur 10 random wale mix hokar dikhein, 
+        // to is block ko uncomment kar do. Nahi to pehle 6 category wale aayenge, fir baki.
+        /*
+        for (let i = finalRecommendations.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [finalRecommendations[i], finalRecommendations[j]] = [finalRecommendations[j], finalRecommendations[i]];
+        }
+        */
 
         res.json(finalRecommendations);
 
     } catch (error) {
         console.error("Related Products Error:", error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Server Error fetching related products" });
     }
 };
 
