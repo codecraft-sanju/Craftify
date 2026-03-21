@@ -332,7 +332,7 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   const displayCategories = ["All", ...productCategories];
 
   return (
-    <div className="mb-12 relative group px-2 sm:px-0">
+    <div className="mb-2 relative group px-2 sm:px-0">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
         <button 
