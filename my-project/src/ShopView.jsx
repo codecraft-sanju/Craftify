@@ -151,7 +151,7 @@ const CarouselImage = ({ offer, isPriority }) => {
                     src={optimizeCloudinaryUrl(offer.image)} 
                     alt={offer.title} 
                     onLoad={() => setIsImgLoaded(true)}
-                    fetchpriority={isPriority ? "high" : "auto"}
+                    fetchPriority={isPriority ? "high" : "auto"}
                     loading={isPriority ? "eager" : "lazy"}
                     className={`w-full h-full object-cover object-center transition-opacity duration-700 ${isImgLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
