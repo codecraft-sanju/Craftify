@@ -497,6 +497,42 @@ const getRelatedProducts = async (req, res) => {
     }
 };
 
+// --- NAYA CODE: Increment Product View Count ---
+// @desc    Increment view count for a product
+// @route   PUT /api/products/:id/view
+// @access  Public
+const incrementProductView = async (req, res) => {
+    try {
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+        res.json({ message: 'View updated successfully', views: product.views });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error updating view count' });
+    }
+};
+
+// --- NAYA CODE: Fetch Trending Top 20 Products ---
+// @desc    Get top 20 trending products based on views
+// @route   GET /api/products/trending
+// @access  Public
+const getTrendingProducts = async (req, res) => {
+    try {
+        // Fetch top 20 products with stock > 0, sorted by views descending
+        const trendingProducts = await Product.find({ stock: { $gt: 0 } })
+            .sort({ views: -1 })
+            .limit(20)
+            .populate('shop', 'name logo rating');
+
+        res.json(trendingProducts);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error fetching trending products' });
+    }
+};
+
 module.exports = {
     getProducts,
     getProductById,
@@ -507,5 +543,7 @@ module.exports = {
     getTopProducts,
     getProductsByShop,
     deleteProductsBatch,
-    getRelatedProducts
+    getRelatedProducts,
+    incrementProductView,   // NAYA: Added to exports
+    getTrendingProducts     // NAYA: Added to exports
 };

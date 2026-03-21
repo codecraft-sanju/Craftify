@@ -8,7 +8,8 @@ import {
   MessageCircle, // WhatsApp icon alternative
   ShieldCheck, // Trust icon
   CheckCircle2, // Process step icon
-  Truck // Delivery icon
+  Truck, // Delivery icon
+  Share2 // --- NAYA CODE: Added Share Icon ---
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -52,6 +53,21 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // --- NAYA CODE: Track Product View ---
+    const trackProductView = async () => {
+        try {
+            await fetch(`${API_URL}/api/products/${id}/view`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (error) {
+            console.error("Failed to track view", error);
+        }
+    };
+    // -------------------------------------
+
     const fetchRelatedProducts = async () => {
       try {
         setIsLoadingRelated(true);
@@ -69,6 +85,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
     if (id) {
         fetchRelatedProducts();
+        trackProductView(); // Track view when ID changes
     }
   }, [id]);
 
@@ -99,6 +116,27 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
   const handleAddToCart = () => {
       addToCart(product);
   };
+
+  // --- NAYA CODE: Share Function ---
+  const handleShare = async () => {
+      const shareData = {
+          title: `Buy ${product.name} on Giftomize`,
+          text: `Check out this amazing customized gift: ${product.name} 🔥`,
+          url: window.location.href
+      };
+
+      try {
+          if (navigator.share) {
+              await navigator.share(shareData);
+          } else {
+              await navigator.clipboard.writeText(window.location.href);
+              alert("Link copied to clipboard! Share it with your friends.");
+          }
+      } catch (err) {
+          console.error("Error sharing:", err);
+      }
+  };
+  // ---------------------------------
 
   if (!product)
     return (
@@ -222,7 +260,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                 </p>
               </div>
 
-              {/* 🔥 NAYA CODE: How Customization Works Section 🔥 */}
+              {/* 🔥 How Customization Works Section 🔥 */}
               <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-100 mb-8">
                   <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-green-500">
@@ -260,15 +298,32 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                       <div className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600"/> Free Cancellation before print</div>
                   </div>
               </div>
-              {/* -------------------------------------------------- */}
               
               <div className="flex gap-4 mb-8">
+                {/* Wishlist Button */}
                 <button 
                   onClick={() => toggleWishlist(product)}
                   className={`p-4 rounded-2xl border transition-all active:scale-95 ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500 shadow-sm' : 'border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
                 >
                   <Heart className={`w-6 h-6 ${isInWishlist ? 'fill-current' : ''}`} />
                 </button>
+
+                {/* --- NAYA MOBILE-FRIENDLY PREMIUM SHARE BUTTON --- */}
+                <button 
+                  onClick={handleShare}
+                  className="flex-1 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 shadow-sm flex items-center justify-center gap-3 transition-all active:scale-95 hover:shadow-md"
+                >
+                  {/* Icon Container - Always visible white background */}
+                  <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-50 flex items-center justify-center">
+                    <Share2 className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  
+                  {/* Text - Always visible gradient */}
+                  <span className="font-bold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent">
+                    Share with Friends
+                  </span>
+                </button>
+                {/* ------------------------------- */}
               </div>
             </div>
 

@@ -10,7 +10,9 @@ const {
     getTopProducts,
     getRelatedProducts,
     getProductsByShop,
-    deleteProductsBatch 
+    deleteProductsBatch,
+    incrementProductView,
+    getTrendingProducts
 } = require('../controllers/productController');
 
 // --- CHANGES MADE HERE: Removed 'seller' import since we handle roles in the controller now ---
@@ -27,12 +29,16 @@ router.route('/batch').delete(protect, deleteProductsBatch);
 
 // Specific Lists (Static/Distinct Paths)
 router.get('/top', getTopProducts);
+// --- CHANGES MADE HERE: Added trending route (Must be before /:id) ---
+router.get('/trending', getTrendingProducts);
 router.get('/shop/:shopId', getProductsByShop);
 
 // Reviews
 router.route('/:id/reviews').post(protect, createProductReview);
 
 router.route('/:id/related').get(getRelatedProducts);
+// --- CHANGES MADE HERE: Added view tracking route ---
+router.put('/:id/view', incrementProductView);
 
 // Dynamic ID Routes (Last)
 router.route('/:id')

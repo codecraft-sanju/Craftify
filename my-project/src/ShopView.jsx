@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
-  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift 
+  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame // --- NAYA CODE: Added Flame icon ---
 } from 'lucide-react'; 
 
 import ProductCard from './ProductCard'; 
@@ -13,7 +13,6 @@ import ReviewsSection from './ReviewsSection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// --- NAYA CODE: Cloudinary Helper yahan bhi dalna hoga ---
 const optimizeCloudinaryUrl = (url) => {
     if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
     if (url.includes('/upload/f_auto,q_auto')) return url;
@@ -21,7 +20,6 @@ const optimizeCloudinaryUrl = (url) => {
     if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
     return url;
 };
-// -----------------------------------------------------------
 
 const PageLoader = () => (
     <motion.div
@@ -136,7 +134,6 @@ const CarouselImage = ({ offer }) => {
                 </div>
             )}
             <picture>
-                {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai mobileImage aur image dono ke liye --- */}
                 {offer.mobileImage && (
                     <source media="(max-width: 768px)" srcSet={optimizeCloudinaryUrl(offer.mobileImage)} />
                 )}
@@ -238,7 +235,6 @@ const CategoryImage = ({ src, alt, isActive }) => {
             {!isImgLoaded && (
                 <div className="w-6 h-6 border-2 border-slate-300 border-t-pink-400 rounded-full animate-spin absolute"></div>
             )}
-            {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai category images ke liye --- */}
             <img 
                 src={optimizeCloudinaryUrl(src)} 
                 alt={alt} 
@@ -257,7 +253,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  // --- NAYA CODE: Scroll buttons ke functions ---
   const scrollLeftAction = () => {
       if (scrollRef.current) {
           scrollRef.current.scrollBy({ left: -350, behavior: 'smooth' });
@@ -269,7 +264,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
           scrollRef.current.scrollBy({ left: 350, behavior: 'smooth' });
       }
   };
-  // ---------------------------------------------
 
   const handleMouseDown = (e) => {
       setIsDragging(true);
@@ -324,18 +318,15 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   const displayCategories = ["All", ...productCategories];
 
   return (
-    // --- NAYA CODE: parent div me 'relative group' add kiya taaki arrows theek se position hon ---
     <div className="mb-12 relative group px-2 sm:px-0">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
-        {/* --- NAYA CODE: Left Arrow Button (Sirf desktop ke liye) --- */}
         <button 
             onClick={scrollLeftAction}
             className="hidden md:flex absolute left-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
         >
             <ChevronLeft className="w-6 h-6 ml-[-2px]" />
         </button>
-        {/* ----------------------------------------------------------- */}
 
         <div 
             ref={scrollRef}
@@ -349,7 +340,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
-                  // --- NAYA CODE: className me 'group' ko 'group/btn' banaya taaki hover effect conflict na kare ---
                   <motion.button 
                       key={idx} 
                       onClick={() => setActiveCategory(cat)} 
@@ -369,17 +359,76 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
             })}
         </div>
 
-        {/* --- NAYA CODE: Right Arrow Button (Sirf desktop ke liye) --- */}
         <button 
             onClick={scrollRightAction}
             className="hidden md:flex absolute right-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
         >
             <ChevronRight className="w-6 h-6 mr-[-2px]" />
         </button>
-        {/* ------------------------------------------------------------ */}
     </div>
   );
 };
+
+// --- NAYA CODE: Trending Slider Component ---
+const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
+    const scrollRef = useRef(null);
+  
+    const scrollLeftAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+    };
+  
+    const scrollRightAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+    };
+  
+    const trendingProducts = products.slice(0, 8); 
+  
+    if (!trendingProducts || trendingProducts.length === 0) return null;
+  
+    return (
+      <div className="mb-12 relative group px-2 sm:px-0">
+          <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
+              <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
+                  <Flame className="w-6 h-6 text-orange-500 fill-orange-500/20" /> 
+                  Trending Now
+              </h3>
+          </div>
+          
+          <button 
+              onClick={scrollLeftAction}
+              className="hidden md:flex absolute left-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-orange-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronLeft className="w-6 h-6 ml-[-2px]" />
+          </button>
+  
+          <div 
+              ref={scrollRef}
+              className="flex gap-4 md:gap-6 overflow-x-auto py-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible"
+          >
+              {trendingProducts.map((product, index) => (
+                  // --- CHANGE HERE: Changed min-w-[240px] to responsive w-[160px] etc. ---
+                  <div key={product._id || product.id} className="w-[160px] sm:w-[200px] md:w-[240px] lg:w-[260px] shrink-0 snap-center flex items-stretch">
+                      <ProductCard 
+                          product={product} 
+                          index={index}
+                          wishlist={wishlist} 
+                          toggleWishlist={toggleWishlist} 
+                          addToCart={addToCart} 
+                      />
+                  </div>
+              ))}
+          </div>
+  
+          <button 
+              onClick={scrollRightAction}
+              className="hidden md:flex absolute right-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-orange-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronRight className="w-6 h-6 mr-[-2px]" />
+          </button>
+      </div>
+    );
+};
+// ------------------------------------------
 
 const ShopView = ({ 
     searchQuery, 
@@ -396,6 +445,11 @@ const ShopView = ({
   const [showPageLoader, setShowPageLoader] = useState(true);
   const [bannerData, setBannerData] = useState(null);
   const [isBannersLoading, setIsBannersLoading] = useState(true);
+  
+  // --- NAYA CODE: Trending State ---
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(true);
+  // ---------------------------------
 
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
@@ -420,6 +474,25 @@ const ShopView = ({
     };
     fetchBanners();
   }, []); 
+
+  // --- NAYA CODE: Fetch Trending API ---
+  useEffect(() => {
+    const fetchTrendingProducts = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/products/trending`);
+            if (res.ok) {
+                const data = await res.json();
+                setTrendingProducts(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch trending products", error);
+        } finally {
+            setIsTrendingLoading(false);
+        }
+    };
+    fetchTrendingProducts();
+  }, []);
+  // -------------------------------------
 
   const filteredProducts = products.filter(p => {
       const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -449,6 +522,17 @@ const ShopView = ({
                     products={products} 
                     showPageLoader={showPageLoader} 
                 />
+
+                {/* --- NAYA CODE: Rendering Trending Slider --- */}
+                {!isTrendingLoading && trendingProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
+                    <TrendingSlider 
+                        products={trendingProducts}
+                        wishlist={wishlist}
+                        toggleWishlist={toggleWishlist}
+                        addToCart={addToCart}
+                    />
+                )}
+                {/* ------------------------------------------ */}
 
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                     <AnimatePresence>

@@ -81,7 +81,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
             delay: (index % 8) * 0.1, 
             ease: "easeOut" 
         }}
-        className="group bg-[#FFFBF0] rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 block"
+        className="group bg-[#FFFBF0] rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 w-full"
       >
          
          {/* --- IMAGE CONTAINER --- */}
