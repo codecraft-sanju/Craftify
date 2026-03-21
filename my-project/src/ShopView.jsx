@@ -257,6 +257,20 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
+  // --- NAYA CODE: Scroll buttons ke functions ---
+  const scrollLeftAction = () => {
+      if (scrollRef.current) {
+          scrollRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+      }
+  };
+
+  const scrollRightAction = () => {
+      if (scrollRef.current) {
+          scrollRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+      }
+  };
+  // ---------------------------------------------
+
   const handleMouseDown = (e) => {
       setIsDragging(true);
       setStartX(e.pageX - scrollRef.current.offsetLeft);
@@ -310,21 +324,32 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   const displayCategories = ["All", ...productCategories];
 
   return (
-    <div className="mb-12">
+    // --- NAYA CODE: parent div me 'relative group' add kiya taaki arrows theek se position hon ---
+    <div className="mb-12 relative group px-2 sm:px-0">
         <h3 className="text-2xl font-black text-slate-800 text-center mb-6 font-serif">Product Category</h3>
         
+        {/* --- NAYA CODE: Left Arrow Button (Sirf desktop ke liye) --- */}
+        <button 
+            onClick={scrollLeftAction}
+            className="hidden md:flex absolute left-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+        >
+            <ChevronLeft className="w-6 h-6 ml-[-2px]" />
+        </button>
+        {/* ----------------------------------------------------------- */}
+
         <div 
             ref={scrollRef}
             onMouseDown={handleMouseDown}
             onMouseLeave={handleMouseLeave}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
-            className={`flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start md:justify-center -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`flex gap-6 overflow-x-auto py-4 snap-x scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] justify-start -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         >
             {displayCategories.map((cat, idx) => {
                 const isActive = activeCategory === cat;
                 const image = visualMap[cat] || fallbackImage;
                 return (
+                  // --- NAYA CODE: className me 'group' ko 'group/btn' banaya taaki hover effect conflict na kare ---
                   <motion.button 
                       key={idx} 
                       onClick={() => setActiveCategory(cat)} 
@@ -333,16 +358,25 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
                       viewport={{ once: true, amount: 0.1 }}
                       transition={{ duration: 0.4, delay: idx * 0.05, ease: "easeOut" }}
                       whileHover={{ y: -5 }}
-                      className="group flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
+                      className="group/btn flex flex-col items-center gap-3 min-w-[100px] sm:min-w-[110px] md:min-w-[130px] snap-center"
                   >
                       <div className={`w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden shadow-md transition-all duration-300 ${isActive ? 'scale-105' : ''}`}>
                           <CategoryImage src={image} alt={cat} isActive={isActive} />
                       </div>
-                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover:text-slate-900'}`}>{cat}</span>
+                      <span className={`text-sm font-bold tracking-wide capitalize ${isActive ? 'text-pink-500' : 'text-slate-600 group-hover/btn:text-slate-900'}`}>{cat}</span>
                   </motion.button>
                 );
             })}
         </div>
+
+        {/* --- NAYA CODE: Right Arrow Button (Sirf desktop ke liye) --- */}
+        <button 
+            onClick={scrollRightAction}
+            className="hidden md:flex absolute right-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+        >
+            <ChevronRight className="w-6 h-6 mr-[-2px]" />
+        </button>
+        {/* ------------------------------------------------------------ */}
     </div>
   );
 };
