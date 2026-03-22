@@ -147,7 +147,11 @@ export default function FounderAccess({ currentUser, onLogout }) {
             if (usersRes.ok) setUsers(await usersRes.json());
             if (shopsRes.ok) setShops(await shopsRes.json());
             if (ordersRes.ok) setOrders(await ordersRes.json());
-            if (productsRes.ok) setProducts(await productsRes.json());
+           if (productsRes.ok) {
+                const pData = await productsRes.json();
+                // Check agar backend ne object bheja hai jisme products array hai, varna directly data
+                setProducts(pData.products ? pData.products : (Array.isArray(pData) ? pData : []));
+            }
 
             if (categoriesRes.ok) {
                 const savedCategories = await categoriesRes.json();
