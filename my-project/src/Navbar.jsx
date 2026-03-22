@@ -106,7 +106,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
             </Link>
             
             <Link
-              to={currentUser ? '/profile' : '/login'}
+              to={currentUser ? '/profile' : '/register'}
               className="hover:text-yellow-400 transition-colors hover:bg-white/5 px-3 py-2 rounded-lg"
             >
               My Orders
@@ -142,7 +142,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
             {/* Profile Icon */}
             <button
               onClick={() =>
-                currentUser ? navigate('/profile') : navigate('/login')
+                currentUser ? navigate('/profile') : navigate('/register')
               }
               className="flex items-center gap-2 pl-1 pr-1 py-1 rounded-full transition-colors hover:bg-white/10"
             >
@@ -226,7 +226,7 @@ const Navbar = ({ cart, wishlist, currentUser, setIsCartOpen }) => {
 
             {/* PROFILE ICON MOBILE (ADDED) */}
             <button
-              onClick={() => currentUser ? navigate('/profile') : navigate('/login')}
+              onClick={() => currentUser ? navigate('/profile') : navigate('/register')}
               className="p-1.5 relative text-white hover:bg-white/10 hover:text-yellow-400 rounded-full transition-colors ml-1"
             >
                {currentUser ? (

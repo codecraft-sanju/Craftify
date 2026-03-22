@@ -278,7 +278,7 @@ const CraftifyContent = () => {
   };
 
   const addToCart = async (product, options = {}) => {
-    if (!currentUser) { navigate('/login'); return; }
+    if (!currentUser) { navigate('/register'); return; }
     try {
       const res = await fetch(`${API_URL}/api/cart`, {
         method: 'POST',
@@ -352,7 +352,7 @@ const CraftifyContent = () => {
   };
 
   const toggleWishlist = async (product) => {
-    if (!currentUser) { navigate('/login'); return; }
+    if (!currentUser) { navigate('/register'); return; }
     const isIn = wishlist.some(item => item._id === product._id);
     const method = isIn ? 'DELETE' : 'POST';
     const url = isIn ? `${API_URL}/api/users/wishlist/${product._id}` : `${API_URL}/api/users/wishlist`;
