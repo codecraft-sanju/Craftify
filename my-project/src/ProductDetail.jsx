@@ -5,11 +5,13 @@ import {
   ShoppingBag,
   Store,
   Heart,
-  MessageCircle, // WhatsApp icon alternative
-  ShieldCheck, // Trust icon
-  CheckCircle2, // Process step icon
-  Truck, // Delivery icon
-  Share2 // --- NAYA CODE: Added Share Icon ---
+  MessageCircle,
+  ShieldCheck,
+  CheckCircle2,
+  Truck,
+  Share2,
+  ImagePlus,
+  PackageCheck
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -53,7 +55,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // --- NAYA CODE: Track Product View ---
     const trackProductView = async () => {
         try {
             await fetch(`${API_URL}/api/products/${id}/view`, {
@@ -66,7 +67,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
             console.error("Failed to track view", error);
         }
     };
-    // -------------------------------------
 
     const fetchRelatedProducts = async () => {
       try {
@@ -85,7 +85,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
     if (id) {
         fetchRelatedProducts();
-        trackProductView(); // Track view when ID changes
+        trackProductView();
     }
   }, [id]);
 
@@ -117,7 +117,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
       addToCart(product);
   };
 
-  // --- NAYA CODE: Share Function ---
   const handleShare = async () => {
       const shareData = {
           title: `Buy ${product.name} on Giftomize`,
@@ -136,7 +135,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
           console.error("Error sharing:", err);
       }
   };
-  // ---------------------------------
 
   if (!product)
     return (
@@ -148,11 +146,11 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
   return (
     <>
-      <div className="pt-2 md:pt-32 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 lg:gap-20 items-start">
+      <div className="pt-2 md:pt-24 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 lg:gap-16 items-start">
           
           {/* --- LEFT COLUMN: GALLERY --- */}
-          <div className="w-full max-w-xl mx-auto space-y-6">
+          <div className="w-full max-w-xl mx-auto space-y-4">
             <div className="relative">
               <div 
                 ref={scrollRef}
@@ -189,7 +187,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
             </div>
 
             {allImages.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 px-4 md:px-0 scrollbar-hide md:grid md:grid-cols-5 md:gap-4">
+              <div className="flex gap-2 overflow-x-auto pb-2 px-4 md:px-0 scrollbar-hide md:grid md:grid-cols-5 md:gap-3">
                   {allImages.map((img, index) => (
                       <button 
                           key={index}
@@ -203,7 +201,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                               });
                             }
                           }}
-                          className={`flex-shrink-0 w-16 h-16 md:w-full md:aspect-square rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img.url ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'}`}
+                          className={`flex-shrink-0 w-16 h-16 md:w-full md:aspect-square rounded-xl overflow-hidden border-2 transition-all ${activeImage === img.url ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-slate-100 hover:border-slate-200'}`}
                       >
                           <PremiumImage 
                               src={optimizeCloudinaryUrl(img.url)} 
@@ -216,126 +214,131 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
             )}
           </div>
 
-          {/* --- RIGHT COLUMN: DETAILS --- */}
-          <div className="flex flex-col h-full pt-8 md:pt-2 px-5 md:px-0">
-            <div className="mb-8">
-              <div className="flex flex-wrap items-center gap-2 mb-6">
-                <Badge color="indigo" className="text-[10px] uppercase font-bold tracking-widest px-3">{product.category}</Badge>
+          {/* --- RIGHT COLUMN: DETAILS (COMPACT FIT) --- */}
+          <div className="flex flex-col h-full pt-6 md:pt-0 px-5 md:px-0">
+            <div className="mb-4">
+              
+              {/* Badges */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <Badge color="indigo" className="text-[10px] uppercase font-bold tracking-widest px-2">
+                  {product.category}
+                </Badge>
                 
                 {product.stock <= 0 ? (
-                  <Badge color="red" className="font-bold">Out of Stock</Badge>
+                  <Badge color="red" className="font-bold text-[10px]">Out of Stock</Badge>
                 ) : product.stock <= (product.lowStockThreshold || 5) ? (
-                  <Badge color="amber" className="animate-pulse font-bold">
+                  <Badge color="amber" className="animate-pulse font-bold text-[10px]">
                     Limited: Only {product.stock} Left
                   </Badge>
                 ) : (
-                  <Badge color="green" className="font-bold">Ready to Ship</Badge>
+                  <Badge color="green" className="font-bold text-[10px]">Ready to Ship</Badge>
                 )}
               </div>
 
-              <h1 className="text-4xl md:text-6xl font-serif font-bold text-slate-900 mb-6 leading-[1.1] tracking-tight">
+              {/* Title */}
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-2 leading-tight tracking-tight">
                 {product.name}
               </h1>
               
-              <div className="flex items-center justify-between border-y border-slate-50 py-6 mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100">
-                    <Store className="w-5 h-5" />
+              {/* Price and Store Info */}
+              <div className="flex items-center justify-between border-y border-slate-100 py-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100">
+                    <Store className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Store</p>
-                    <p className="font-bold text-slate-800">
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">Store</p>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">
                       {product.shop?.name || 'Giftomize Select'}
                     </p>
                   </div>
                 </div>
-                <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
+                <div className="text-2xl md:text-3xl font-black text-slate-900 tracking-tighter">
                   ₹{product.price}
                 </div>
               </div>
 
-              <div className="prose prose-slate mb-8">
-                <p className="text-slate-600 leading-relaxed text-lg font-medium">
+              {/* Description */}
+              <div className="prose prose-slate mb-4">
+                <p className="text-slate-600 text-sm font-medium leading-snug line-clamp-3">
                   {product.description}
                 </p>
               </div>
 
-              {/* 🔥 How Customization Works Section 🔥 */}
-              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-100 mb-8">
-                  <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-green-500">
-                          <MessageCircle className="w-5 h-5" />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900">How to Customize? It's simple!</h3>
-                  </div>
+              {/* 🔥 How Customization Works Section (PREMIUM & AESTHETIC) 🔥 */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                     <span className="w-1.5 h-4 bg-[#65280E] rounded-full"></span> 
+                     How it works
+                  </h3>
                   
-                  <div className="space-y-4 relative before:absolute before:inset-y-2 before:left-[11px] before:w-0.5 before:bg-indigo-200">
-                      <div className="flex gap-4 relative z-10">
-                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">1</div>
-                          <div>
-                              <p className="font-bold text-slate-800 text-sm">Place your order here</p>
-                              <p className="text-slate-500 text-xs mt-0.5">Secure your product by checking out.</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                      {/* Step 1 */}
+                      <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50 border border-slate-100/50">
+                          <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-indigo-600 mb-2">
+                              <ShoppingBag className="w-3.5 h-3.5" />
                           </div>
+                          <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5">1. Order</p>
+                          <p className="text-slate-500 text-[9px] leading-tight">Secure it first</p>
                       </div>
-                      <div className="flex gap-4 relative z-10">
-                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">2</div>
-                          <div>
-                              <p className="font-bold text-slate-800 text-sm">We'll text you on WhatsApp</p>
-                              <p className="text-slate-500 text-xs mt-0.5">Our team will reach out to get your photos, names, and design choices.</p>
+                      
+                      {/* Step 2 */}
+                      <div className="flex flex-col items-center p-2 rounded-xl bg-green-50/50 border border-green-100/50">
+                          <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-green-500 mb-2 relative">
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 border border-white rounded-full"></span>
                           </div>
+                          <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5">2. WhatsApp</p>
+                          <p className="text-slate-500 text-[9px] leading-tight">Share details</p>
                       </div>
-                      <div className="flex gap-4 relative z-10">
-                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-md">3</div>
-                          <div>
-                              <p className="font-bold text-slate-800 text-sm">Fast Delivery to your door</p>
-                              <p className="text-slate-500 text-xs mt-0.5">Once you approve the design, we print and ship it immediately.</p>
+
+                      {/* Step 3 */}
+                      <div className="flex flex-col items-center p-2 rounded-xl bg-orange-50/50 border border-orange-100/50">
+                          <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-orange-500 mb-2">
+                              <PackageCheck className="w-3.5 h-3.5" />
                           </div>
+                          <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5">3. Delivery</p>
+                          <p className="text-slate-500 text-[9px] leading-tight">Fast & secure</p>
                       </div>
                   </div>
-                  
-                  <div className="mt-5 pt-4 border-t border-indigo-100 flex flex-wrap gap-4 text-xs font-bold text-slate-600">
-                      <div className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-green-600"/> 100% Safe</div>
-                      <div className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-600"/> Free Cancellation before print</div>
+
+                  <div className="mt-3 flex items-center justify-between text-[9px] font-medium text-slate-500 px-1">
+                      <div className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-emerald-500"/> 100% Safe Payments</div>
+                      <div className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500"/> Free Cancellation</div>
                   </div>
               </div>
               
-              <div className="flex gap-4 mb-8">
-                {/* Wishlist Button */}
+              {/* Actions Row */}
+              <div className="flex gap-3 mb-4">
                 <button 
                   onClick={() => toggleWishlist(product)}
-                  className={`p-4 rounded-2xl border transition-all active:scale-95 ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500 shadow-sm' : 'border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                  className={`p-3 rounded-xl border transition-all active:scale-95 flex items-center justify-center ${isInWishlist ? 'border-red-100 bg-red-50 text-red-500 shadow-sm' : 'border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
                 >
-                  <Heart className={`w-6 h-6 ${isInWishlist ? 'fill-current' : ''}`} />
+                  <Heart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
                 </button>
 
-                {/* --- NAYA MOBILE-FRIENDLY PREMIUM SHARE BUTTON --- */}
                 <button 
                   onClick={handleShare}
-                  className="flex-1 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 shadow-sm flex items-center justify-center gap-3 transition-all active:scale-95 hover:shadow-md"
+                  className="flex-1 p-3 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-slate-200"
                 >
-                  {/* Icon Container - Always visible white background */}
-                  <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-50 flex items-center justify-center">
-                    <Share2 className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  
-                  {/* Text - Always visible gradient */}
-                  <span className="font-bold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent">
+                  <Share2 className="w-4 h-4 text-slate-600" />
+                  <span className="text-sm font-bold text-slate-700 truncate">
                     Share with Friends
                   </span>
                 </button>
-                {/* ------------------------------- */}
               </div>
             </div>
 
+            {/* Sticky Place Order Button */}
             <div className="mt-auto sticky bottom-4 md:static z-30">
               <Button
                 size="lg"
                 onClick={handleAddToCart}
-                className="w-full shadow-2xl shadow-indigo-200 text-lg py-5 rounded-2xl font-bold transition-all hover:-translate-y-1"
+                className="w-full shadow-lg shadow-indigo-200/50 text-base py-3.5 rounded-xl font-bold transition-all hover:-translate-y-0.5"
                 disabled={product.stock <= 0}
-                variant="primary"
+                variant="brand" 
               >
-                <ShoppingBag className="w-6 h-6 mr-2" />
+                <ShoppingBag className="w-5 h-5 mr-2" />
                 {product.stock > 0 ? 'Place Order & Customize Later' : 'Sold Out'}
               </Button>
             </div>
@@ -343,19 +346,18 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         </div>
 
         {/* --- RELATED PRODUCTS SECTION --- */}
-    {/* --- RELATED PRODUCTS SECTION --- */}
-<div className="mt-12 pt-8 border-t border-slate-50 px-5 md:px-0">
-          <div className="flex items-center justify-between mb-12">
-            <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 tracking-tight">Handpicked for You</h2>
-            <div className="h-[2px] flex-1 bg-slate-50 ml-8 rounded-full hidden md:block" />
+        <div className="mt-12 pt-8 border-t border-slate-100 px-5 md:px-0">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">Handpicked for You</h2>
+            <div className="h-[2px] flex-1 bg-slate-100 ml-6 rounded-full hidden md:block" />
           </div>
           
           {isLoadingRelated ? (
-            <div className="flex justify-center items-center py-20">
+            <div className="flex justify-center items-center py-12">
               <div className="w-8 h-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
             </div>
           ) : relatedProducts.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {relatedProducts.map((item) => (
                   <ProductCard 
                       key={item._id} 
@@ -366,8 +368,8 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
               ))}
             </div>
           ) : (
-            <div className="py-16 text-center bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
-              <p className="text-slate-400 font-medium italic">No similar treasures found right now.</p>
+            <div className="py-12 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+              <p className="text-slate-400 font-medium text-sm">No similar treasures found right now.</p>
             </div>
           )}
         </div>
