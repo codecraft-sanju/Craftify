@@ -227,12 +227,12 @@ const CustomerAuth = ({ onLoginSuccess }) => {
     <motion.main
       initial="initial"
       animate="animate"
-      className="min-h-screen w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 pt-24 relative overflow-hidden font-sans"
+      className="h-[100dvh] w-full bg-zinc-50 dark:bg-black flex items-center justify-center p-4 pt-24 relative overflow-hidden font-sans"
     >
       <BackgroundAurora />
 
       {/* --- GLASS HEADER --- */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-6 py-6">
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between bg-white/70 dark:bg-zinc-900/60 backdrop-blur-md rounded-full px-2 py-2 pr-6 border border-white/50 dark:border-zinc-800 shadow-sm">
             <button
@@ -258,7 +258,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
         {/* LEFT SIDE: FORM CONTAINER */}
         <motion.div
           variants={staggerContainer}
-          className="order-2 lg:order-1 max-h-[85vh] overflow-y-auto pr-2 
+          className="order-2 lg:order-1 max-h-[calc(100dvh-7rem)] overflow-y-auto pr-2 
                        [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <motion.div variants={fadeInUp} className="mb-10 mt-6">
@@ -295,7 +295,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
           )}
 
           {/* FORM AREA */}
-          <div className="space-y-2 pb-10">
+          <div className="space-y-2 pb-2">
             <AnimatePresence mode="wait">
                 
                 {/* === LOGIN FORM === */}
@@ -378,7 +378,7 @@ const CustomerAuth = ({ onLoginSuccess }) => {
 
           {/* --- Bottom switch text --- */}
           {!showOtpScreen && (
-            <motion.p variants={fadeInUp} className="mt-4 text-center text-zinc-500 text-sm font-medium pb-10">
+            <motion.p variants={fadeInUp} className="mt-2 text-center text-zinc-500 text-sm font-medium pb-10">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
                   {isLogin ? "Register Now" : "Login Here"}
