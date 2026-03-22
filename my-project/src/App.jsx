@@ -84,11 +84,9 @@ export const Button = ({ children, variant = 'primary', className = '', icon: Ic
     danger: 'bg-white text-red-600 border border-red-100 hover:bg-red-50',
     ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',
     indigo: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20',
-    // Added custom brand color variant
     brand: 'text-white shadow-xl shadow-[#65280E]/20', 
   };
   
-  // Logic to apply the custom brand color if variant is 'brand'
   const buttonClass = variant === 'brand' 
     ? `relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants.brand} ${className}`
     : `relative overflow-hidden transition-all active:scale-95 flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3 text-sm ${variants[variant]} ${className}`;
@@ -113,12 +111,12 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
     red: 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/10',
     slate: 'bg-slate-100 text-slate-700 ring-1 ring-slate-600/10',
     amber: 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20', 
-    brand: 'bg-[#65280E]/10 text-[#65280E] ring-1 ring-[#65280E]/20', // Custom brand badge
+    brand: 'bg-[#65280E]/10 text-[#65280E] ring-1 ring-[#65280E]/20',
   };
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}>{children}</span>;
 };
 
-/* --- MODIFIED: CART DRAWER --- */
+/* --- CART DRAWER --- */
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const itemCount = cart.reduce((acc, item) => acc + item.qty, 0);
@@ -208,11 +206,8 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
     </>
   );
 };
-/* --- END MODIFIED --- */
 
 // --- SECURITY & REDIRECT ROUTES ---
-
-// Naya Component: Agar user logged in hai, toh unko wapas public pages pe aane se rokega
 const AuthRedirect = ({ user, children }) => {
   if (user) {
     if (user.role === 'founder') return <Navigate to="/founder" replace />;
@@ -235,7 +230,6 @@ const BuyerOnlyRoute = ({ children }) => {
   return children;
 };
 
-// --- ADDED: Razorpay Script Loader ---
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
     const script = document.createElement('script');
@@ -251,17 +245,22 @@ const CraftifyContent = () => {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('userInfo')) || null);
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  
+  // --- NAYA CODE: Pagination & Product State ---
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [toasts, setToasts] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orders, setOrders] = useState([]);
-  
-  // --- CHANGES MADE HERE: Added state for Category and Search filtering ---
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -321,6 +320,43 @@ const CraftifyContent = () => {
     } catch (e) { console.error(e); }
   };
 
+  // --- NAYA CODE: Backend se paginate hoke products ayenge ---
+  const fetchProducts = async (pageNum = 1, reset = false) => {
+    try {
+      if (reset) setProductsLoading(true);
+      else setIsFetchingMore(true);
+
+      let url = `${API_URL}/api/products?page=${pageNum}`;
+      if (activeCategory !== 'All') url += `&category=${encodeURIComponent(activeCategory)}`;
+      if (searchQuery) url += `&keyword=${encodeURIComponent(searchQuery)}`;
+
+      const res = await fetch(url);
+      if (res.ok) {
+          const data = await res.json();
+          if (reset) {
+              setProducts(data.products || []);
+          } else {
+              setProducts(prev => [...prev, ...(data.products || [])]);
+          }
+          setPage(data.page || 1);
+          setHasMore(data.hasMore || false);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setProductsLoading(false);
+      setIsFetchingMore(false);
+    }
+  };
+
+  // Jab bhi Category ya Search badlega, Page 1 se fetch hoga
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        fetchProducts(1, true);
+    }, 400); // 400ms debounce typing ke liye
+    return () => clearTimeout(timer);
+  }, [activeCategory, searchQuery]);
+
   useEffect(() => {
     socket = io(ENDPOINT, { withCredentials: true });
     if (currentUser) {
@@ -329,17 +365,9 @@ const CraftifyContent = () => {
       fetchOrders();
       socket.emit('setup', currentUser);
     }
-    fetchProducts();
+    // Note: yaha se fetchProducts() hata diya kyunki ab upar wala useEffect call karega
     return () => socket.disconnect();
   }, [currentUser]);
-
-  const fetchProducts = async () => {
-    try {
-      setProductsLoading(true);
-      const res = await fetch(`${API_URL}/api/products`);
-      setProducts(await res.json());
-    } finally { setProductsLoading(false); }
-  };
 
   const fetchWishlist = async () => {
     const res = await fetch(`${API_URL}/api/users/wishlist`, { credentials: 'include' });
@@ -373,11 +401,9 @@ const CraftifyContent = () => {
 
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  // Handle Login (Redirects based on Role)
   const handleLogin = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem('userInfo', JSON.stringify(userData));
-    // Redirect logic: Founder -> Founder, Seller -> My Shop, Buyer -> Shop
     navigate(userData.role === 'founder' ? '/founder' : userData.role === 'seller' ? '/my-shop' : '/shop');
   };
 
@@ -389,7 +415,6 @@ const CraftifyContent = () => {
     navigate('/');
   };
 
-  // --- UPDATED: confirmOrder for Razorpay Integration ---
   const confirmOrder = async (orderData) => {
     setOrderLoading(true);
 
@@ -403,7 +428,6 @@ const CraftifyContent = () => {
     const totalAmount = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
 
     try {
-      // 1. Ask backend to create a Razorpay Order
       const orderResponse = await fetch(`${API_URL}/api/razorpay/create-order`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -420,7 +444,6 @@ const CraftifyContent = () => {
 
       const order = orderDataResponse.order;
 
-      // 2. Open Razorpay Checkout Modal
       const options = {
         "key":"rzp_live_SKUDOOica8z6I6",
         "amount": order.amount,
@@ -429,8 +452,6 @@ const CraftifyContent = () => {
         "description": "Purchase from Giftomize",
         "order_id": order.id,
         "handler": async function (paymentResponse){
-           // Payment is successful! Now verify and place order on our backend.
-           
            try {
              const verifyRes = await fetch(`${API_URL}/api/razorpay/verify-payment`, {
                method: 'POST',
@@ -445,9 +466,7 @@ const CraftifyContent = () => {
              const verifyData = await verifyRes.json();
              
              if(verifyData.success) {
-                 
                  const orderPayload = {
-                    
                     orderItems: cart.map(i => ({ 
                         product: i.product, 
                         shop: i.shop, 
@@ -481,7 +500,6 @@ const CraftifyContent = () => {
                     setCart([]);
                     setIsCheckoutOpen(false);
                     addToast('Success', 'Payment Successful & Order Placed!');
-                    // --- CHANGES MADE HERE: Added fetchOrders() so profile page shows fresh data immediately ---
                     await fetchOrders(); 
                     navigate('/profile');
                  } else {
@@ -524,10 +542,8 @@ const CraftifyContent = () => {
     }
   };
 
-  // --- FIX APPLIED HERE: Added '/my-shop' and '/founder' to the hide list ---
   const showNavbar = !['/', '/login', '/register', '/seller-register', '/seller-login', '/admin-login', '/my-shop', '/founder'].includes(location.pathname);
 
-  // Toast Component Definition
   const ToastContainer = ({ toasts, removeToast }) => (
     <div className="fixed top-4 right-4 md:top-24 z-[130] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => (
@@ -548,14 +564,12 @@ const CraftifyContent = () => {
       <GlobalStyles />
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       
-      {/* Conditionally Render Navbar */}
       {showNavbar && (
         <Navbar cart={cart} wishlist={wishlist} currentUser={currentUser} setIsCartOpen={setIsCartOpen} />
       )}
       
       <main className={showNavbar ? 'pt-16 md:pt-0' : ''}>
         <Routes>
-          {/* Public Routes Wrapped in AuthRedirect */}
           <Route path="/" element={<AuthRedirect user={currentUser}><LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} /></AuthRedirect>} />
           <Route path="/login" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
           <Route path="/register" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
@@ -566,26 +580,39 @@ const CraftifyContent = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
 
-          {/* Buyer Routes */}
-          {/* --- CHANGES MADE HERE: Passed down state correctly to ShopView --- */}
-          <Route path="/shop" element={<BuyerOnlyRoute><ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery={searchQuery} setSearchQuery={setSearchQuery} activeCategory={activeCategory} setActiveCategory={setActiveCategory} /></BuyerOnlyRoute>} />
+          <Route path="/shop" element={
+            <BuyerOnlyRoute>
+              <ShopView 
+                addToCart={addToCart} 
+                products={products} 
+                isLoading={productsLoading} 
+                wishlist={wishlist} 
+                toggleWishlist={toggleWishlist} 
+                searchQuery={searchQuery} 
+                setSearchQuery={setSearchQuery} 
+                activeCategory={activeCategory} 
+                setActiveCategory={setActiveCategory} 
+                // --- NEW PROPS PASSED HERE ---
+                fetchMoreProducts={() => fetchProducts(page + 1, false)}
+                hasMore={hasMore}
+                isFetchingMore={isFetchingMore}
+              />
+            </BuyerOnlyRoute>
+          } />
+          
           <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           
-          {/* Protected Routes */}
           <Route path="/wishlist" element={<ProtectedRoute user={currentUser}><WishlistView wishlist={wishlist} addToCart={addToCart} removeFromWishlist={(id) => toggleWishlist({_id: id})} /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute user={currentUser}><ProfileView currentUser={currentUser} orders={orders} onLogout={handleLogout} /></ProtectedRoute>} />
           
-          {/* Role Specific Routes */}
         <Route path="/founder" element={<ProtectedRoute user={currentUser} allowedRoles={['founder']}><FounderAccess currentUser={currentUser} onLogout={handleLogout} /></ProtectedRoute>} />
           <Route path="/my-shop" element={<ProtectedRoute user={currentUser} allowedRoles={['seller']}><StoreAdmin currentUser={currentUser} /></ProtectedRoute>} />
           
-          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 
-      {/* Overlays */}
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
       <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
     </div>

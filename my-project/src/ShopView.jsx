@@ -78,14 +78,12 @@ const ProductSkeleton = () => (
     </div>
 );
 
-// --- NAYA CODE: Carousel Skeleton ---
 const CarouselSkeleton = () => (
     <div className="relative h-[300px] sm:h-[400px] md:h-[500px] lg:h-[550px] overflow-hidden mb-8 shadow-lg group bg-slate-800 animate-pulse -mx-4 w-[calc(100%+2rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:mx-0 md:w-full rounded-none md:rounded-3xl flex flex-col items-center justify-center">
         <div className="w-12 h-12 border-4 border-slate-700 border-t-slate-500 rounded-full animate-spin mb-4"></div>
         <p className="text-slate-600 font-bold tracking-widest text-sm uppercase">Loading Offers...</p>
     </div>
 );
-// ------------------------------------
 
 const MarqueeStrip = () => {
     const items = [
@@ -133,7 +131,6 @@ const MarqueeStrip = () => {
     );
 };
 
-// --- NAYA CODE: isPriority prop added ---
 const CarouselImage = ({ offer, isPriority }) => {
     const [isImgLoaded, setIsImgLoaded] = useState(false);
     return (
@@ -159,7 +156,6 @@ const CarouselImage = ({ offer, isPriority }) => {
         </div>
     );
 };
-// ----------------------------------------
 
 const OfferCarousel = ({ bannerData }) => {
     if (bannerData && bannerData.isVisible === false) return null; 
@@ -217,7 +213,6 @@ const OfferCarousel = ({ bannerData }) => {
       >
         {displayOffers.map((offer, index) => (
           <div key={offer._id || offer.id || index} className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`}>
-            {/* --- CHANGE HERE: Passed isPriority prop --- */}
             <CarouselImage offer={offer} isPriority={index === 0} />
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
                <div className="transform transition-all duration-700 translate-y-0 opacity-100">
@@ -328,6 +323,7 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
   }, []);
 
   const fallbackImage = "https://images.unsplash.com/photo-1556742043-272d6b04d444?q=80&w=2070&auto=format&fit=crop";
+  // We still extract categories from currently loaded products, but ideal is fetching full list from backend
   const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
   const displayCategories = ["All", ...productCategories];
 
@@ -450,7 +446,11 @@ const ShopView = ({
     products = [], 
     isLoading,
     wishlist = [],
-    toggleWishlist
+    toggleWishlist,
+    // --- NAYE PROPS AAYE HAIN YAHA SE ---
+    fetchMoreProducts,
+    hasMore,
+    isFetchingMore
 }) => {
   
   const [showPageLoader, setShowPageLoader] = useState(() => {
@@ -507,16 +507,6 @@ const ShopView = ({
     fetchTrendingProducts();
   }, []);
 
-  const filteredProducts = products.filter(p => {
-      const nameMatch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-      const descMatch = p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const searchPass = nameMatch || descMatch;
-      
-      const categoryPass = activeCategory === "All" || (p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
-      
-      return searchPass && categoryPass;
-  });
-
   return (
       <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
             
@@ -528,7 +518,6 @@ const ShopView = ({
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 pt-0 mt-0 flex-1 w-full">
                 
-                {/* --- NAYA CODE: Skeleton Add Kiya Hai --- */}
                 <div className="mt-0">
                     {isBannersLoading ? (
                         <CarouselSkeleton />
@@ -536,7 +525,6 @@ const ShopView = ({
                         <OfferCarousel bannerData={bannerData} />
                     )}
                 </div>
-                {/* -------------------------------------- */}
                 
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
@@ -562,32 +550,24 @@ const ShopView = ({
                             </motion.div>
                         ))}
                         
+                        {/* --- CHANGES HERE: directly map 'products' as they are filtered by backend now --- */}
                         {!isLoading && products.length === 0 && (
                             <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
-                                <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border border-indigo-100"><PackageOpen className="w-10 h-10 text-indigo-500"/></div>
-                                <h3 className="text-2xl font-black text-slate-900">Marketplace is Empty</h3>
-                                <p className="text-slate-500 mt-2 max-w-md mx-auto">Be the first to list a product and start selling to millions.</p>
-                                <Link to="/seller-register" className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 group"><Store className="w-5 h-5" /> Become a Seller <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform"/></Link>
-                            </motion.div>
-                        )}
-                        
-                        {!isLoading && products.length > 0 && filteredProducts.length === 0 && (
-                            <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
                                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
-                                <h3 className="text-xl font-bold text-slate-900">No matches found</h3>
+                                <h3 className="text-xl font-bold text-slate-900">No products found</h3>
                                 <p className="text-slate-500 mt-1">We couldn't find any "{activeCategory !== 'All' ? activeCategory : ''}" products matching "{searchQuery}"</p>
                                 <button onClick={() => { setSearchQuery(""); if(setActiveCategory) setActiveCategory("All"); }} className="mt-6 flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-5 py-2.5 rounded-xl transition-colors"><XCircle className="w-4 h-4"/> Clear All Filters</button>
                             </motion.div>
                         )}
                         
-                        {!isLoading && filteredProducts.map((product, index) => (
+                        {!isLoading && products.map((product, index) => (
                             <motion.div
                                 layout
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={showPageLoader ? { opacity: 0, scale: 0.8 } : { opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8, filter: "blur(5px)" }}
                                 transition={{ duration: 0.4, delay: index * 0.05, ease: "easeOut" }} 
-                                key={product._id || product.id}
+                                key={product._id || product.id || index}
                             >
                                 <ProductCard 
                                     product={product} 
@@ -600,6 +580,29 @@ const ShopView = ({
                         ))}
                     </AnimatePresence>
                 </motion.div>
+
+                {/* --- NAYA CODE: 'See More' Button --- */}
+              {/* --- NAYA CODE: 'See More' Button --- */}
+                {!isLoading && products.length > 0 && (hasMore || isFetchingMore) && (
+                    <div className="col-span-full py-10 flex justify-center w-full mt-4">
+                        {isFetchingMore ? (
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="w-8 h-8 border-4 border-slate-200 border-t-[#65280E] rounded-full animate-spin"></div>
+                                <span className="text-sm font-bold text-slate-500 tracking-wider">LOADING MORE...</span>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={fetchMoreProducts}
+                                className="bg-white text-slate-900 border-2 border-[#65280E] px-8 py-3 rounded-xl font-bold hover:bg-[#65280E] hover:text-white transition-colors duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
+                            >
+                                See More Products
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                )}
+               
+
             </div>
 
            <ReviewsSection currentUser={currentUser} />

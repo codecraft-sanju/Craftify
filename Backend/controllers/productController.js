@@ -6,6 +6,10 @@ const Shop = require('../models/Shop');
 // @access  Public
 const getProducts = async (req, res) => {
     try {
+        // --- CHANGES MADE HERE: Added pagination logic (20 per page) ---
+        const pageSize = 20; 
+        const page = Number(req.query.page) || 1;
+
         const keyword = req.query.keyword
             ? {
                   name: {
@@ -19,17 +23,29 @@ const getProducts = async (req, res) => {
             ? { category: req.query.category } 
             : {};
 
-        // Fetch products as usual
-        let products = await Product.find({ ...keyword, ...category }).populate('shop', 'name logo rating');
+        // Combine all filters
+        const queryFilter = { ...keyword, ...category };
 
-        // --- NEW LOGIC: Shuffle (Randomize) the products array before sending ---
-        // Fisher-Yates algorithm
-        for (let i = products.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [products[i], products[j]] = [products[j], products[i]];
-        }
+        // Count total matching products to tell frontend if there are more
+        const count = await Product.countDocuments(queryFilter);
 
-        res.json(products);
+        // Fetch paginated products with a stable sort (Newest first)
+        const products = await Product.find(queryFilter)
+            .populate('shop', 'name logo rating')
+            .sort({ createdAt: -1 }) // Stable sort ensures products don't repeat across pages
+            .skip(pageSize * (page - 1))
+            .limit(pageSize);
+
+        // --- CHANGES MADE HERE: Removed in-memory shuffle because it breaks pagination ---
+        
+        // Return products along with pagination metadata
+        res.json({
+            products,
+            page,
+            pages: Math.ceil(count / pageSize),
+            hasMore: page * pageSize < count
+        });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

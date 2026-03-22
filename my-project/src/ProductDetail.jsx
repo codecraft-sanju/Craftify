@@ -343,7 +343,8 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         </div>
 
         {/* --- RELATED PRODUCTS SECTION --- */}
-        <div className="mt-24 pt-16 border-t border-slate-50 px-5 md:px-0">
+    {/* --- RELATED PRODUCTS SECTION --- */}
+<div className="mt-12 pt-8 border-t border-slate-50 px-5 md:px-0">
           <div className="flex items-center justify-between mb-12">
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 tracking-tight">Handpicked for You</h2>
             <div className="h-[2px] flex-1 bg-slate-50 ml-8 rounded-full hidden md:block" />
