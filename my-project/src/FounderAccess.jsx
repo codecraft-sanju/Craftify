@@ -231,7 +231,42 @@ export default function FounderAccess({ currentUser, onLogout }) {
         return cloudData.secure_url;
     };
 
-    // ... [Previous Handlers: Category, Banner, Verification, Payout, Batch Delete - remain unchanged] ...
+    // --- NEW HANDLER: DELETE CATEGORY ---
+    const handleDeleteCategory = async (categoryName) => {
+        if (categoryName === "All" || categoryName === "other") {
+            return alert("Cannot delete default categories.");
+        }
+        
+        const confirmDelete = window.confirm(`Are you sure you want to delete '${categoryName}'?\nAll its products will be moved to 'other'.`);
+        if (!confirmDelete) return;
+
+        try {
+            const res = await fetch(`${API_URL}/api/users/categories/${encodeURIComponent(categoryName)}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                // Update local state to remove it
+                setCategoryImages(prev => {
+                    const newImages = { ...prev };
+                    delete newImages[categoryName];
+                    return newImages;
+                });
+                
+                // Also update products state locally so UI updates instantly
+                setProducts(prev => prev.map(p => p.category === categoryName ? { ...p, category: 'other' } : p));
+                alert(`Category ${categoryName} deleted successfully.`);
+            } else {
+                alert("Failed to delete category.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error deleting category.");
+        }
+    };
+    // ------------------------------------
+
     const handleCategoryUpload = async () => {
         if (!newCategoryFile || !editingCategory) return;
         setUploadingCatImg(true);
@@ -975,15 +1010,27 @@ export default function FounderAccess({ currentUser, onLogout }) {
 
                                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                                      {allCategories.map((cat, idx) => (
-                                         <div key={idx} className="group relative bg-white rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer" onClick={() => setEditingCategory(cat)}>
+                                         <div key={idx} className="group relative bg-white rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer">
                                              <div className="aspect-[4/5] relative overflow-hidden bg-slate-200">
                                                  <img src={categoryImages[cat] || DEFAULT_CATEGORY_IMAGES[cat] || DEFAULT_CATEGORY_IMAGES["All"]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={cat} />
                                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
-                                                 <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
-                                                     <Edit className="w-4 h-4 text-white"/>
+                                                 
+                                                 {/* CHANGES MADE HERE: Added Edit and Delete buttons */}
+                                                 <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
+                                                     <button onClick={(e) => { e.stopPropagation(); setEditingCategory(cat); }} className="bg-white/90 backdrop-blur-md p-2.5 rounded-full hover:bg-white text-indigo-600 shadow-lg" title="Edit Image">
+                                                         <Edit className="w-4 h-4"/>
+                                                     </button>
+                                                     
+                                                     {/* Don't show delete for "All" or "other" */}
+                                                     {cat !== "All" && cat !== "other" && (
+                                                         <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }} className="bg-rose-500/90 backdrop-blur-md p-2.5 rounded-full hover:bg-rose-600 text-white shadow-lg" title="Delete Category">
+                                                             <Trash2 className="w-4 h-4"/>
+                                                         </button>
+                                                     )}
                                                  </div>
+                                                 {/* ----------------------------------------------- */}
                                              </div>
-                                             <div className="absolute bottom-0 left-0 right-0 p-5 text-center">
+                                             <div className="absolute bottom-0 left-0 right-0 p-5 text-center pointer-events-none">
                                                  <h3 className="font-bold text-white text-lg drop-shadow-md capitalize">{cat}</h3>
                                                  <p className="text-[10px] text-white/80 uppercase font-bold tracking-widest mt-1">{cat === "All" ? products.length : products.filter(p => p.category === cat).length} Items</p>
                                              </div>

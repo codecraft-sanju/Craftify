@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -56,8 +56,6 @@ const GlobalStyles = () => (
     .pb-safe-area { padding-bottom: env(safe-area-inset-bottom, 20px); }
   `}</style>
 );
-
-// --- PREMIUM UI COMPONENTS ---
 
 export const PremiumImage = ({ src, alt, className = "", objectFit = "cover" }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -116,7 +114,6 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
   return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[color]} ${className}`}>{children}</span>;
 };
 
-/* --- CART DRAWER --- */
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
   const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const itemCount = cart.reduce((acc, item) => acc + item.qty, 0);
@@ -207,7 +204,6 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
   );
 };
 
-// --- SECURITY & REDIRECT ROUTES ---
 const AuthRedirect = ({ user, children }) => {
   if (user) {
     if (user.role === 'founder') return <Navigate to="/founder" replace />;
@@ -240,21 +236,19 @@ const loadRazorpayScript = () => {
   });
 };
 
-// --- MAIN CONTENT ---
 const CraftifyContent = () => {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('userInfo')) || null);
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   
-  // --- NAYA CODE: Pagination & Product State ---
+  // --- CHANGES: Removed pagination states, kept only core product state ---
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const productCache = useRef({}); 
 
   const [toasts, setToasts] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -320,40 +314,44 @@ const CraftifyContent = () => {
     } catch (e) { console.error(e); }
   };
 
-  // --- NAYA CODE: Backend se paginate hoke products ayenge ---
-  const fetchProducts = async (pageNum = 1, reset = false) => {
+  // --- CHANGES: Simplified fetchProducts to fetch all matching products at once ---
+  const fetchProducts = async () => {
     try {
-      if (reset) setProductsLoading(true);
-      else setIsFetchingMore(true);
+      setProductsLoading(true);
 
-      let url = `${API_URL}/api/products?page=${pageNum}`;
-      if (activeCategory !== 'All') url += `&category=${encodeURIComponent(activeCategory)}`;
-      if (searchQuery) url += `&keyword=${encodeURIComponent(searchQuery)}`;
+      const cacheKey = `${activeCategory}_${searchQuery}`;
+      
+      let url = new URL(`${API_URL}/api/products`);
+      if (activeCategory !== 'All') url.searchParams.append('category', activeCategory);
+      if (searchQuery) url.searchParams.append('keyword', searchQuery);
 
-      const res = await fetch(url);
+      const res = await fetch(url.toString());
       if (res.ok) {
           const data = await res.json();
-          if (reset) {
-              setProducts(data.products || []);
-          } else {
-              setProducts(prev => [...prev, ...(data.products || [])]);
-          }
-          setPage(data.page || 1);
-          setHasMore(data.hasMore || false);
+          const newProducts = data.products || [];
+          setProducts(newProducts);
+          // Save directly to cache array
+          productCache.current[cacheKey] = newProducts;
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
       setProductsLoading(false);
-      setIsFetchingMore(false);
     }
   };
 
-  // Jab bhi Category ya Search badlega, Page 1 se fetch hoga
   useEffect(() => {
     const timer = setTimeout(() => {
-        fetchProducts(1, true);
-    }, 400); // 400ms debounce typing ke liye
+        const cacheKey = `${activeCategory}_${searchQuery}`;
+        
+        if (productCache.current[cacheKey]) {
+            setProducts(productCache.current[cacheKey]);
+            setProductsLoading(false); 
+        } else {
+            fetchProducts();
+        }
+    }, 400); 
+    
     return () => clearTimeout(timer);
   }, [activeCategory, searchQuery]);
 
@@ -365,7 +363,6 @@ const CraftifyContent = () => {
       fetchOrders();
       socket.emit('setup', currentUser);
     }
-    // Note: yaha se fetchProducts() hata diya kyunki ab upar wala useEffect call karega
     return () => socket.disconnect();
   }, [currentUser]);
 
@@ -592,10 +589,7 @@ const CraftifyContent = () => {
                 setSearchQuery={setSearchQuery} 
                 activeCategory={activeCategory} 
                 setActiveCategory={setActiveCategory} 
-                // --- NEW PROPS PASSED HERE ---
-                fetchMoreProducts={() => fetchProducts(page + 1, false)}
-                hasMore={hasMore}
-                isFetchingMore={isFetchingMore}
+                // --- CHANGES: Removed pagination props ---
               />
             </BuyerOnlyRoute>
           } />

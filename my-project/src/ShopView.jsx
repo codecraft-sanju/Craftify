@@ -256,11 +256,13 @@ const CategoryImage = ({ src, alt, isActive }) => {
     );
 };
 
-const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], showPageLoader }) => {
+const CategoryHighlight = ({ activeCategory, setActiveCategory, showPageLoader }) => {
   const scrollRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  
+  const [dbCategories, setDbCategories] = useState([]);
 
   const scrollLeftAction = () => {
       if (scrollRef.current) {
@@ -319,13 +321,25 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, products = [], s
             }
         } catch (error) { console.error("Failed to fetch category images", error); }
     };
+
+    const fetchAllCategories = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/products/categories`);
+            if (res.ok) {
+                const data = await res.json();
+                const cleanCategories = data.filter(Boolean).sort();
+                setDbCategories(cleanCategories);
+            }
+        } catch (error) { console.error("Failed to fetch DB categories", error); }
+    };
+
     fetchCategoryImages();
+    fetchAllCategories();
   }, []);
 
   const fallbackImage = "https://images.unsplash.com/photo-1556742043-272d6b04d444?q=80&w=2070&auto=format&fit=crop";
-  // We still extract categories from currently loaded products, but ideal is fetching full list from backend
-  const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
-  const displayCategories = ["All", ...productCategories];
+  
+  const displayCategories = ["All", ...dbCategories];
 
   return (
     <div className="mb-2 relative group px-2 sm:px-0">
@@ -446,11 +460,7 @@ const ShopView = ({
     products = [], 
     isLoading,
     wishlist = [],
-    toggleWishlist,
-    // --- NAYE PROPS AAYE HAIN YAHA SE ---
-    fetchMoreProducts,
-    hasMore,
-    isFetchingMore
+    toggleWishlist
 }) => {
   
   const [showPageLoader, setShowPageLoader] = useState(() => {
@@ -529,7 +539,6 @@ const ShopView = ({
                 <CategoryHighlight 
                     activeCategory={activeCategory} 
                     setActiveCategory={setActiveCategory} 
-                    products={products} 
                     showPageLoader={showPageLoader} 
                 />
 
@@ -550,7 +559,6 @@ const ShopView = ({
                             </motion.div>
                         ))}
                         
-                        {/* --- CHANGES HERE: directly map 'products' as they are filtered by backend now --- */}
                         {!isLoading && products.length === 0 && (
                             <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
                                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
@@ -580,28 +588,6 @@ const ShopView = ({
                         ))}
                     </AnimatePresence>
                 </motion.div>
-
-                {/* --- NAYA CODE: 'See More' Button --- */}
-              {/* --- NAYA CODE: 'See More' Button --- */}
-                {!isLoading && products.length > 0 && (hasMore || isFetchingMore) && (
-                    <div className="col-span-full py-10 flex justify-center w-full mt-4">
-                        {isFetchingMore ? (
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-8 h-8 border-4 border-slate-200 border-t-[#65280E] rounded-full animate-spin"></div>
-                                <span className="text-sm font-bold text-slate-500 tracking-wider">LOADING MORE...</span>
-                            </div>
-                        ) : (
-                            <button 
-                                onClick={fetchMoreProducts}
-                                className="bg-white text-slate-900 border-2 border-[#65280E] px-8 py-3 rounded-xl font-bold hover:bg-[#65280E] hover:text-white transition-colors duration-300 flex items-center gap-2 shadow-sm hover:shadow-md"
-                            >
-                                See More Products
-                                <ArrowRight className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                )}
-               
 
             </div>
 

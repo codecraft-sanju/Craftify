@@ -544,6 +544,36 @@ const addToWishlist = async (req, res) => {
     }
 };
 
+// --- NEW FEATURE: Delete Category Entirely ---
+// @desc    Delete a category visual AND move its products to 'uncategorized'
+// @route   DELETE /api/users/categories/:categoryName
+// @access  Private (Founder only)
+const deleteCategory = async (req, res) => {
+    try {
+        const categoryName = req.params.categoryName;
+
+        // 1. Delete image from GlobalSettings
+        let settings = await GlobalSettings.findOne();
+        if (settings && settings.categoryImages && settings.categoryImages.has(categoryName)) {
+            settings.categoryImages.delete(categoryName);
+            settings.updatedBy = req.user._id;
+            await settings.save();
+        }
+
+        // 2. Move all products that had this category to "other" (Need to import Product at top of userController.js)
+        const Product = require('../models/Product'); // Assuming this exists or require it
+        await Product.updateMany(
+            { category: categoryName },
+            { $set: { category: 'other' } }
+        );
+
+        res.json({ message: `Category '${categoryName}' deleted successfully.` });
+    } catch (error) {
+        console.error("Delete Category Error:", error);
+        res.status(500).json({ message: "Failed to delete category" });
+    }
+};
+
 // Remove from Wishlist
 const removeFromWishlist = async (req, res) => {
     try {
@@ -630,5 +660,6 @@ module.exports = {
     addToWishlist,
     removeFromWishlist,
     receiveAirtextWebhook,
-    subscribeToPushNotifications 
+    subscribeToPushNotifications ,
+    deleteCategory
 };

@@ -20,7 +20,6 @@ import Footer from './Footer';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// --- Cloudinary Helper ---
 const optimizeCloudinaryUrl = (url) => {
     if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
     if (url.includes('/upload/f_auto,q_auto')) return url;
@@ -28,7 +27,6 @@ const optimizeCloudinaryUrl = (url) => {
     if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
     return url;
 };
-// ------------------------------------
 
 const ProductImagePreview = ({ activeImage, isMobileView }) => (
   <div className={`relative w-full bg-slate-50 flex justify-center items-center ${isMobileView ? '' : 'rounded-3xl'} overflow-hidden border border-slate-100 shadow-sm`}>
@@ -42,8 +40,15 @@ const ProductImagePreview = ({ activeImage, isMobileView }) => (
 
 const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishlist }) => {
   const { id } = useParams();
-  const product = products.find((p) => p._id === id);
   
+  // --- CHANGES MADE HERE: Added local state to handle products missing from the main array ---
+  const productFromProps = products.find((p) => p._id === id);
+  const [fetchedProduct, setFetchedProduct] = useState(null);
+  const [isFetchingProduct, setIsFetchingProduct] = useState(!productFromProps);
+  
+  const product = productFromProps || fetchedProduct;
+  // ---------------------------------------------------------------------------------------
+
   const [activeImage, setActiveImage] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -55,6 +60,26 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // --- CHANGES MADE HERE: Added fetch logic if product is not in the paginated props ---
+    const fetchSingleProduct = async () => {
+      if (!productFromProps) {
+        try {
+          const res = await fetch(`${API_URL}/api/products/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setFetchedProduct(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch product directly", error);
+        } finally {
+          setIsFetchingProduct(false);
+        }
+      }
+    };
+
+    fetchSingleProduct();
+    // ---------------------------------------------------------------------------------------
+
     const trackProductView = async () => {
         try {
             await fetch(`${API_URL}/api/products/${id}/view`, {
@@ -87,7 +112,7 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         fetchRelatedProducts();
         trackProductView();
     }
-  }, [id]);
+  }, [id, productFromProps]); // --- CHANGES MADE HERE: Added productFromProps to dependency array ---
 
   useEffect(() => {
     if (product) {
@@ -119,8 +144,8 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
   const handleShare = async () => {
       const shareData = {
-          title: `Buy ${product.name} on Giftomize`,
-          text: `Check out this amazing customized gift: ${product.name} 🔥`,
+          title: `Buy ${product?.name} on Giftomize`,
+          text: `Check out this amazing customized gift: ${product?.name} 🔥`,
           url: window.location.href
       };
 
@@ -136,7 +161,8 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
       }
   };
 
-  if (!product)
+  // --- CHANGES MADE HERE: Updated loading state to wait for our new direct API fetch ---
+  if (!product && isFetchingProduct)
     return (
       <div className="h-screen flex flex-col items-center justify-center">
         <div className="w-8 h-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
@@ -144,12 +170,19 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
       </div>
     );
 
+  if (!product && !isFetchingProduct)
+    return (
+      <div className="h-screen flex flex-col items-center justify-center">
+        <p className="text-slate-500 mt-4 font-medium">Product not found.</p>
+      </div>
+    );
+  // ---------------------------------------------------------------------------------------
+
   return (
     <>
       <div className="pt-2 md:pt-24 pb-20 max-w-7xl mx-auto px-0 md:px-6 animate-in fade-in duration-500">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 md:gap-12 lg:gap-16 items-start">
           
-          {/* --- LEFT COLUMN: GALLERY --- */}
           <div className="w-full max-w-xl mx-auto space-y-4">
             <div className="relative">
               <div 
@@ -214,11 +247,9 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
             )}
           </div>
 
-          {/* --- RIGHT COLUMN: DETAILS (COMPACT FIT) --- */}
           <div className="flex flex-col h-full pt-6 md:pt-0 px-5 md:px-0">
             <div className="mb-4">
               
-              {/* Badges */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <Badge color="indigo" className="text-[10px] uppercase font-bold tracking-widest px-2">
                   {product.category}
@@ -235,12 +266,10 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                 )}
               </div>
 
-              {/* Title */}
               <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-2 leading-tight tracking-tight">
                 {product.name}
               </h1>
               
-              {/* Price and Store Info */}
               <div className="flex items-center justify-between border-y border-slate-100 py-3 mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100">
@@ -258,14 +287,12 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                 </div>
               </div>
 
-              {/* Description */}
               <div className="prose prose-slate mb-4">
                 <p className="text-slate-600 text-sm font-medium leading-snug line-clamp-3">
                   {product.description}
                 </p>
               </div>
 
-              {/* 🔥 How Customization Works Section (PREMIUM & AESTHETIC) 🔥 */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
                   <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
                      <span className="w-1.5 h-4 bg-[#65280E] rounded-full"></span> 
@@ -273,7 +300,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                   </h3>
                   
                   <div className="grid grid-cols-3 gap-2 text-center">
-                      {/* Step 1 */}
                       <div className="flex flex-col items-center p-2 rounded-xl bg-slate-50 border border-slate-100/50">
                           <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-indigo-600 mb-2">
                               <ShoppingBag className="w-3.5 h-3.5" />
@@ -282,7 +308,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                           <p className="text-slate-500 text-[9px] leading-tight">Secure it first</p>
                       </div>
                       
-                      {/* Step 2 */}
                       <div className="flex flex-col items-center p-2 rounded-xl bg-green-50/50 border border-green-100/50">
                           <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-green-500 mb-2 relative">
                               <MessageCircle className="w-3.5 h-3.5" />
@@ -292,7 +317,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                           <p className="text-slate-500 text-[9px] leading-tight">Share details</p>
                       </div>
 
-                      {/* Step 3 */}
                       <div className="flex flex-col items-center p-2 rounded-xl bg-orange-50/50 border border-orange-100/50">
                           <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm text-orange-500 mb-2">
                               <PackageCheck className="w-3.5 h-3.5" />
@@ -308,7 +332,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
                   </div>
               </div>
               
-              {/* Actions Row */}
               <div className="flex gap-3 mb-4">
                 <button 
                   onClick={() => toggleWishlist(product)}
@@ -329,7 +352,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
               </div>
             </div>
 
-            {/* Sticky Place Order Button */}
             <div className="mt-auto sticky bottom-4 md:static z-30">
               <Button
                 size="lg"
@@ -345,7 +367,6 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
           </div>
         </div>
 
-        {/* --- RELATED PRODUCTS SECTION --- */}
         <div className="mt-12 pt-8 border-t border-slate-100 px-5 md:px-0">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">Handpicked for You</h2>

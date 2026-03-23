@@ -12,7 +12,8 @@ const {
     getProductsByShop,
     deleteProductsBatch,
     incrementProductView,
-    getTrendingProducts
+    getTrendingProducts,
+    getCategories // --- CHANGES MADE HERE: Added getCategories import ---
 } = require('../controllers/productController');
 
 // --- CHANGES MADE HERE: Removed 'seller' import since we handle roles in the controller now ---
@@ -31,6 +32,12 @@ router.route('/batch').delete(protect, deleteProductsBatch);
 router.get('/top', getTopProducts);
 // --- CHANGES MADE HERE: Added trending route (Must be before /:id) ---
 router.get('/trending', getTrendingProducts);
+
+// --- NEW CATEGORIES ROUTE ---
+// CHANGES MADE HERE: Must be before any /:id routes so Express doesn't treat 'categories' as an ID
+router.get('/categories', getCategories);
+// ----------------------------
+
 router.get('/shop/:shopId', getProductsByShop);
 
 // Reviews

@@ -24,7 +24,8 @@ const {
     addToWishlist,
     removeFromWishlist,
     receiveAirtextWebhook,
-    subscribeToPushNotifications // CHANGES MADE: Imported new push notification controller
+    subscribeToPushNotifications, // CHANGES MADE: Imported new push notification controller
+    deleteCategory // --- NEW: Import deleteCategory function ---
 } = require('../controllers/userController');
 const { protect, founder } = require('../middleware/authMiddleware');
 
@@ -48,6 +49,9 @@ router.post('/qr', protect, founder, updateGlobalQR); // Founder Only
 // 2. Category Images 
 router.get('/categories', getCategoryImages); // Public
 router.put('/categories', protect, founder, updateCategoryImage); // Founder Only
+// --- NEW: Route to delete a category and its image ---
+router.delete('/categories/:categoryName', protect, founder, deleteCategory); // Founder Only
+// -----------------------------------------------------
 
 // 3. Offer Banners
 router.get('/banners', getOfferBanners); // Public
@@ -77,6 +81,6 @@ router.route('/:id')
     .put(protect, founder, updateUser)
     .delete(protect, founder, deleteUser);
 
-    router.post('/webhook', receiveAirtextWebhook);
+router.post('/webhook', receiveAirtextWebhook);
 
 module.exports = router;
