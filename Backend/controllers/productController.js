@@ -1,13 +1,12 @@
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 
-// @desc    Fetch all products (Marketplace View)
-// @route   GET /api/products
-// @access  Public
+// ProductController.js -> getProducts
+
+// ProductController.js -> getProducts
+
 const getProducts = async (req, res) => {
     try {
-        // --- CHANGES MADE HERE: Completely removed pagination. Fetching ALL matching products. ---
-        
         const keyword = req.query.keyword
             ? {
                   name: {
@@ -17,22 +16,21 @@ const getProducts = async (req, res) => {
               }
             : {};
 
+        // --- THE BULLETPROOF FIX FOR 2-WORD CATEGORIES ---
+        // Yahan exact match ki jagah flexible regex lagaya hai 
+        // Jo aage-peeche ke extra spaces ko ignore kar dega aur 'Wooden frame' dhund lega
         const category = req.query.category && req.query.category !== 'All' 
-            ? { category: req.query.category } 
+            ? { category: { $regex: req.query.category.trim(), $options: 'i' } } 
             : {};
 
-        // Combine all filters
         const queryFilter = { ...keyword, ...category };
 
-        // Count total matching products (good to keep for reference)
         const count = await Product.countDocuments(queryFilter);
 
-        // Fetch ALL products with a stable sort (Newest first) - Removed skip() and limit()
         const products = await Product.find(queryFilter)
             .populate('shop', 'name logo rating')
             .sort({ createdAt: -1 });
         
-        // Return all products. hasMore is set to false so 'See More' button never shows up.
         res.json({
             products,
             page: 1,
@@ -44,7 +42,6 @@ const getProducts = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
 // @desc    Fetch single product
 // @route   GET /api/products/:id
 // @access  Public
