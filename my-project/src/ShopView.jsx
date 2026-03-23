@@ -476,6 +476,20 @@ const ShopView = ({
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
 
+  // CHANGES MADE HERE: Smart filtering code added to handle case sensitivity and spaces
+  const filteredProducts = products.filter((product) => {
+      const prodCategory = (product?.category || "").toLowerCase().trim();
+      const selectedCategory = (activeCategory || "").toLowerCase().trim();
+      const matchCategory = activeCategory === "All" || prodCategory === selectedCategory;
+
+      const prodName = (product?.name || "").toLowerCase();
+      const search = (searchQuery || "").toLowerCase().trim();
+      const matchSearch = search === "" || prodName.includes(search);
+
+      return matchCategory && matchSearch;
+  });
+  // ---------------------------------------------------------------------------------------
+
   useEffect(() => {
       if (showPageLoader) {
           const timer = setTimeout(() => {
@@ -559,7 +573,7 @@ const ShopView = ({
                             </motion.div>
                         ))}
                         
-                        {!isLoading && products.length === 0 && (
+                        {!isLoading && filteredProducts.length === 0 && (
                             <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="col-span-full flex flex-col items-center justify-center py-20 text-center duration-500">
                                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-400"/></div>
                                 <h3 className="text-xl font-bold text-slate-900">No products found</h3>
@@ -568,7 +582,7 @@ const ShopView = ({
                             </motion.div>
                         )}
                         
-                        {!isLoading && products.map((product, index) => (
+                        {!isLoading && filteredProducts.map((product, index) => (
                             <motion.div
                                 layout
                                 initial={{ opacity: 0, scale: 0.8 }}
