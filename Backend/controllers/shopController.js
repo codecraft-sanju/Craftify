@@ -7,8 +7,8 @@ const User = require('../models/User');
 // @access  Private (Registered User)
 const registerShop = async (req, res) => {
     try {
-        // --- CHANGE: Added paymentQrCode to destructuring ---
-        const { name, tagline, description, phone, logo, paymentQrCode } = req.body;
+        // --- CHANGE: Added paymentQrCode and address to destructuring ---
+        const { name, tagline, description, phone, logo, paymentQrCode, address } = req.body;
 
         // 1. Create the Shop directly (No "Already Exists" check)
         const shop = await Shop.create({
@@ -20,6 +20,8 @@ const registerShop = async (req, res) => {
             logo: logo || undefined, 
             // Save Seller QR Code if provided
             paymentQrCode: paymentQrCode || '', 
+            // --- CHANGE: Save address during registration ---
+            address: address || {},
             isActive: true 
         });
 
@@ -107,6 +109,11 @@ const updateShopProfile = async (req, res) => {
                 shop.paymentQrCode = req.body.paymentQrCode;
             }
             // -------------------------------------
+
+            // --- CHANGE: Update Address if provided ---
+            if (req.body.address) {
+                shop.address = req.body.address;
+            }
 
             const updatedShop = await shop.save();
 

@@ -104,7 +104,8 @@ const sendRegistrationOtp = async (req, res) => {
 // @access  Public
 const verifyOtpAndRegister = async (req, res) => {
     try {
-        const { name, email, password, phone, role, shopName, description, categories, otp } = req.body;
+        // --- CHANGE: Added shopAddress to destructuring ---
+        const { name, email, password, phone, role, shopName, description, categories, otp, shopAddress } = req.body;
 
         // --- PHONE NUMBER FORMATTING ---
         let formattedPhone = phone.toString().replace(/\D/g, ''); 
@@ -162,6 +163,8 @@ const verifyOtpAndRegister = async (req, res) => {
                     description: description || 'Welcome to my shop',
                     phone: formattedPhone, // Saved with 91
                     categories: categories || [],
+                    // --- CHANGE: Save address during user/shop registration ---
+                    address: shopAddress || {},
                     owner: user._id,
                     isActive: true
                 });

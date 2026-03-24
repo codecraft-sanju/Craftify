@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, ShoppingBag, 
-  Sparkles, Loader2, Eye, EyeOff, Key, MessageCircle
+  Sparkles, Loader2, Eye, EyeOff, Key, MessageCircle,
+  // --- CHANGE: Added new icons for Address ---
+  MapPin, Building, Map, Globe, Hash
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -60,8 +62,8 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
                    focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
       />
       <span className={`absolute ${prefix ? 'left-9' : 'left-0'} top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
-                       peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
-                       peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:left-0 peer-[:not(:placeholder-shown)]:text-zinc-500`}>
+                        peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
+                        peer-[:not(:placeholder-shown)]:-top-4 peer-[:not(:placeholder-shown)]:left-0 peer-[:not(:placeholder-shown)]:text-zinc-500`}>
         {label}
       </span>
       
@@ -174,6 +176,14 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
     shopName: '',
     category: 'Clothing & Apparel',
     description: 'Welcome to my new shop on Giftomize!',
+    // --- CHANGE: Added shopAddress to State ---
+    shopAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'India'
+    }
   });
 
   // Switcher Effect
@@ -194,6 +204,19 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
     setFormData({ ...formData, [name]: value });
     setError(""); 
+  };
+
+  // --- CHANGE: Added specific handler for address fields ---
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      shopAddress: {
+        ...formData.shopAddress,
+        [name]: value
+      }
+    });
+    setError("");
   };
 
   const handleSwitchMode = () => {
@@ -268,7 +291,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                         role: 'seller', 
                         shopName: formData.shopName,
                         description: formData.description,
-                        categories: [formData.category], 
+                        categories: [formData.category],
+                        // --- CHANGE: Send shopAddress here ---
+                        shopAddress: formData.shopAddress,
                         otp: 'bypass' // Backend ignores this when OTP_SERVICE is false or skipped
                     })
                 });
@@ -308,7 +333,9 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                 role: 'seller', 
                 shopName: formData.shopName,
                 description: formData.description,
-                categories: [formData.category], 
+                categories: [formData.category],
+                // --- CHANGE: Send shopAddress here too ---
+                shopAddress: formData.shopAddress,
                 otp: otp
             })
         });
@@ -452,7 +479,7 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                     </motion.div>
                 )}
 
-                {/* === REGISTER STEP 2: Shop Info === */}
+                {/* === REGISTER STEP 2: Shop Info & Address === */}
                 {!isLoginView && step === 2 && (
                     <motion.form onSubmit={handleSubmit} key="step2" variants={fadeInUp} initial="initial" animate="animate" exit="exit" className="space-y-6">
                         <InputGroup icon={Store} name="shopName" value={formData.shopName} onChange={handleChange} type="text" label="Shop Name" autoFocus />
@@ -464,6 +491,21 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
                             options={['Clothing & Apparel', 'Art & Decor', 'Tech Accessories', 'Handmade Goods', 'Food & Beverage']}
                             onChange={handleChange}
                         />
+
+                        {/* --- CHANGE: Added Address Fields UI --- */}
+                        <div className="pt-2 pb-2">
+                          <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2">Shop Address</h3>
+                          <InputGroup icon={MapPin} name="street" value={formData.shopAddress.street} onChange={handleAddressChange} type="text" label="Street / Building / Area" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <InputGroup icon={Building} name="city" value={formData.shopAddress.city} onChange={handleAddressChange} type="text" label="City" />
+                            <InputGroup icon={Map} name="state" value={formData.shopAddress.state} onChange={handleAddressChange} type="text" label="State" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <InputGroup icon={Hash} name="zipCode" value={formData.shopAddress.zipCode} onChange={handleAddressChange} type="text" label="ZIP / PIN Code" />
+                            <InputGroup icon={Globe} name="country" value={formData.shopAddress.country} onChange={handleAddressChange} type="text" label="Country" />
+                          </div>
+                        </div>
+                        {/* -------------------------------------- */}
 
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => setStep(1)} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">

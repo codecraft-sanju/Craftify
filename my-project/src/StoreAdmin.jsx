@@ -5,7 +5,8 @@ import {
     DollarSign, Star, Settings, RefreshCcw, Store,
     LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
-    ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2
+    ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2,
+    Building, Map, Globe, Hash // --- CHANGE: Added Icons for Address ---
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -132,6 +133,15 @@ export default function StoreAdmin({ currentUser }) {
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
     
+    // --- CHANGE: Added Address State ---
+    const [address, setAddress] = useState({
+        street: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "India"
+    });
+    
     useEffect(() => {
         socket = io(ENDPOINT, { withCredentials: true });
         if(currentUser) {
@@ -193,6 +203,16 @@ export default function StoreAdmin({ currentUser }) {
                 if(shopData && shopData.paymentQrCode) {
                     setSellerQrPreview(shopData.paymentQrCode); 
                 }
+                // --- CHANGE: Load address into state ---
+                if (shopData && shopData.address) {
+                    setAddress({
+                        street: shopData.address.street || "",
+                        city: shopData.address.city || "",
+                        state: shopData.address.state || "",
+                        zipCode: shopData.address.zipCode || "",
+                        country: shopData.address.country || "India"
+                    });
+                }
                 if(shopData && shopData._id) {
                     const [prodRes, ordRes] = await Promise.all([
                         fetch(`${API_URL}/api/products/shop/${shopData._id}`),
@@ -250,7 +270,9 @@ export default function StoreAdmin({ currentUser }) {
                     description: formData.get('description'), 
                     phone: formData.get('phone'), 
                     tagline: formData.get('tagline'),
-                    paymentQrCode: paymentQrCode 
+                    paymentQrCode: paymentQrCode,
+                    // --- CHANGE: Send address in update payload ---
+                    address: address 
                 })
             });
             if(res.ok) { 
@@ -260,6 +282,12 @@ export default function StoreAdmin({ currentUser }) {
                 setSellerQrFile(null);
             }
         } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
+    };
+
+    // --- CHANGE: Handle Address Input Changes ---
+    const handleAddressChange = (e) => {
+        const { name, value } = e.target;
+        setAddress(prev => ({ ...prev, [name]: value }));
     };
 
     const handleImageUpload = async (e) => {
@@ -760,11 +788,70 @@ export default function StoreAdmin({ currentUser }) {
                                     <Card className="p-6 md:p-8">
                                         <form onSubmit={handleUpdateStore} className="space-y-6">
                                             <div className="grid grid-cols-1 gap-5">
-                                                <div className="space-y-1"><label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Store Name</label><input name="storeName" defaultValue={shop?.name} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" /></div>
-                                                <div className="space-y-1"><label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Contact Phone</label><input name="phone" defaultValue={shop?.phone} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" /></div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Store Name</label>
+                                                    <input name="storeName" defaultValue={shop?.name} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Contact Phone</label>
+                                                    <input name="phone" defaultValue={shop?.phone} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" />
+                                                </div>
                                             </div>
-                                            <div className="space-y-1"><label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Tagline</label><input name="tagline" defaultValue={shop?.tagline} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" placeholder="e.g. Best Electronics in Town" /></div>
-                                            <div className="space-y-1"><label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Description</label><textarea name="description" defaultValue={shop?.description} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" rows="4"/></div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Tagline</label>
+                                                <input name="tagline" defaultValue={shop?.tagline} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" placeholder="e.g. Best Electronics in Town" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-extrabold uppercase text-slate-500 tracking-wider">Description</label>
+                                                <textarea name="description" defaultValue={shop?.description} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" rows="4"/>
+                                            </div>
+
+                                            {/* --- CHANGE: Store Address Section --- */}
+                                            <div className="p-5 bg-slate-800/50 rounded-2xl border border-white/5 space-y-4">
+                                                <h4 className="font-bold text-slate-300 mb-2 flex items-center gap-2">
+                                                    <MapPin className="w-5 h-5 text-rose-500"/> Store Address
+                                                </h4>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Street Address</label>
+                                                    <div className="relative">
+                                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                                                        <input name="street" value={address.street} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="123 Main St" />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">City</label>
+                                                        <div className="relative">
+                                                            <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                                                            <input name="city" value={address.city} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="City" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">State</label>
+                                                        <div className="relative">
+                                                            <Map className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                                                            <input name="state" value={address.state} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="State" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">ZIP Code</label>
+                                                        <div className="relative">
+                                                            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                                                            <input name="zipCode" value={address.zipCode} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="000000" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Country</label>
+                                                        <div className="relative">
+                                                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
+                                                            <input name="country" value={address.country} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="Country" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {/* -------------------------------------- */}
                                             
                                             <div className="p-5 bg-slate-800/50 rounded-2xl border border-white/5">
                                                 <h4 className="font-bold text-slate-300 mb-2 flex items-center gap-2"><QrCode className="w-5 h-5 text-rose-500"/> Payment QR</h4>
