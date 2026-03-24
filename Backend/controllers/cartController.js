@@ -7,7 +7,8 @@ const Product = require('../models/Product');
 // @access  Private
 const getCart = async (req, res) => {
     try {
-        let cart = await Cart.findOne({ user: req.user._id }).populate('items.product', 'name price coverImage stock');
+        // --- CHANGES MADE HERE: Added 'shippingCost' to populate select ---
+        let cart = await Cart.findOne({ user: req.user._id }).populate('items.product', 'name price coverImage stock shippingCost');
         
         if (!cart) {
             // Agar cart nahi hai, toh empty return karo bajaye error ke
@@ -52,6 +53,8 @@ const addToCart = async (req, res) => {
             image: itemImage, // Updated to use dynamic image
             price: product.price,
             qty: Number(qty) || 1,
+            // --- CHANGES MADE HERE: Added shippingCost from Product model ---
+            shippingCost: product.shippingCost || 0,
             selectedSize,
             selectedColor,
             customization, // Yeh ab naturally photoUrl handle kar lega

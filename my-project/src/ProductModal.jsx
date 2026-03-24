@@ -28,9 +28,7 @@ export default function ProductModal({
   showCategoryDropdown,
   setShowCategoryDropdown,
   getAvailableCategories,
-  // Prop Changes: colors aur setColors props ko yahan se hata diya gaya hai
 }) {
-  // Function Changes: handleAddColor, handleRemoveColor, aur handleColorChange functions ko hata diya gaya hai
 
   return (
     <>
@@ -144,17 +142,9 @@ export default function ProductModal({
               />
             </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 my-4">
-              <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                <span className="text-rose-400 font-bold">Recommendation:</span>{' '}
-                For a seamless customer experience, please include your
-                estimated shipping cost within the base price. Offering "Free
-                Delivery" directly builds trust and increases your sales.
-              </p>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1 space-y-1">
+            {/* --- CHANGES MADE HERE: Grid adjusted to 2 columns to fit Shipping Cost nicely --- */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
                 <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">
                   Price (₹)
                 </label>
@@ -167,7 +157,7 @@ export default function ProductModal({
                   placeholder="0"
                 />
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="space-y-1">
                 <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">
                   compareAtPrice (₹)
                 </label>
@@ -179,7 +169,7 @@ export default function ProductModal({
                   placeholder="0"
                 />
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="space-y-1">
                 <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">
                   Stock
                 </label>
@@ -192,7 +182,21 @@ export default function ProductModal({
                   placeholder="0"
                 />
               </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest ml-1">
+                  Shipping (₹)
+                </label>
+                <input
+                  name="shippingCost"
+                  defaultValue={editingProduct?.shippingCost}
+                  required
+                  type="number"
+                  className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold text-white placeholder:text-slate-600"
+                  placeholder="0"
+                />
+              </div>
             </div>
+            {/* -------------------------------------------------------------------------------- */}
 
             {/* CATEGORY SECTION */}
             <div className="space-y-1 relative group z-30">

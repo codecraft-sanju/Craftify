@@ -1,4 +1,4 @@
-// models/Cart.js
+// backend/models/Cart.js
 const mongoose = require('mongoose');
 
 const cartItemSchema = new mongoose.Schema({
@@ -16,12 +16,15 @@ const cartItemSchema = new mongoose.Schema({
         default: 1,
         min: [1, 'Quantity cannot be less than 1'] 
     },
+ 
+    shippingCost: { type: Number, default: 0 },
+
     selectedSize: { type: String },
     selectedColor: { type: String },
     customization: {
         text: { type: String },
         font: { type: String },
-        // --- CHANGES MADE HERE: Added photoUrl to store uploaded customization image in cart ---
+       
         photoUrl: { type: String }
     },
     shop: {

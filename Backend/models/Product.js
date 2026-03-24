@@ -55,6 +55,11 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    shippingCost: {
+        type: Number,
+        default: 0,
+        required: [true, 'Please enter shipping cost']
+    },
     sku: {
         type: String, 
         unique: true,
@@ -69,14 +74,6 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 5 
     },
-    shipping: {
-        weight: { type: Number, default: 0 }, 
-        dimensions: {
-            length: { type: Number, default: 0 },
-            width: { type: Number, default: 0 },
-            height: { type: Number, default: 0 }
-        }
-    },
     coverImage: {
         type: String,
         required: true
@@ -87,7 +84,6 @@ const productSchema = new mongoose.Schema({
             url: { type: String, required: true }
         }
     ],
-    // --- CHANGES MADE HERE: Updated colors to hold name, hex code, and specific image ---
     colors: [{
         name: { type: String, required: true }, // e.g., "Midnight Black"
         hexCode: { type: String },              // e.g., "#000000"

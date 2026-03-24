@@ -95,7 +95,8 @@ Thank you for shopping with Giftomize! Your payment has been received and your o
 
 *Order Details:*
 ${productDetails}
-*Total Amount:* ₹${totalPrice}
+*Total Amount:* ₹${totalPrice} (incl. ₹${shippingPrice} Shipping)
+
 The seller will contact you shortly on WhatsApp for any customization details or order updates.
 Best Regards,
 *Team Giftomize*`;
@@ -128,7 +129,7 @@ Best Regards,
                     const customerPhone = shippingAddress.phone || req.user.phone || 'Not provided';
                     const fullAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.postalCode}`;
 
-                const sellerMsg = `🎉 New Order on Giftomize! (Order ID: #${shortOrderId})\n\n*Customer Note:* "Hello, I have successfully placed an order on the Giftomize website. Please process my order."\n\n*🛍️ Order Details:*\n${shopProductDetails}\n*👤 Customer Information:*\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${fullAddress}\n\nPlease reach out to the customer directly via WhatsApp for any photos, sizes, or specific customization details required. Happy Selling!`;
+                const sellerMsg = `🎉 New Order on Giftomize! (Order ID: #${shortOrderId})\n\n*Customer Note:* "Hello, I have successfully placed an order on the Giftomize website. Please process my order."\n\n*🛍️ Order Details:*\n${shopProductDetails}\n*👤 Customer Information:*\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${fullAddress}\n\n*Note:* The customer has paid the total amount including shipping.\nPlease reach out to the customer directly via WhatsApp for any photos, sizes, or specific customization details required. Happy Selling!`;
                     
                     const imageUrl = shopItems[0] ? (shopItems[0].image || shopItems[0].coverImage) : null;
                     sendWhatsApp(shop.phone, sellerMsg, imageUrl).catch(() => {}); 
@@ -256,7 +257,7 @@ const verifyOrderPayment = async (req, res) => {
                         });
 
                         if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-                           webpush.setVapidDetails(
+                            webpush.setVapidDetails(
                                 'mailto:sanjaychoudhury693@gmail.com', 
                                 process.env.VAPID_PUBLIC_KEY,
                                 process.env.VAPID_PRIVATE_KEY

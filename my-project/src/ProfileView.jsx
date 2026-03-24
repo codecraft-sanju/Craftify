@@ -1,3 +1,4 @@
+// src/ProfileView.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 // --- CHANGES MADE HERE: Added Image as ImageIcon to imports ---
@@ -121,7 +122,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
     doc.setFont("helvetica", "normal");
     doc.text(user?.email || '', 120, 60);
 
-    const tableColumn = ["Item Details", "Qty", "Price", "Total"];
+    const tableColumn = ["Item Details", "Qty", "Price", "Shipping", "Total"];
     const tableRows = [];
 
     order.items?.forEach(item => {
@@ -136,13 +137,19 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
         itemDesc += `\n(${extras.join(', ')})`;
       }
 
+      // --- CHANGES MADE HERE: Added shipping cost to invoice breakdown ---
+      const itemShipping = item.shippingCost || 0;
+      const itemTotal = (item.qty * item.price) + (item.qty * itemShipping);
+
       const itemData = [
         itemDesc,
         item.qty,
         `Rs ${item.price}`,
-        `Rs ${item.qty * item.price}`
+        `Rs ${itemShipping}`,
+        `Rs ${itemTotal}`
       ];
       tableRows.push(itemData);
+      // -------------------------------------------------------------------
     });
 
     autoTable(doc, {
@@ -152,7 +159,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
       theme: 'striped',
       headStyles: { fillColor: [79, 70, 229] },
       styles: { cellPadding: 3, fontSize: 10, valign: 'middle' },
-      columnStyles: { 0: { cellWidth: 80 } }
+      columnStyles: { 0: { cellWidth: 70 } }
     });
 
     const finalY = doc.lastAutoTable.finalY || 80;
@@ -437,6 +444,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     {/* Item Price */}
                     <div className="text-left sm:text-right shrink-0 w-full sm:w-auto pl-20 sm:pl-0 sm:pr-2 mt-2 sm:mt-0">
                       <p className="font-black text-slate-900">₹{item.price}</p>
+                      {item.shippingCost > 0 && <p className="text-[10px] text-slate-400 font-bold">+ ₹{item.shippingCost} ship</p>}
                     </div>
                     
                   </div>
@@ -471,14 +479,25 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
 
-                {/* Total Amount */}
+                {/* Total Amount with Shipping Breakdown */}
                 <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
                     Total Paid
                   </p>
-                  <span className="font-black text-2xl text-slate-900">
+                  <span className="font-black text-2xl text-slate-900 leading-none">
                     ₹{o.totalAmount}
                   </span>
+                  {/* --- CHANGES MADE HERE: Shipping text added under Total Paid --- */}
+                  {o.shippingPrice > 0 ? (
+                      <p className="text-[10px] text-slate-500 font-medium mt-1">
+                          Includes ₹{o.shippingPrice} Shipping
+                      </p>
+                  ) : (
+                      <p className="text-[10px] text-emerald-500 font-bold mt-1">
+                          Free Shipping
+                      </p>
+                  )}
+                  {/* -------------------------------------------------------------- */}
                 </div>
               </div>
 
@@ -539,7 +558,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     <div className="absolute bottom-full right-0 mb-3 w-64 p-3.5 bg-slate-900 text-white text-xs font-medium rounded-2xl shadow-2xl shadow-indigo-900/20 animate-in fade-in slide-in-from-bottom-2 z-20 flex items-start gap-3 border border-slate-700">
                       <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
-                       The invoice will be generated only after your item is safely delivered. Please wait a little.
+                        The invoice will be generated only after your item is safely delivered. Please wait a little.
                       </p>
                     </div>
                   )}

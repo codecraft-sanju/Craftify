@@ -152,11 +152,14 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
                             <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
                             <>
+                                {/* --- CHANGES MADE HERE: Visual cue that it's the Total Amount --- */}
                                 <span>Proceed to Pay ₹{cartTotal}</span>
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </>
                         )}
                     </button>
+                    {/* Small text to ensure transparency to the user */}
+                    <p className="text-center text-[10px] text-slate-400 mt-3 font-medium">By proceeding, you agree to our Terms and conditions. Total includes shipping.</p>
                 </div>
             </div>
         </div>

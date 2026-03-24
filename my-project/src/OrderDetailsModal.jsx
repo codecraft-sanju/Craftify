@@ -93,6 +93,13 @@ export default function OrderDetailsModal({ selectedOrder, onClose, onUpdateStat
                                     <div className="text-right shrink-0">
                                         <p className="font-black text-rose-400">₹{item.price}</p>
                                         <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Total: ₹{item.price * item.qty}</p>
+                                        {/* --- CHANGES MADE HERE: Display Shipping Cost to Seller --- */}
+                                        {item.shippingCost > 0 ? (
+                                            <p className="text-[10px] text-emerald-500/80 font-bold uppercase mt-0.5">+₹{item.shippingCost * item.qty} Ship</p>
+                                        ) : (
+                                            <p className="text-[10px] text-emerald-500/80 font-bold uppercase mt-0.5">Free Ship</p>
+                                        )}
+                                        {/* ------------------------------------------------------------- */}
                                     </div>
                                 </div>
                             ))}

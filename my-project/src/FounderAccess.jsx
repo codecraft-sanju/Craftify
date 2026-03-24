@@ -478,6 +478,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
             sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
         }
 
+        // --- CHANGES MADE HERE: Added shippingCost support for Founder edits ---
         const productData = {
             shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : null, // Founder cannot create product without selecting shop, so edit only mostly
             name: formData.get('name'), 
@@ -485,6 +486,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
             price: Number(formData.get('price')), 
             compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
+            shippingCost: Number(formData.get('shippingCost')) || 0, // ADDED THIS
             description: formData.get('description'), 
             images: productImages, 
             coverImage: productImages[0]?.url || '', 

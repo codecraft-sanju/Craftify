@@ -3,8 +3,6 @@ const Shop = require('../models/Shop');
 
 // ProductController.js -> getProducts
 
-// ProductController.js -> getProducts
-
 const getProducts = async (req, res) => {
     try {
         const keyword = req.query.keyword
@@ -42,6 +40,7 @@ const getProducts = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 // @desc    Fetch single product
 // @route   GET /api/products/:id
 // @access  Public
@@ -73,7 +72,9 @@ const createProduct = async (req, res) => {
             customizationAvailable, customizationType,
             image, coverImage, sku,
             images, 
-            compareAtPrice
+            compareAtPrice,
+            // --- CHANGES MADE HERE: Extract shippingCost ---
+            shippingCost 
         } = req.body;
 
         if (category) {
@@ -125,6 +126,8 @@ const createProduct = async (req, res) => {
             name,
             price,
             compareAtPrice: compareAtPrice || 0,
+            // --- CHANGES MADE HERE: Save shippingCost ---
+            shippingCost: shippingCost || 0,
             description,
             coverImage: finalCoverImage,
             images: images || [], 
@@ -173,7 +176,9 @@ const updateProduct = async (req, res) => {
             customizationAvailable, customizationType,
             image, coverImage,
             images, 
-            compareAtPrice 
+            compareAtPrice,
+            // --- CHANGES MADE HERE: Extract shippingCost ---
+            shippingCost 
         } = req.body;
 
         if (category) {
@@ -206,6 +211,11 @@ const updateProduct = async (req, res) => {
             
             if (compareAtPrice !== undefined) {
                 product.compareAtPrice = compareAtPrice;
+            }
+
+            // --- CHANGES MADE HERE: Update shippingCost ---
+            if (shippingCost !== undefined) {
+                product.shippingCost = shippingCost;
             }
 
             product.description = description || product.description;

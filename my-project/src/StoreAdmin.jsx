@@ -341,6 +341,7 @@ export default function StoreAdmin({ currentUser }) {
             sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
         }
 
+        // --- CHANGES MADE HERE: Added shippingCost to productData ---
         const productData = {
             shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : shop?._id,
             name: formData.get('name'), 
@@ -348,6 +349,7 @@ export default function StoreAdmin({ currentUser }) {
             price: Number(formData.get('price')), 
             compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
+            shippingCost: Number(formData.get('shippingCost')) || 0, // Added field
             description: formData.get('description'), 
             images: images, 
             coverImage: images[0].url, 

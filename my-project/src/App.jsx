@@ -115,7 +115,11 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
 };
 
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
-  const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  // --- CHANGES MADE HERE: Calculating subtotal, shipping, and grand total separately ---
+  const itemsTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const shippingTotal = cart.reduce((acc, item) => acc + ((item.shippingCost || 0) * item.qty), 0);
+  const grandTotal = itemsTotal + shippingTotal;
+  
   const itemCount = cart.reduce((acc, item) => acc + item.qty, 0);
 
   return (
@@ -179,7 +183,11 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
                          <Plus size={14} strokeWidth={3}/>
                        </button>
                     </div>
-                    <span className="font-black text-lg" style={{ color: '#65280E' }}>₹{item.price * item.qty}</span>
+                    {/* --- CHANGES MADE HERE: Showing item price and a small text for shipping if any --- */}
+                    <div className="text-right">
+                       <span className="font-black text-lg" style={{ color: '#65280E' }}>₹{item.price * item.qty}</span>
+                       {item.shippingCost > 0 && <p className="text-[10px] text-slate-400 font-bold tracking-wide">+ ₹{item.shippingCost * item.qty} Ship</p>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -188,10 +196,19 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
         </div>
 
         {cart.length > 0 && (
+          // --- CHANGES MADE HERE: Full Pricing Breakdown at the bottom of the Cart ---
           <div className="p-4 pb-10 md:p-6 md:pb-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-slate-500 font-medium">Estimated Total</span>
-              <span className="text-2xl font-black text-slate-900">₹{total}</span>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-slate-500 font-medium text-sm">Subtotal</span>
+              <span className="font-bold text-slate-800">₹{itemsTotal}</span>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-slate-500 font-medium text-sm">Shipping Cost</span>
+              <span className="font-bold text-slate-800">{shippingTotal === 0 ? <span className="text-emerald-500">Free</span> : `+ ₹${shippingTotal}`}</span>
+            </div>
+            <div className="flex justify-between items-center mb-6 pt-4 border-t border-slate-100">
+              <span className="text-slate-800 font-bold">Estimated Total</span>
+              <span className="text-2xl font-black text-slate-900">₹{grandTotal}</span>
             </div>
             <Button onClick={onCheckout} className="w-full py-4 text-base" variant="brand">
               {currentUser ? 'Proceed to Checkout' : 'Login to Checkout'} 
@@ -241,7 +258,6 @@ const CraftifyContent = () => {
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   
-  // --- CHANGES: Removed pagination states, kept only core product state ---
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   
@@ -314,7 +330,6 @@ const CraftifyContent = () => {
     } catch (e) { console.error(e); }
   };
 
-  // --- CHANGES: Simplified fetchProducts to fetch all matching products at once ---
   const fetchProducts = async () => {
     try {
       setProductsLoading(true);
@@ -330,7 +345,6 @@ const CraftifyContent = () => {
           const data = await res.json();
           const newProducts = data.products || [];
           setProducts(newProducts);
-          // Save directly to cache array
           productCache.current[cacheKey] = newProducts;
       }
     } catch (error) {
@@ -422,7 +436,11 @@ const CraftifyContent = () => {
       return;
     }
 
-    const totalAmount = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    // --- CHANGES MADE HERE: Properly separating totals for Backend & Razorpay ---
+    const itemsTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    const shippingTotal = cart.reduce((acc, i) => acc + ((i.shippingCost || 0) * i.qty), 0);
+    const totalAmount = itemsTotal + shippingTotal;
+    // ----------------------------------------------------------------------------
 
     try {
       const orderResponse = await fetch(`${API_URL}/api/razorpay/create-order`, { 
@@ -442,7 +460,7 @@ const CraftifyContent = () => {
       const order = orderDataResponse.order;
 
       const options = {
-        "key":"rzp_live_SKUDOOica8z6I6",
+        "key":"rzp_test_SNwkfTU2QHMrsu",
         "amount": order.amount,
         "currency": order.currency,
         "name": "Giftomize",
@@ -471,6 +489,7 @@ const CraftifyContent = () => {
                         image: i.image, 
                         price: i.price, 
                         qty: i.qty, 
+                        shippingCost: i.shippingCost || 0, // NEW: Sending shipping down
                         selectedSize: i.selectedSize,
                         selectedColor: i.selectedColor 
                     })),
@@ -480,10 +499,12 @@ const CraftifyContent = () => {
                       id: paymentResponse.razorpay_payment_id,
                       status: 'paid'
                     },
-                    itemsPrice: totalAmount,
+                    // --- CHANGES MADE HERE: Passing exact breakdown to backend ---
+                    itemsPrice: itemsTotal,
                     taxPrice: 0,
-                    shippingPrice: 0,
+                    shippingPrice: shippingTotal,
                     totalPrice: totalAmount,
+                    // -------------------------------------------------------------
                  };
 
                  const res = await fetch(`${API_URL}/api/orders`, { 
@@ -556,6 +577,9 @@ const CraftifyContent = () => {
     </div>
   );
 
+  // --- CHANGES MADE HERE: Calculated Grand Total exactly to pass into CheckoutModal ---
+  const currentGrandTotal = cart.reduce((acc, i) => acc + (i.price * i.qty) + ((i.shippingCost || 0) * i.qty), 0);
+
   return (
     <div className="min-h-screen bg-[#FEFAEF]">
       <GlobalStyles />
@@ -589,7 +613,6 @@ const CraftifyContent = () => {
                 setSearchQuery={setSearchQuery} 
                 activeCategory={activeCategory} 
                 setActiveCategory={setActiveCategory} 
-                // --- CHANGES: Removed pagination props ---
               />
             </BuyerOnlyRoute>
           } />
@@ -608,7 +631,7 @@ const CraftifyContent = () => {
       </main>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
-      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={cart.reduce((acc, i) => acc + (i.price * i.qty), 0)} onConfirmOrder={confirmOrder} loading={orderLoading} />
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={currentGrandTotal} onConfirmOrder={confirmOrder} loading={orderLoading} />
     </div>
   );
 };
