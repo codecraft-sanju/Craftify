@@ -460,7 +460,7 @@ const CraftifyContent = () => {
       const order = orderDataResponse.order;
 
       const options = {
-        "key":"rzp_test_SNwkfTU2QHMrsu",
+        "key":"rzp_live_SKUDOOica8z6I6",
         "amount": order.amount,
         "currency": order.currency,
         "name": "Giftomize",
