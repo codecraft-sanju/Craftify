@@ -6,7 +6,7 @@ import {
     LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
     ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2,
-    Building, Map, Globe, Hash
+    Building, Map, Globe, Hash, AlertCircle // --- CHANGE: Added AlertCircle icon ---
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -125,6 +125,9 @@ export default function StoreAdmin({ currentUser }) {
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
     
+    // --- CHANGE: State for showing the address popup ---
+    const [showAddressPrompt, setShowAddressPrompt] = useState(false);
+    
     const [address, setAddress] = useState({
         street: "",
         city: "",
@@ -233,6 +236,12 @@ export default function StoreAdmin({ currentUser }) {
                         country: shopData.address.country || "India"
                     });
                 }
+
+                // --- CHANGE: Check if address is incomplete and show prompt ---
+                if (shopData && (!shopData.address || !shopData.address.street || !shopData.address.city)) {
+                    setShowAddressPrompt(true);
+                }
+                
                 if(shopData && shopData._id) {
                     const [prodRes, ordRes] = await Promise.all([
                         fetch(`${API_URL}/api/products/shop/${shopData._id}`),
@@ -516,7 +525,6 @@ export default function StoreAdmin({ currentUser }) {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950"><div className="flex flex-col items-center gap-4"><Loader2 className="w-12 h-12 text-rose-500 animate-spin" /><p className="text-slate-500 text-xs font-bold uppercase tracking-widest animate-pulse">Loading Store...</p></div></div>;
 
-    // --- CHANGE: Updated this entire section for the 404 Store Not Found UI ---
     if (!shop) return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white">
             <div className="bg-slate-900 p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-black w-full max-w-lg text-center border border-white/10 relative">
@@ -537,7 +545,6 @@ export default function StoreAdmin({ currentUser }) {
             </div>
         </div>
     );
-    // --------------------------------------------------------------------------
 
     return (
         <div className="min-h-screen bg-slate-950 font-sans text-slate-200 selection:bg-rose-500/30 selection:text-rose-200 overflow-hidden flex relative">
@@ -837,7 +844,7 @@ export default function StoreAdmin({ currentUser }) {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1">
-                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">ZIP Code</label>
+                                                        <label className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">PIN Code</label>
                                                         <div className="relative">
                                                             <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"/>
                                                             <input name="zipCode" value={address.zipCode} onChange={handleAddressChange} className="w-full p-3 pl-10 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-medium text-sm" placeholder="000000" />
@@ -876,6 +883,48 @@ export default function StoreAdmin({ currentUser }) {
                     </div>
                 </div>
             </main>
+
+            {/* --- CHANGE: Pop-up Modal for Missing Address --- */}
+            {showAddressPrompt && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-in zoom-in-95 duration-300">
+                        <button 
+                            onClick={() => setShowAddressPrompt(false)} 
+                            className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-full transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-6 border border-rose-500/20 mx-auto">
+                            <AlertCircle className="w-8 h-8 text-rose-500" />
+                        </div>
+                        
+                        <h2 className="text-2xl font-black text-white text-center mb-3">Action Required</h2>
+                        <p className="text-slate-400 text-center mb-8 text-sm leading-relaxed">
+                            We've introduced location-based shipping! To ensure accurate shipping costs and smooth order pickups, please update your store address.
+                        </p>
+                        
+                        <div className="flex flex-col gap-3">
+                            <Button 
+                                onClick={() => {
+                                    setActiveTab('settings');
+                                    setShowAddressPrompt(false);
+                                }}
+                                className="w-full shadow-lg shadow-rose-900/20"
+                            >
+                                <MapPin className="w-4 h-4" /> Update Address Now
+                            </Button>
+                            <button 
+                                onClick={() => setShowAddressPrompt(false)}
+                                className="w-full py-3 text-sm font-bold text-slate-500 hover:text-white transition-colors"
+                            >
+                                I'll do it later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ------------------------------------------------ */}
 
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-white/10 z-50 flex justify-around p-2 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
                  {[
