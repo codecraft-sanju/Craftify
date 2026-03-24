@@ -6,7 +6,7 @@ import {
     LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
     ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2,
-    Building, Map, Globe, Hash // --- CHANGE: Added Icons for Address ---
+    Building, Map, Globe, Hash
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -18,7 +18,6 @@ const ENDPOINT = import.meta.env.VITE_API_URL;
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
 
-// --- NAYA CODE: Cloudinary Helper ---
 const optimizeCloudinaryUrl = (url) => {
     if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com')) return url;
     if (url.includes('/upload/f_auto,q_auto')) return url;
@@ -26,7 +25,6 @@ const optimizeCloudinaryUrl = (url) => {
     if (parts.length === 2) return `${parts[0]}/upload/f_auto,q_auto/${parts[1]}`;
     return url;
 };
-// ------------------------------------
 
 var socket;
 
@@ -106,34 +104,27 @@ export default function StoreAdmin({ currentUser }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     
-    // Data States
     const [shop, setShop] = useState(null); 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [selectedOrder, setSelectedOrder] = useState(null); 
     
-    // Loading States
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false); 
     
-    // Search & Filter States
     const [productSearch, setProductSearch] = useState("");
     const [orderFilter, setOrderFilter] = useState("All");
 
-    // Product Editing & Image Upload States
     const [editingProduct, setEditingProduct] = useState(null);
     const [images, setImages] = useState([]); 
     const [uploading, setUploading] = useState(false);
 
-    // Category States
     const [categoryInput, setCategoryInput] = useState("");
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
-    // Seller QR Upload State
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
     
-    // --- CHANGE: Added Address State ---
     const [address, setAddress] = useState({
         street: "",
         city: "",
@@ -186,24 +177,53 @@ export default function StoreAdmin({ currentUser }) {
         
         socket.on("new_order_placed", () => fetchStoreData());
         socket.on("order_verified", () => fetchStoreData());
+        socket.on("shop_deleted", () => {
+             alert("Your store has been deleted by the admin.");
+             handleForceLogout(); 
+        });
 
         return () => { socket.disconnect(); }
     }, [currentUser]); 
+
+    const handleForceLogout = async () => {
+        try {
+            await fetch(`${API_URL}/api/users/logout`, { method: 'POST', credentials: 'include' });
+        } catch(e) { console.error("Logout API issue", e); }
+        
+        localStorage.removeItem("userInfo");
+        window.location.href = '/seller-login';
+    };
+
+    const handleLogout = () => {
+        if(window.confirm("Are you sure you want to log out?")) {
+            handleForceLogout();
+        }
+    };
 
     const fetchStoreData = async () => {
         if(!currentUser) return;
         try {
             setLoading(true);
             const shopRes = await fetch(`${API_URL}/api/shops/my-shop`, { credentials: 'include' });
-            if (shopRes.status === 401 || shopRes.status === 403) { handleLogout(); return; }
+            
+            if (shopRes.status === 401 || shopRes.status === 403) { 
+                handleForceLogout(); 
+                return; 
+            }
 
             if (shopRes.ok) {
                 const shopData = await shopRes.json();
+                
+                if (!shopData) {
+                    setShop(null);
+                    setLoading(false);
+                    return;
+                }
+
                 setShop(shopData); 
                 if(shopData && shopData.paymentQrCode) {
                     setSellerQrPreview(shopData.paymentQrCode); 
                 }
-                // --- CHANGE: Load address into state ---
                 if (shopData && shopData.address) {
                     setAddress({
                         street: shopData.address.street || "",
@@ -224,19 +244,6 @@ export default function StoreAdmin({ currentUser }) {
             } else { setShop(null); }
         } catch (error) { console.error("Store Data Error:", error); } 
         finally { setLoading(false); }
-    };
-
-    const handleCreateShop = async (e) => {
-        e.preventDefault(); setIsSubmitting(true);
-        const formData = new FormData(e.target);
-        try {
-            const res = await fetch(`${API_URL}/api/shops`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ name: formData.get('name'), description: formData.get('description'), phone: formData.get('phone') })
-            });
-            const data = await res.json();
-            if (res.ok) { setShop(data); fetchStoreData(); } else { alert(data.message || "Failed"); }
-        } catch (error) { console.error(error); alert("Network Error"); } finally { setIsSubmitting(false); }
     };
 
     const handleUpdateStore = async (e) => {
@@ -271,7 +278,6 @@ export default function StoreAdmin({ currentUser }) {
                     phone: formData.get('phone'), 
                     tagline: formData.get('tagline'),
                     paymentQrCode: paymentQrCode,
-                    // --- CHANGE: Send address in update payload ---
                     address: address 
                 })
             });
@@ -284,7 +290,6 @@ export default function StoreAdmin({ currentUser }) {
         } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
     };
 
-    // --- CHANGE: Handle Address Input Changes ---
     const handleAddressChange = (e) => {
         const { name, value } = e.target;
         setAddress(prev => ({ ...prev, [name]: value }));
@@ -369,7 +374,6 @@ export default function StoreAdmin({ currentUser }) {
             sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
         }
 
-        // --- CHANGES MADE HERE: Added shippingCost to productData ---
         const productData = {
             shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : shop?._id,
             name: formData.get('name'), 
@@ -377,7 +381,7 @@ export default function StoreAdmin({ currentUser }) {
             price: Number(formData.get('price')), 
             compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
-            shippingCost: Number(formData.get('shippingCost')) || 0, // Added field
+            shippingCost: Number(formData.get('shippingCost')) || 0,
             description: formData.get('description'), 
             images: images, 
             coverImage: images[0].url, 
@@ -435,12 +439,6 @@ export default function StoreAdmin({ currentUser }) {
         }
     };
 
-    const handleLogout = () => {
-        if(window.confirm("Are you sure you want to log out?")) {
-            localStorage.removeItem("userInfo");
-            window.location.href = '/seller-login';
-        }
-    };
 
     const getAvailableCategories = () => {
         const defaults = ["Jewellery","Electronics", "Fashion", "Home", "Art & Decor", "Handmade Goods", "Beauty", "Toys", "Sports"];
@@ -518,23 +516,28 @@ export default function StoreAdmin({ currentUser }) {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950"><div className="flex flex-col items-center gap-4"><Loader2 className="w-12 h-12 text-rose-500 animate-spin" /><p className="text-slate-500 text-xs font-bold uppercase tracking-widest animate-pulse">Loading Store...</p></div></div>;
 
+    // --- CHANGE: Updated this entire section for the 404 Store Not Found UI ---
     if (!shop) return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
-            <div className="bg-slate-900 p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-black w-full max-w-lg text-center border border-white/10">
-                <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-white/5 shadow-inner">
-                    <Store className="w-10 h-10 text-rose-500"/>
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white">
+            <div className="bg-slate-900 p-8 md:p-12 rounded-[2.5rem] shadow-2xl shadow-black w-full max-w-lg text-center border border-white/10 relative">
+                
+                <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20 shadow-inner">
+                    <ShieldAlert className="w-12 h-12 text-red-500"/>
                 </div>
-                <h2 className="text-3xl font-black text-white mb-3 tracking-tight">Setup Your Store</h2>
-                <p className="text-slate-400 mb-10 leading-relaxed">Your journey to success starts here. Tell us about your business.</p>
-                <form onSubmit={handleCreateShop} className="space-y-6 text-left">
-                    <div className="space-y-1"><label className="text-xs font-extrabold text-slate-500 uppercase ml-1">Store Name</label><input name="name" required className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold transition-all placeholder:text-slate-600" placeholder="e.g. Urban Trends" /></div>
-                    <div className="space-y-1"><label className="text-xs font-extrabold text-slate-500 uppercase ml-1">Phone Number</label><input name="phone" required className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold transition-all placeholder:text-slate-600" placeholder="+91 98765 43210" /></div>
-                    <div className="space-y-1"><label className="text-xs font-extrabold text-slate-500 uppercase ml-1">Description</label><textarea name="description" required rows="3" className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none font-bold transition-all placeholder:text-slate-600" placeholder="We sell premium quality..."></textarea></div>
-                    <Button type="submit" size="lg" className="w-full shadow-xl shadow-rose-900/20 mt-4" loading={isSubmitting}>Launch Store</Button>
-                </form>
+                
+                <h2 className="text-3xl font-black text-white mb-3 tracking-tight">404 - Store Not Found</h2>
+                <p className="text-slate-400 mb-8 leading-relaxed">
+                    We couldn't find your store. It may have been removed by the administrator. Please log out to clear your session and start fresh.
+                </p>
+                
+                <Button onClick={handleForceLogout} size="lg" className="w-full shadow-xl shadow-rose-900/20">
+                    <LogOut className="w-5 h-5" /> Logout & Clear Data
+                </Button>
+
             </div>
         </div>
     );
+    // --------------------------------------------------------------------------
 
     return (
         <div className="min-h-screen bg-slate-950 font-sans text-slate-200 selection:bg-rose-500/30 selection:text-rose-200 overflow-hidden flex relative">
@@ -687,7 +690,6 @@ export default function StoreAdmin({ currentUser }) {
                                                     </span>
                                                 </div>
                                                 <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
-                                                    {/* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai grid thumbnails ke liye --- */}
                                                     <img src={optimizeCloudinaryUrl(displayImage)} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                         <button onClick={() => handleOpenModal(p)} className="p-2 bg-white rounded-full text-black shadow-lg hover:scale-110 transition-transform"><Edit className="w-4 h-4"/></button>
@@ -806,7 +808,6 @@ export default function StoreAdmin({ currentUser }) {
                                                 <textarea name="description" defaultValue={shop?.description} className="w-full p-4 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all font-bold placeholder:text-slate-600" rows="4"/>
                                             </div>
 
-                                            {/* --- CHANGE: Store Address Section --- */}
                                             <div className="p-5 bg-slate-800/50 rounded-2xl border border-white/5 space-y-4">
                                                 <h4 className="font-bold text-slate-300 mb-2 flex items-center gap-2">
                                                     <MapPin className="w-5 h-5 text-rose-500"/> Store Address
@@ -851,13 +852,11 @@ export default function StoreAdmin({ currentUser }) {
                                                     </div>
                                                 </div>
                                             </div>
-                                            {/* -------------------------------------- */}
                                             
                                             <div className="p-5 bg-slate-800/50 rounded-2xl border border-white/5">
                                                 <h4 className="font-bold text-slate-300 mb-2 flex items-center gap-2"><QrCode className="w-5 h-5 text-rose-500"/> Payment QR</h4>
                                                 <div className="flex items-center gap-4 mt-4">
                                                     {sellerQrPreview ? (
-                                                        /* --- CHANGE HERE: optimizeCloudinaryUrl ka use kiya hai QR Preview ke liye bhi --- */
                                                         <img src={optimizeCloudinaryUrl(sellerQrPreview)} className="w-24 h-24 object-contain border border-white/10 rounded-xl p-2 bg-white shadow-sm" alt="QR Preview" />
                                                     ) : (
                                                         <div className="w-24 h-24 bg-slate-900 rounded-xl flex items-center justify-center text-slate-500 border-2 border-dashed border-slate-700 font-bold">No QR</div>
