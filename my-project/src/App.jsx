@@ -460,7 +460,7 @@ const CraftifyContent = () => {
       const order = orderDataResponse.order;
 
       const options = {
-        "key":"rzp_live_SKUDOOica8z6I6",
+      "key": import.meta.env.VITE_RAZORPAY_KEY_ID,
         "amount": order.amount,
         "currency": order.currency,
         "name": "Giftomize",
