@@ -18,7 +18,8 @@ const addOrderItems = async (req, res) => {
             itemsPrice,
             taxPrice,
             shippingPrice,
-            totalPrice
+            totalPrice,
+            hasLocalDeliveryDiscount // <--- App.jsx se aayega
         } = req.body;
 
         if (orderItems && orderItems.length === 0) {
@@ -35,7 +36,33 @@ const addOrderItems = async (req, res) => {
             return res.status(400).json({ message: 'Payment verification failed. Razorpay ID missing.' });
         }
 
-        // 1. Create the Order (Directly using orderItems, customization/colors removed)
+        // --- STRICT SHIPPING COST VALIDATION ---
+        let calculatedShippingPrice = 0;
+        const customerPincode = shippingAddress.postalCode;
+
+        for (const item of orderItems) {
+            const product = await Product.findById(item.product);
+            const shop = await Shop.findById(item.shop);
+
+            let itemShippingCost = product.shippingCost || 0;
+
+            if (itemShippingCost > 0) {
+              const sellerPincode = shop.address?.zipCode || shop.address?.postalCode || shop.address?.pincode;
+                if (sellerPincode && sellerPincode.toString() === customerPincode.toString()) {
+                    itemShippingCost = itemShippingCost / 2;
+                }
+            }
+            calculatedShippingPrice += (itemShippingCost * item.qty);
+        }
+
+        if (Number(shippingPrice) !== calculatedShippingPrice) {
+            return res.status(400).json({ 
+                message: `Shipping price mismatch detected. Valid shipping is ₹${calculatedShippingPrice}. Please refresh your cart.` 
+            });
+        }
+        // --------------------------------------------------------
+
+        // 1. Create the Order
         const order = new Order({
             customer: req.user._id,
             items: orderItems, 
@@ -54,7 +81,8 @@ const addOrderItems = async (req, res) => {
             shippingPrice,
             totalAmount: totalPrice,
             isPaid: true,
-            paidAt: Date.now()
+            paidAt: Date.now(),
+            hasLocalDeliveryDiscount: hasLocalDeliveryDiscount || false // <--- Save in DB
         });
 
         const createdOrder = await order.save();
@@ -160,7 +188,7 @@ Best Regards,
                 }
             }
 
-            // CHANGES MADE: Simple notification to Founder after seller gets notified
+            // Simple notification to Founder after seller gets notified
             const founder = await User.findOne({ role: 'founder' });
             if (founder && founder.phone) {
                 const shortOrderId = createdOrder._id.toString().slice(-6).toUpperCase();

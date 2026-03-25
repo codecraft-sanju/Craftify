@@ -21,8 +21,12 @@ const orderItemSchema = new mongoose.Schema({
     customization: {
         text: { type: String },
         font: { type: String },
-        // --- CHANGES MADE HERE: Added photoUrl to pass the uploaded image to the seller ---
         photoUrl: { type: String }
+    },
+    // --- THIS IS GOOD ---
+    shippingCost: {
+        type: Number,
+        default: 0
     },
     status: {
         type: String,
@@ -48,7 +52,6 @@ const orderSchema = new mongoose.Schema({
     },
     
     // --- 1. USER PAYMENT INFO (Incoming: Customer -> Founder via Razorpay) ---
-    // CHANGES MADE: Updated to store Razorpay specific details
     paymentInfo: {
         method: { 
             type: String, 
@@ -92,6 +95,13 @@ const orderSchema = new mongoose.Schema({
     shippingPrice: { type: Number, required: true, default: 0.0 },
     totalAmount: { type: Number, required: true, default: 0.0 },
     
+    // --- NAYA FIELD: OVERALL DISCOUNT TRACKING KE LIYE ---
+    hasLocalDeliveryDiscount: {
+       type: Boolean,
+       default: false
+    },
+    // -----------------------------------------------------
+
     isPaid: {
         type: Boolean,
         default: false

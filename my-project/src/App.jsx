@@ -26,12 +26,10 @@ import {
 } from 'lucide-react';
 import io from 'socket.io-client';
 
-// --- CONFIGURATION ---
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 var socket;
 
-// --- IMPORTS ---
 import Navbar from './Navbar'; 
 import LandingPage from './LandingPage';
 import FounderAccess from './FounderAccess';
@@ -115,7 +113,6 @@ export const Badge = ({ children, color = 'slate', className = '' }) => {
 };
 
 const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, currentUser }) => {
-  // --- CHANGES MADE HERE: Calculating subtotal, shipping, and grand total separately ---
   const itemsTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const shippingTotal = cart.reduce((acc, item) => acc + ((item.shippingCost || 0) * item.qty), 0);
   const grandTotal = itemsTotal + shippingTotal;
@@ -183,7 +180,6 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
                          <Plus size={14} strokeWidth={3}/>
                        </button>
                     </div>
-                    {/* --- CHANGES MADE HERE: Showing item price and a small text for shipping if any --- */}
                     <div className="text-right">
                        <span className="font-black text-lg" style={{ color: '#65280E' }}>₹{item.price * item.qty}</span>
                        {item.shippingCost > 0 && <p className="text-[10px] text-slate-400 font-bold tracking-wide">+ ₹{item.shippingCost * item.qty} Ship</p>}
@@ -196,7 +192,6 @@ const CartDrawer = ({ isOpen, onClose, cart, onRemove, onUpdateQty, onCheckout, 
         </div>
 
         {cart.length > 0 && (
-          // --- CHANGES MADE HERE: Full Pricing Breakdown at the bottom of the Cart ---
           <div className="p-4 pb-10 md:p-6 md:pb-6 border-t border-slate-100 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-10">
             <div className="flex justify-between items-center mb-2">
               <span className="text-slate-500 font-medium text-sm">Subtotal</span>
@@ -269,6 +264,7 @@ const CraftifyContent = () => {
   const [toasts, setToasts] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutPincode, setCheckoutPincode] = useState(null); 
   const [orderLoading, setOrderLoading] = useState(false);
   const [orders, setOrders] = useState([]);
 
@@ -426,6 +422,23 @@ const CraftifyContent = () => {
     navigate('/');
   };
 
+  // --- DISCOUNT CALCULATION LOGIC ---
+  const currentGrandTotal = cart.reduce((acc, i) => {
+      let itemShipping = i.shippingCost || 0;
+      const sellerPincode = i.shop?.address?.zipCode || i.shop?.address?.postalCode || i.shop?.address?.pincode;
+      
+      if (checkoutPincode && sellerPincode && sellerPincode.toString() === checkoutPincode.toString()) {
+          itemShipping = itemShipping / 2;
+      }
+      return acc + (i.price * i.qty) + (itemShipping * i.qty);
+  }, 0);
+
+  const isDiscountApplied = cart.some(i => {
+      let itemShipping = i.shippingCost || 0;
+      const sellerPincode = i.shop?.address?.zipCode || i.shop?.address?.postalCode || i.shop?.address?.pincode;
+      return checkoutPincode && sellerPincode && sellerPincode.toString() === checkoutPincode.toString() && itemShipping > 0;
+  });
+
   const confirmOrder = async (orderData) => {
     setOrderLoading(true);
 
@@ -436,12 +449,18 @@ const CraftifyContent = () => {
       return;
     }
 
-    // --- CHANGES MADE HERE: Properly separating totals for Backend & Razorpay ---
     const itemsTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    const shippingTotal = cart.reduce((acc, i) => acc + ((i.shippingCost || 0) * i.qty), 0);
+    const shippingTotal = cart.reduce((acc, i) => {
+        let itemShipping = i.shippingCost || 0;
+        const sellerPincode = i.shop?.address?.zipCode || i.shop?.address?.postalCode || i.shop?.address?.pincode;
+        
+        if (checkoutPincode && sellerPincode && sellerPincode.toString() === checkoutPincode.toString()) {
+            itemShipping = itemShipping / 2;
+        }
+        return acc + (itemShipping * i.qty);
+    }, 0);
     const totalAmount = itemsTotal + shippingTotal;
-    // ----------------------------------------------------------------------------
-
+    
     try {
       const orderResponse = await fetch(`${API_URL}/api/razorpay/create-order`, { 
         method: 'POST',
@@ -482,29 +501,38 @@ const CraftifyContent = () => {
              
              if(verifyData.success) {
                  const orderPayload = {
-                    orderItems: cart.map(i => ({ 
-                        product: i.product, 
-                        shop: i.shop, 
-                        name: i.name, 
-                        image: i.image, 
-                        price: i.price, 
-                        qty: i.qty, 
-                        shippingCost: i.shippingCost || 0, // NEW: Sending shipping down
-                        selectedSize: i.selectedSize,
-                        selectedColor: i.selectedColor 
-                    })),
+                    orderItems: cart.map(i => {
+                        let itemShipping = i.shippingCost || 0;
+                        const sellerPincode = i.shop?.address?.zipCode || i.shop?.address?.postalCode || i.shop?.address?.pincode;
+                        
+                        if (checkoutPincode && sellerPincode && sellerPincode.toString() === checkoutPincode.toString()) {
+                            itemShipping = itemShipping / 2;
+                        }
+
+                        return {
+                            product: i.product, 
+                            shop: i.shop, 
+                            name: i.name, 
+                            image: i.image, 
+                            price: i.price, 
+                            qty: i.qty, 
+                            shippingCost: itemShipping, 
+                            selectedSize: i.selectedSize,
+                            selectedColor: i.selectedColor 
+                        }
+                    }),
                     shippingAddress: orderData.shippingAddress,
                     paymentInfo: {
                       method: 'Online',
                       id: paymentResponse.razorpay_payment_id,
                       status: 'paid'
                     },
-                    // --- CHANGES MADE HERE: Passing exact breakdown to backend ---
                     itemsPrice: itemsTotal,
                     taxPrice: 0,
                     shippingPrice: shippingTotal,
                     totalPrice: totalAmount,
-                    // -------------------------------------------------------------
+                    // --- NAYA FLAG PASS KAR RAHE HAIN BACKEND KO ---
+                    hasLocalDeliveryDiscount: isDiscountApplied
                  };
 
                  const res = await fetch(`${API_URL}/api/orders`, { 
@@ -517,6 +545,7 @@ const CraftifyContent = () => {
                  if (res.ok) {
                     setCart([]);
                     setIsCheckoutOpen(false);
+                    setCheckoutPincode(null); 
                     addToast('Success', 'Payment Successful & Order Placed!');
                     await fetchOrders(); 
                     navigate('/profile');
@@ -577,9 +606,6 @@ const CraftifyContent = () => {
     </div>
   );
 
-  // --- CHANGES MADE HERE: Calculated Grand Total exactly to pass into CheckoutModal ---
-  const currentGrandTotal = cart.reduce((acc, i) => acc + (i.price * i.qty) + ((i.shippingCost || 0) * i.qty), 0);
-
   return (
     <div className="min-h-screen bg-[#FEFAEF]">
       <GlobalStyles />
@@ -594,44 +620,39 @@ const CraftifyContent = () => {
           <Route path="/" element={<AuthRedirect user={currentUser}><LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} /></AuthRedirect>} />
           <Route path="/login" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
           <Route path="/register" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
-          
           <Route path="/seller-register" element={<AuthRedirect user={currentUser}><SellerRegister onLoginSuccess={handleLogin} initialMode="register" /></AuthRedirect>} />
           <Route path="/seller-login" element={<AuthRedirect user={currentUser}><SellerRegister onLoginSuccess={handleLogin} initialMode="login" /></AuthRedirect>} />
-
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
 
           <Route path="/shop" element={
             <BuyerOnlyRoute>
-              <ShopView 
-                addToCart={addToCart} 
-                products={products} 
-                isLoading={productsLoading} 
-                wishlist={wishlist} 
-                toggleWishlist={toggleWishlist} 
-                searchQuery={searchQuery} 
-                setSearchQuery={setSearchQuery} 
-                activeCategory={activeCategory} 
-                setActiveCategory={setActiveCategory} 
-              />
+              <ShopView addToCart={addToCart} products={products} isLoading={productsLoading} wishlist={wishlist} toggleWishlist={toggleWishlist} searchQuery={searchQuery} setSearchQuery={setSearchQuery} activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
             </BuyerOnlyRoute>
           } />
           
           <Route path="/search" element={<SearchPage products={products} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
           <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} currentUser={currentUser} products={products} wishlist={wishlist} toggleWishlist={toggleWishlist} />} />
-          
           <Route path="/wishlist" element={<ProtectedRoute user={currentUser}><WishlistView wishlist={wishlist} addToCart={addToCart} removeFromWishlist={(id) => toggleWishlist({_id: id})} /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute user={currentUser}><ProfileView currentUser={currentUser} orders={orders} onLogout={handleLogout} /></ProtectedRoute>} />
-          
-        <Route path="/founder" element={<ProtectedRoute user={currentUser} allowedRoles={['founder']}><FounderAccess currentUser={currentUser} onLogout={handleLogout} /></ProtectedRoute>} />
+          <Route path="/founder" element={<ProtectedRoute user={currentUser} allowedRoles={['founder']}><FounderAccess currentUser={currentUser} onLogout={handleLogout} /></ProtectedRoute>} />
           <Route path="/my-shop" element={<ProtectedRoute user={currentUser} allowedRoles={['seller']}><StoreAdmin currentUser={currentUser} /></ProtectedRoute>} />
-          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 
       <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} onRemove={removeFromCart} onUpdateQty={updateQuantity} onCheckout={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} currentUser={currentUser} />
-      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartTotal={currentGrandTotal} onConfirmOrder={confirmOrder} loading={orderLoading} />
+      
+      <CheckoutModal 
+        isOpen={isCheckoutOpen} 
+        onClose={() => { setIsCheckoutOpen(false); setCheckoutPincode(null); }} 
+        cartTotal={currentGrandTotal} 
+        onConfirmOrder={confirmOrder} 
+        loading={orderLoading} 
+        onPincodeChange={setCheckoutPincode}
+        hasDiscount={isDiscountApplied} 
+        currentUser={currentUser}
+      />
     </div>
   );
 };

@@ -22,41 +22,65 @@ const InputField = ({ label, icon: Icon, ...props }) => (
     </div>
 );
 
-const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) => {
-    // CHANGES MADE: Removed manual transactionId state and QR code fetching logic
+const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading, onPincodeChange, hasDiscount, currentUser }) => {
     const [paymentMethod] = useState('Online'); // Always Online for Razorpay
 
+    // Hum formData mein initial state daalenge. Agar User logged in hai, uska naam/phone daal do.
     const [formData, setFormData] = useState({
-        fullName: '',
+        fullName: currentUser?.name || '',
         address: '',
         city: '',
         postalCode: '',
         country: 'India',
-        phone: ''
+        phone: currentUser?.phone || ''
     });
 
-    // Lock Body Scroll when Modal is Open
+    // --- FIX IS HERE: Modal open hote hi DOM elements ka autofill check karenge aur user address ---
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            
+            // Check 1: Agar state mein pehle se 6-digit postalCode hai.
+            if (formData.postalCode && formData.postalCode.toString().length === 6) {
+                if (onPincodeChange) onPincodeChange(formData.postalCode);
+            } else {
+                // Check 2: Browser autofill. Ek chhota delay denge taaki browser autofill kar sake.
+                const timer = setTimeout(() => {
+                    const pincodeInput = document.querySelector('input[name="postalCode"]');
+                    if (pincodeInput && pincodeInput.value && pincodeInput.value.length === 6) {
+                        setFormData(prev => ({ ...prev, postalCode: pincodeInput.value }));
+                        if (onPincodeChange) onPincodeChange(pincodeInput.value);
+                    }
+                }, 300); // 300ms delay to let browser fill it
+                
+                return () => clearTimeout(timer);
+            }
         } else {
             document.body.style.overflow = 'unset';
         }
-        return () => { document.body.style.overflow = 'unset'; }
-    }, [isOpen]);
+    }, [isOpen, formData.postalCode, onPincodeChange]); 
+    // -----------------------------------------------------------------------
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+
+        if (name === 'postalCode' && onPincodeChange) {
+            if (value.length === 6) {
+                onPincodeChange(value);
+            } else if (value.length < 6) {
+                onPincodeChange(null); 
+            }
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // CHANGES MADE: Removed manual transaction ID check. 
-        // Directly passing shipping info to App.jsx to trigger Razorpay.
         const finalData = {
             shippingAddress: formData,
             paymentInfo: { 
                 method: paymentMethod
-                // Naya payment verification ID hum App.jsx (Razorpay handler) me add karenge.
             }
         };
         onConfirmOrder(finalData);
@@ -74,7 +98,6 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
             />
 
             {/* MODAL CONTAINER */}
-            {/* CHANGES MADE: Made modal narrower since we removed the left QR side */}
             <div className="bg-white w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl shadow-2xl relative flex flex-col overflow-hidden h-[85vh] md:h-[650px] animate-in slide-in-from-bottom duration-300 z-10">
                 
                 {/* Header */}
@@ -118,10 +141,11 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
 
                         <div className="grid grid-cols-2 gap-5">
                             <InputField label="City" icon={MapPin} type="text" name="city" placeholder="Mumbai" required value={formData.city} onChange={handleChange} />
-                            <InputField label="Pincode" icon={MapPin} type="text" name="postalCode" placeholder="400001" maxLength="6" required value={formData.postalCode} onChange={handleChange} />
+                            {/* Is input field me name="postalCode" zaroori hai autofill detect karne ke liye */}
+                            <InputField label="Pincode" icon={MapPin} type="text" name="postalCode" id="postalCode" placeholder="400001" maxLength="6" required value={formData.postalCode} onChange={handleChange} />
                         </div>
 
-                        {/* Payment Section - Simplified for Razorpay */}
+                        {/* Payment Section */}
                         <div className="pt-2">
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 mb-3 block">Payment Method</label>
                             <div className="relative overflow-hidden rounded-2xl border-2 border-indigo-600 bg-indigo-50/50 p-5 flex items-center justify-between">
@@ -142,6 +166,16 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
 
                 {/* Footer - Sticky Bottom */}
                 <div className="p-4 md:p-6 border-t border-slate-100 bg-white shrink-0 z-20 pb-safe">
+                    
+                    {/* --- BANNER --- */}
+                    {hasDiscount && (
+                        <div className="mb-3 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 animate-in zoom-in-95 duration-300">
+                            <span className="text-base"></span>
+                            <span>Local Delivery! 50% OFF on Shipping applied.</span>
+                        </div>
+                    )}
+                    {/* -------------- */}
+
                     <button 
                         form="checkout-form" 
                         type="submit" 
@@ -152,13 +186,11 @@ const CheckoutModal = ({ isOpen, onClose, cartTotal, onConfirmOrder, loading }) 
                             <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
                             <>
-                                {/* --- CHANGES MADE HERE: Visual cue that it's the Total Amount --- */}
                                 <span>Proceed to Pay ₹{cartTotal}</span>
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </>
                         )}
                     </button>
-                    {/* Small text to ensure transparency to the user */}
                     <p className="text-center text-[10px] text-slate-400 mt-3 font-medium">By proceeding, you agree to our Terms and conditions. Total includes shipping.</p>
                 </div>
             </div>

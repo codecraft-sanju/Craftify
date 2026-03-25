@@ -1,11 +1,9 @@
 // src/ProfileView.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-// --- CHANGES MADE HERE: Added Image as ImageIcon to imports ---
 import { Package, Clock, RefreshCcw, Camera, Loader2, Copy, CheckCircle, CreditCard, User as UserIcon, AlertTriangle, Info, Truck, Home, Image as ImageIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-// --- MODIFIED SECTION END ---
 
 // --- CONFIGURATION ---
 const CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -86,9 +84,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
   const [copiedId, setCopiedId] = useState(null);
   
   const [invoiceMsgId, setInvoiceMsgId] = useState(null);
-  // --- MODIFIED SECTION START ---
   const [trackingOrderId, setTrackingOrderId] = useState(null);
-  // --- MODIFIED SECTION END ---
 
   const generateInvoice = (order, user) => {
     const doc = new jsPDF();
@@ -137,7 +133,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
         itemDesc += `\n(${extras.join(', ')})`;
       }
 
-      // --- CHANGES MADE HERE: Added shipping cost to invoice breakdown ---
       const itemShipping = item.shippingCost || 0;
       const itemTotal = (item.qty * item.price) + (item.qty * itemShipping);
 
@@ -149,7 +144,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
         `Rs ${itemTotal}`
       ];
       tableRows.push(itemData);
-      // -------------------------------------------------------------------
     });
 
     autoTable(doc, {
@@ -162,7 +156,18 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
       columnStyles: { 0: { cellWidth: 70 } }
     });
 
-    const finalY = doc.lastAutoTable.finalY || 80;
+    let finalY = doc.lastAutoTable.finalY || 80;
+
+    // --- INVOICE ME 50% DISCOUNT PRINT ---
+    if (order.hasLocalDeliveryDiscount) {
+      finalY += 10;
+      doc.setFontSize(10);
+      doc.setTextColor(16, 185, 129); // Emerald Green
+      doc.text('Local Delivery Applied (50% OFF on Shipping)', 14, finalY);
+      doc.setTextColor(0, 0, 0); // Reset color
+    }
+    // ----------------------------------------
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(`Total Amount Paid: Rs ${order.totalAmount}`, 14, finalY + 15);
@@ -179,7 +184,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
     }
   };
 
-  // --- IMAGE UPLOAD LOGIC ---
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -187,7 +191,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
     setUploading(true);
 
     try {
-      // 1. Upload to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', UPLOAD_PRESET);
@@ -203,7 +206,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
       if (!imageUrl) throw new Error("Cloudinary upload failed");
 
-      // 2. Update Backend
       const backendRes = await fetch(`${API_URL}/api/users/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -215,7 +217,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
       const updatedUser = await backendRes.json();
       
-      // 3. Update Local Storage & Refresh
       localStorage.setItem('userInfo', JSON.stringify(updatedUser));
       window.location.reload(); 
 
@@ -226,64 +227,43 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
     }
   };
 
-  // --- COPY TRANSACTION ID LOGIC ---
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopiedId(text);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Helper: Check if avatar is a valid URL (contains http/https)
   const hasValidAvatar = currentUser?.avatar && currentUser.avatar.includes('http');
 
   return (
     <div className="bg-[#FEFAEF] pt-28 pb-32 max-w-5xl mx-auto px-6">
-      {/* Profile Header */}
       <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden mb-12 text-center md:text-left group">
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-10 group-hover:opacity-15 transition-opacity"></div>
 
         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10 mt-6">
-          
-          {/* Avatar Section */}
           <div className="relative group/avatar">
             <div className="w-32 h-32 bg-white rounded-full p-2 shadow-2xl relative">
               <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-white text-4xl font-bold overflow-hidden relative">
-                
-                {/* 1. Loading State */}
                 {uploading ? (
                    <Loader2 className="w-10 h-10 animate-spin text-white" />
-                ) 
-                /* 2. Valid Image URL State */
-                : hasValidAvatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    className="w-full h-full object-cover"
-                    alt="User"
-                  />
-                ) 
-                /* 3. Fallback: Initials (First Letter) */
-                : (
+                ) : hasValidAvatar ? (
+                  <img src={currentUser.avatar} className="w-full h-full object-cover" alt="User" />
+                ) : (
                   <span className="text-5xl font-black text-white select-none">
                      {currentUser?.name?.charAt(0).toUpperCase() || <UserIcon className="w-12 h-12" />}
                   </span>
                 )}
                 
-                {/* Camera Overlay for Upload */}
                 <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 cursor-pointer transition-opacity duration-300">
                   <Camera className="w-8 h-8 text-white drop-shadow-md" />
                   <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleImageUpload}
-                    disabled={uploading}
+                    type="file" accept="image/*" className="hidden" 
+                    onChange={handleImageUpload} disabled={uploading}
                   />
                 </label>
               </div>
             </div>
-            {/* Status Dot */}
             <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full pointer-events-none"></div>
-            {/* Mobile Camera Icon */}
             <div className="md:hidden absolute bottom-0 right-0 pointer-events-none">
                  <div className="bg-slate-900 text-white p-1.5 rounded-full border-2 border-white shadow-sm">
                     <Camera className="w-3 h-3" />
@@ -304,17 +284,12 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
             </div>
           </div>
 
-          <Button
-            onClick={onLogout}
-            variant="secondary"
-            className="mt-6 md:mt-0 px-8"
-          >
+          <Button onClick={onLogout} variant="secondary" className="mt-6 md:mt-0 px-8">
             Sign Out
           </Button>
         </div>
       </div>
 
-      {/* Order Section Header */}
       <div className="flex items-center gap-3 mb-8 px-2">
         <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
           <Package className="w-5 h-5" />
@@ -322,7 +297,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
         <h3 className="font-black text-2xl text-slate-900">Order History</h3>
       </div>
 
-      {/* Orders List */}
       <div className="space-y-5">
         {orders.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-[2rem] border border-slate-200 border-dashed">
@@ -330,20 +304,14 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               <Package className="w-8 h-8 text-slate-300" />
             </div>
             <p className="text-slate-400 font-medium text-lg">No orders yet.</p>
-            <Link
-              to="/shop"
-              className="text-indigo-600 font-bold hover:underline mt-2 inline-block"
-            >
+            <Link to="/shop" className="text-indigo-600 font-bold hover:underline mt-2 inline-block">
               Start Shopping
             </Link>
           </div>
         ) : (
           orders.map((o) => (
-            <div
-              key={o._id}
-              className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group"
-            >
-              {/* Order Info Header */}
+            <div key={o._id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+              
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-50 pb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -362,38 +330,33 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
                 
-                {/* Status & Paid Badge */}
                 <div className="flex flex-col items-end gap-2">
-                  <Badge
-                    color={
-                      o.orderStatus === 'Delivered'
-                        ? 'green'
-                        : o.orderStatus === 'Shipped'
-                          ? 'indigo'
-                          : o.orderStatus === 'Cancelled'
-                            ? 'red'
-                            : 'slate'
-                    }
-                  >
+                  <Badge color={o.orderStatus === 'Delivered' ? 'green' : o.orderStatus === 'Shipped' ? 'indigo' : o.orderStatus === 'Cancelled' ? 'red' : 'slate'}>
                     {o.orderStatus || 'Processing'}
                   </Badge>
                   
-                  {/* Paid Badge for Online Orders */}
-                  {o.paymentInfo?.method === 'Online' && (
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                      <CheckCircle className="w-3 h-3" /> Paid Online
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    {o.paymentInfo?.method === 'Online' && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                        <CheckCircle className="w-3 h-3" /> Paid Online
+                      </div>
+                    )}
+                    {/* --- UI ME 50% DISCOUNT BADGE --- */}
+                    {o.hasLocalDeliveryDiscount && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                        <CheckCircle className="w-3 h-3" /> 50% Off Shipping
+                      </div>
+                    )}
+                    {/* ------------------------------------ */}
+                  </div>
                 </div>
               </div>
 
-              {/* Items Section */}
               <div className="flex flex-col gap-3 mb-4">
                 {o.items?.map((item, i) => (
                   <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
                     
                     <div className="flex items-center gap-4 w-full sm:w-auto flex-1">
-                        {/* Item Image */}
                         <div className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white shrink-0">
                           <img
                             src={item.image || item.coverImage}
@@ -403,7 +366,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                           />
                         </div>
                         
-                        {/* Item Details (Name, Color, Size, Qty) */}
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
                           
@@ -424,7 +386,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                               </span>
                             )}
 
-                            {/* --- CHANGES MADE HERE: Show Custom Text and Photo Info --- */}
                             {item.customization?.text && (
                                <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md border border-indigo-100 shadow-sm normal-case tracking-normal">
                                  Text: "{item.customization.text}"
@@ -436,12 +397,10 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                                  <ImageIcon className="w-3 h-3" /> View Photo
                                </a>
                             )}
-                            {/* --------------------------------------------------------- */}
                           </div>
                         </div>
                     </div>
 
-                    {/* Item Price */}
                     <div className="text-left sm:text-right shrink-0 w-full sm:w-auto pl-20 sm:pl-0 sm:pr-2 mt-2 sm:mt-0">
                       <p className="font-black text-slate-900">₹{item.price}</p>
                       {item.shippingCost > 0 && <p className="text-[10px] text-slate-400 font-bold">+ ₹{item.shippingCost} ship</p>}
@@ -451,10 +410,8 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 ))}
               </div>
 
-              {/* --- PAYMENT DETAILS & TOTAL SECTION --- */}
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
                 
-                {/* Transaction ID Display */}
                 <div className="w-full sm:w-auto flex flex-col gap-1">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
                     <CreditCard className="w-3 h-3" /> Payment Transaction ID
@@ -479,7 +436,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
 
-                {/* Total Amount with Shipping Breakdown */}
                 <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
                     Total Paid
@@ -487,21 +443,27 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   <span className="font-black text-2xl text-slate-900 leading-none">
                     ₹{o.totalAmount}
                   </span>
-                  {/* --- CHANGES MADE HERE: Shipping text added under Total Paid --- */}
+                  {/* --- UI ME 50% DISCOUNT BREAKDOWN TEXT --- */}
                   {o.shippingPrice > 0 ? (
-                      <p className="text-[10px] text-slate-500 font-medium mt-1">
-                          Includes ₹{o.shippingPrice} Shipping
-                      </p>
+                      <div>
+                          <p className="text-[10px] text-slate-500 font-medium mt-1">
+                              Includes ₹{o.shippingPrice} Shipping
+                          </p>
+                          {o.hasLocalDeliveryDiscount && (
+                              <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
+                                   50% Local Discount Applied
+                              </p>
+                          )}
+                      </div>
                   ) : (
                       <p className="text-[10px] text-emerald-500 font-bold mt-1">
                           Free Shipping
                       </p>
                   )}
-                  {/* -------------------------------------------------------------- */}
+                  {/* ----------------------------------------- */}
                 </div>
               </div>
 
-              {/* --- CANCELLATION NOTICE FOR CUSTOMER --- */}
               {o.orderStatus === 'Cancelled' && (
                   <div className="mt-6 bg-red-50 border border-red-100 rounded-2xl p-5 animate-in fade-in">
                       <div className="flex items-start gap-3">
@@ -529,9 +491,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
               )}
 
-              {/* Action Buttons */}
               <div className="mt-4 flex justify-end gap-3">
-                {/* --- MODIFIED SECTION START (Hide Track Order if Cancelled) --- */}
                 {o.orderStatus !== 'Cancelled' && (
                   <Button 
                     size="sm" 
@@ -542,7 +502,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     {trackingOrderId === o._id ? 'Close Tracking' : 'Track Order'}
                   </Button>
                 )}
-                {/* --- MODIFIED SECTION END --- */}
                 
                 <div className="relative flex items-center">
                   <Button 
@@ -565,14 +524,12 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 </div>
               </div>
 
-              {/* --- MODIFIED SECTION START (Tracking Timeline UI) --- */}
               {trackingOrderId === o._id && o.orderStatus !== 'Cancelled' && (
                 <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-4 fade-in duration-300">
                   <h4 className="text-sm font-bold text-slate-900 mb-6 px-2">Journey Details</h4>
                   
                   <div className="relative pl-6 space-y-8 before:absolute before:inset-y-2 before:left-[11px] before:w-[2px] before:bg-slate-100">
                     
-                    {/* Step 1: Placed */}
                     <div className="relative flex items-start gap-4">
                       <div className="absolute -left-6 w-6 h-6 rounded-full bg-indigo-500 border-4 border-white flex items-center justify-center shadow-sm">
                         <CheckCircle className="w-3 h-3 text-white" />
@@ -583,7 +540,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Step 2: Processing */}
                     <div className="relative flex items-start gap-4">
                       <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus !== 'Pending' ? 'bg-indigo-500' : 'bg-slate-200'}`}>
                         <Package className={`w-3 h-3 ${o.orderStatus !== 'Pending' ? 'text-white' : 'text-slate-400'}`} />
@@ -594,7 +550,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Step 3: Shipped */}
                     <div className="relative flex items-start gap-4">
                       <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'bg-indigo-500' : 'bg-slate-200'}`}>
                         <Truck className={`w-3 h-3 ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'text-white' : 'text-slate-400'}`} />
@@ -605,7 +560,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                       </div>
                     </div>
 
-                    {/* Step 4: Delivered */}
                     <div className="relative flex items-start gap-4">
                       <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus === 'Delivered' ? 'bg-green-500' : 'bg-slate-200'}`}>
                         <Home className={`w-3 h-3 ${o.orderStatus === 'Delivered' ? 'text-white' : 'text-slate-400'}`} />
@@ -619,7 +573,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
               )}
-              {/* --- MODIFIED SECTION END --- */}
 
             </div>
           ))

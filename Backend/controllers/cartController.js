@@ -7,11 +7,11 @@ const Product = require('../models/Product');
 // @access  Private
 const getCart = async (req, res) => {
     try {
-        // --- CHANGES MADE HERE: Added 'shippingCost' to populate select ---
-        let cart = await Cart.findOne({ user: req.user._id }).populate('items.product', 'name price coverImage stock shippingCost');
+        let cart = await Cart.findOne({ user: req.user._id })
+            .populate('items.product', 'name price coverImage stock shippingCost')
+            .populate('items.shop', 'name address');
         
         if (!cart) {
-            // Agar cart nahi hai, toh empty return karo bajaye error ke
             return res.json({ items: [], totalPrice: 0 });
         }
         
@@ -33,7 +33,6 @@ const addToCart = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // --- CHANGES MADE HERE: Smart Image Selection based on selectedColor ---
         let itemImage = product.coverImage; 
         
         if (selectedColor && product.colors && product.colors.length > 0) {
@@ -42,27 +41,23 @@ const addToCart = async (req, res) => {
                 itemImage = matchedColor.imageUrl;
             }
         }
-        // -----------------------------------------------------------------------
-
+   
         let cart = await Cart.findOne({ user: req.user._id });
 
-        // Naya item object jo add karna hai
         const newItem = {
             product: productId,
             name: product.name,
-            image: itemImage, // Updated to use dynamic image
+            image: itemImage, 
             price: product.price,
             qty: Number(qty) || 1,
-            // --- CHANGES MADE HERE: Added shippingCost from Product model ---
             shippingCost: product.shippingCost || 0,
             selectedSize,
             selectedColor,
-            customization, // Yeh ab naturally photoUrl handle kar lega
+            customization,
             shop: product.shop
         };
 
         if (cart) {
-            // --- CHANGES MADE HERE: Updated logic to also check customization fields (text, font, photoUrl) ---
             const itemIndex = cart.items.findIndex(item => {
                 const isSameProduct = item.product.toString() === productId && 
                                       item.selectedSize === selectedSize &&
@@ -71,32 +66,33 @@ const addToCart = async (req, res) => {
                 const existingCust = item.customization || {};
                 const newCust = customization || {};
 
-                // Agar customization alag hai (jaise alag photo ya alag naam), toh naya item treat karo
                 const isSameCustomization = existingCust.text === newCust.text &&
                                             existingCust.font === newCust.font &&
                                             existingCust.photoUrl === newCust.photoUrl;
 
                 return isSameProduct && isSameCustomization;
             });
-            // -----------------------------------------------------------------------------------------------
 
             if (itemIndex > -1) {
-                // Product aur customization same hai: Sirf quantity update karo
                 cart.items[itemIndex].qty += newItem.qty;
             } else {
-                // Product ya customization naya hai: Array mein push karo
                 cart.items.push(newItem);
             }
             await cart.save();
-            res.status(200).json(cart);
         } else {
-            // Cart hi nahi hai user ka: Naya Cart banao
-            const newCart = await Cart.create({
+            cart = await Cart.create({
                 user: req.user._id,
                 items: [newItem]
             });
-            res.status(201).json(newCart);
         }
+
+        // --- THE FIX: ALways return POPULATED cart after adding ---
+        const populatedCart = await Cart.findById(cart._id)
+            .populate('items.product', 'name price coverImage stock shippingCost')
+            .populate('items.shop', 'name address');
+            
+        res.status(200).json(populatedCart);
+
     } catch (error) {
         console.error("Add to Cart Error:", error);
         res.status(500).json({ message: error.message });
@@ -108,7 +104,7 @@ const addToCart = async (req, res) => {
 // @access  Private
 const updateCartQuantity = async (req, res) => {
     try {
-        const { itemId, action } = req.body; // action: 'inc' or 'dec'
+        const { itemId, action } = req.body; 
         const cart = await Cart.findOne({ user: req.user._id });
 
         if (!cart) return res.status(404).json({ message: 'Cart not found' });
@@ -127,7 +123,13 @@ const updateCartQuantity = async (req, res) => {
         }
 
         await cart.save();
-        res.json(cart);
+
+        // --- THE FIX: Return POPULATED cart after updating quantity ---
+        const populatedCart = await Cart.findById(cart._id)
+            .populate('items.product', 'name price coverImage stock shippingCost')
+            .populate('items.shop', 'name address');
+            
+        res.json(populatedCart);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -143,7 +145,13 @@ const removeFromCart = async (req, res) => {
         if (cart) {
             cart.items = cart.items.filter(item => item._id.toString() !== req.params.itemId);
             await cart.save();
-            res.json(cart);
+
+            // --- THE FIX: Return POPULATED cart after removing item ---
+            const populatedCart = await Cart.findById(cart._id)
+                .populate('items.product', 'name price coverImage stock shippingCost')
+                .populate('items.shop', 'name address');
+                
+            res.json(populatedCart);
         } else {
             res.status(404).json({ message: 'Cart not found' });
         }
