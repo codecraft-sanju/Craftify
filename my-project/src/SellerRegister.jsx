@@ -1,7 +1,7 @@
 // src/SellerRegister.jsx
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // --- CHANGE: Imported Link ---
 import {
   Store, User, Phone, ArrowRight, ArrowLeft,
   Mail, Lock, ShoppingBag, 
@@ -59,7 +59,7 @@ const InputGroup = ({ icon: Icon, type, label, name, value, onChange, required =
         autoFocus={autoFocus}
         maxLength={maxLength}
         className={`inputText peer w-full bg-transparent border-b-2 border-zinc-200 dark:border-zinc-800 py-3 ${prefix ? 'pl-9' : 'pl-2'} pr-10 outline-none 
-                   focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
+                    focus:border-black dark:focus:border-white transition-all duration-300 text-zinc-900 dark:text-white placeholder-transparent font-medium`}
       />
       <span className={`absolute ${prefix ? 'left-9' : 'left-0'} top-3 text-zinc-400 pointer-events-none transition-all duration-300 uppercase text-[10px] font-bold tracking-widest
                         peer-focus:-top-4 peer-focus:left-0 peer-focus:text-black dark:peer-focus:text-white
@@ -561,12 +561,24 @@ export default function SellerRegister({ onLoginSuccess, initialMode = 'register
 
           {/* Hide Switch Mode text when inside multi-step process for cleaner UI */}
           {(isLoginView || step === 1) && (
-            <motion.p variants={fadeInUp} className="mt-2 text-center text-zinc-500 text-sm font-medium pb-10">
-              {isLoginView ? "Don't have a seller account? " : "Already have a seller account? "}
-              <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
-                  {isLoginView ? "Register Now" : "Login Here"}
-              </button>
-            </motion.p>
+            <motion.div variants={fadeInUp} className="mt-2 text-center pb-10 flex flex-col items-center">
+              <p className="text-zinc-500 text-sm font-medium">
+                {isLoginView ? "Don't have a seller account? " : "Already have a seller account? "}
+                <button type="button" onClick={handleSwitchMode} className="text-black dark:text-white font-bold hover:underline">
+                    {isLoginView ? "Register Now" : "Login Here"}
+                </button>
+              </p>
+
+              {/* --- CHANGE: Added Customer Redirect Link Here --- */}
+              <div className="mt-6 pt-6 w-full max-w-sm border-t border-zinc-200 dark:border-zinc-800">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+                  Want to shop instead?{' '}
+                  <Link to="/register" className="font-bold text-black dark:text-white hover:underline">
+                    Join as a Customer
+                  </Link>
+                </p>
+              </div>
+            </motion.div>
           )}
         </motion.div>
 
