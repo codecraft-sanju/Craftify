@@ -6,7 +6,7 @@ import {
     LogOut, ChevronRight, Search, Bell, TrendingUp, UploadCloud, 
     MapPin, Phone, Truck, CheckCircle, QrCode, ArrowLeft, Loader2,
     ChevronDown, Filter, Calendar, Sparkles, ExternalLink, ShieldAlert,Edit,Trash2,
-    Building, Map, Globe, Hash, AlertCircle // --- CHANGE: Added AlertCircle icon ---
+    Building, Map, Globe, Hash, AlertCircle 
 } from 'lucide-react';
 import io from 'socket.io-client';
 
@@ -125,7 +125,6 @@ export default function StoreAdmin({ currentUser }) {
     const [sellerQrFile, setSellerQrFile] = useState(null);
     const [sellerQrPreview, setSellerQrPreview] = useState("");
     
-    // --- CHANGE: State for showing the address popup ---
     const [showAddressPrompt, setShowAddressPrompt] = useState(false);
     
     const [address, setAddress] = useState({
@@ -237,7 +236,6 @@ export default function StoreAdmin({ currentUser }) {
                     });
                 }
 
-                // --- CHANGE: Check if address is incomplete and show prompt ---
                 if (shopData && (!shopData.address || !shopData.address.street || !shopData.address.city)) {
                     setShowAddressPrompt(true);
                 }
@@ -690,24 +688,36 @@ export default function StoreAdmin({ currentUser }) {
                                     ) : filteredProducts.map(p => {
                                         const displayImage = p.coverImage || (p.images && p.images[0]?.url) || p.image || "https://via.placeholder.com/300";
                                         return (
-                                            <div key={p._id} className="group bg-slate-900/50 backdrop-blur rounded-2xl border border-white/5 hover:border-rose-500/50 shadow-lg transition-all duration-300 overflow-hidden flex flex-col relative">
+                                            <div key={p._id} className="group bg-slate-900/50 backdrop-blur rounded-2xl border border-white/5 shadow-lg transition-all duration-300 overflow-hidden flex flex-col relative">
                                                 <div className="absolute top-2 right-2 z-10">
                                                     <span className="bg-black/60 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wide text-white flex items-center gap-1">
                                                         <Package className="w-3 h-3"/> {p.stock}
                                                     </span>
                                                 </div>
                                                 <div className="relative aspect-[4/5] overflow-hidden bg-slate-800">
-                                                    <img src={optimizeCloudinaryUrl(displayImage)} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                        <button onClick={() => handleOpenModal(p)} className="p-2 bg-white rounded-full text-black shadow-lg hover:scale-110 transition-transform"><Edit className="w-4 h-4"/></button>
-                                                        <button onClick={() => handleDeleteProduct(p._id)} className="p-2 bg-rose-500 rounded-full text-white shadow-lg hover:scale-110 transition-transform"><Trash2 className="w-4 h-4"/></button>
-                                                    </div>
+                                                    <img src={optimizeCloudinaryUrl(displayImage)} alt={p.name} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
                                                 </div>
-                                                <div className="p-3 flex flex-col flex-1">
+                                                <div className="p-4 flex flex-col flex-1">
                                                     <h3 className="font-bold text-white text-sm line-clamp-1">{p.name}</h3>
-                                                    <div className="flex justify-between items-center mt-auto pt-2">
+                                                    <div className="flex justify-between items-center mt-1 mb-3">
                                                         <p className="text-rose-400 font-black text-sm">₹{p.price}</p>
                                                         <p className="text-[10px] text-slate-500 font-bold uppercase">{p.category}</p>
+                                                    </div>
+                                                    
+                                                    {/* --- EXPLICIT ACTION BUTTONS FOR MOBILE & DESKTOP --- */}
+                                                    <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-white/5">
+                                                        <button 
+                                                            onClick={() => handleOpenModal(p)} 
+                                                            className="flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
+                                                        >
+                                                            <Edit className="w-3.5 h-3.5"/> Edit
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteProduct(p._id)} 
+                                                            className="flex items-center justify-center gap-1.5 py-2.5 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5"/> Delete
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -884,7 +894,7 @@ export default function StoreAdmin({ currentUser }) {
                 </div>
             </main>
 
-            {/* --- CHANGE: Pop-up Modal for Missing Address --- */}
+            {/* --- Pop-up Modal for Missing Address --- */}
             {showAddressPrompt && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
                     <div className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-in zoom-in-95 duration-300">
@@ -924,7 +934,6 @@ export default function StoreAdmin({ currentUser }) {
                     </div>
                 </div>
             )}
-            {/* ------------------------------------------------ */}
 
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-white/10 z-50 flex justify-around p-2 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
                  {[
