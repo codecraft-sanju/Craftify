@@ -5,6 +5,7 @@ const GlobalSettings = require('../models/GlobalSettings');
 const generateToken = require('../utils/generateToken'); 
 const Otp = require('../models/Otp');
 const sendWhatsApp = require('../utils/sendWhatsApp');
+const Product = require('../models/Product');
 
 // @desc    Send OTP for new user registration (Via WhatsApp)
 // @route   POST /api/users/send-otp
@@ -437,13 +438,34 @@ const updateGlobalQR = async (req, res) => {
 // 3. Get Category Images (Public)
 const getCategoryImages = async (req, res) => {
     try {
+        // 1. Founder ki set ki hui settings nikalo
         let settings = await GlobalSettings.findOne();
-        if (!settings) {
-            return res.json({ 
-                "All": "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop" 
-            });
+        
+        // Map ko plain object me convert kar rahe hain taaki handle karna easy ho
+        let finalImagesMap = settings && settings.categoryImages 
+            ? Object.fromEntries(settings.categoryImages) 
+            : {};
+
+        // Default 'All' category image
+        if (!finalImagesMap["All"]) {
+            finalImagesMap["All"] = "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=2070&auto=format&fit=crop";
         }
-        res.json(settings.categoryImages);
+
+        // 2. Ek single query se har category ke pehle product ki image nikal lo (Super Fast)
+        const categoryFallbacks = await Product.aggregate([
+            { $group: { _id: "$category", fallbackImage: { $first: "$coverImage" } } }
+        ]);
+
+        // 3. Agar founder ne image set nahi ki hai, toh product ki fallback image laga do
+        categoryFallbacks.forEach(cat => {
+            const categoryName = cat._id;
+            // Check if categoryName exists and founder hasn't set an image for it
+            if (categoryName && !finalImagesMap[categoryName] && cat.fallbackImage) {
+                finalImagesMap[categoryName] = cat.fallbackImage;
+            }
+        });
+
+        res.json(finalImagesMap);
     } catch (error) {
         console.error("Get Cat Error:", error);
         res.status(500).json({ message: error.message });
