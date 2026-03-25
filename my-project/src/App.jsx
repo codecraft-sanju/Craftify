@@ -617,7 +617,7 @@ const CraftifyContent = () => {
       
       <main className={showNavbar ? 'pt-16 md:pt-0' : ''}>
         <Routes>
-          <Route path="/" element={<AuthRedirect user={currentUser}><LandingPage onLoginClick={(t) => navigate(t === 'seller' ? '/seller-register' : '/login')} /></AuthRedirect>} />
+        <Route path="/" element={<AuthRedirect user={currentUser}><Navigate to="/shop" replace /></AuthRedirect>} />
           <Route path="/login" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
           <Route path="/register" element={<AuthRedirect user={currentUser}><CustomerAuth onLoginSuccess={handleLogin} /></AuthRedirect>} />
           <Route path="/seller-register" element={<AuthRedirect user={currentUser}><SellerRegister onLoginSuccess={handleLogin} initialMode="register" /></AuthRedirect>} />
