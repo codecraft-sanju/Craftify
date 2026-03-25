@@ -158,12 +158,16 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
     let finalY = doc.lastAutoTable.finalY || 80;
 
-    // --- INVOICE ME 50% DISCOUNT PRINT ---
-    if (order.hasLocalDeliveryDiscount) {
+    // --- CLEARLY WRITING THE ORIGINAL VS HALF PRICE ON PDF ---
+    if (order.hasLocalDeliveryDiscount && order.shippingPrice > 0) {
       finalY += 10;
       doc.setFontSize(10);
       doc.setTextColor(16, 185, 129); // Emerald Green
-      doc.text('Local Delivery Applied (50% OFF on Shipping)', 14, finalY);
+      // Showing the visual comparison here in the generated invoice
+      doc.text(`Local Delivery Applied (50% OFF on Shipping)`, 14, finalY);
+      finalY += 6;
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Original Shipping: Rs ${order.shippingPrice * 2} | Discounted Shipping: Rs ${order.shippingPrice}`, 14, finalY);
       doc.setTextColor(0, 0, 0); // Reset color
     }
     // ----------------------------------------
@@ -341,13 +345,11 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                         <CheckCircle className="w-3 h-3" /> Paid Online
                       </div>
                     )}
-                    {/* --- UI ME 50% DISCOUNT BADGE --- */}
                     {o.hasLocalDeliveryDiscount && (
                       <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                         <CheckCircle className="w-3 h-3" /> 50% Off Shipping
                       </div>
                     )}
-                    {/* ------------------------------------ */}
                   </div>
                 </div>
               </div>
@@ -443,15 +445,22 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   <span className="font-black text-2xl text-slate-900 leading-none">
                     ₹{o.totalAmount}
                   </span>
+                  
                   {/* --- UI ME 50% DISCOUNT BREAKDOWN TEXT --- */}
                   {o.shippingPrice > 0 ? (
                       <div>
-                          <p className="text-[10px] text-slate-500 font-medium mt-1">
-                              Includes ₹{o.shippingPrice} Shipping
-                          </p>
-                          {o.hasLocalDeliveryDiscount && (
-                              <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
-                                   50% Local Discount Applied
+                          {o.hasLocalDeliveryDiscount ? (
+                              <div className="mt-1">
+                                  <p className="text-[10px] text-slate-400 font-medium line-through decoration-slate-400">
+                                      Original Shipping: ₹{o.shippingPrice * 2}
+                                  </p>
+                                  <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
+                                       Local Delivery Applied! Final Shipping: ₹{o.shippingPrice}
+                                  </p>
+                              </div>
+                          ) : (
+                              <p className="text-[10px] text-slate-500 font-medium mt-1">
+                                  Includes ₹{o.shippingPrice} Shipping
                               </p>
                           )}
                       </div>
