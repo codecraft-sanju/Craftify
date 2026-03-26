@@ -4,7 +4,8 @@ const reviewSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     name: { type: String, required: true },
     rating: { type: Number, required: true },
-    comment: { type: String, required: true }
+    comment: { type: String, required: true },
+    image: { type: String, default: null }
 }, { timestamps: true });
 
 const productSchema = new mongoose.Schema({
@@ -31,7 +32,7 @@ const productSchema = new mongoose.Schema({
     category: {
         type: String,
         required: [true, 'Please enter product category'],
-       
+        
         lowercase: true,
         index: true 
     },
@@ -100,7 +101,6 @@ const productSchema = new mongoose.Schema({
     },
     customizationType: { 
         type: String, 
-        // --- CHANGES MADE HERE: Added 'both' to handle cases where product needs text AND photo ---
         enum: ['text', 'upload', 'selection', 'both', 'none'],
         default: 'none'
     },

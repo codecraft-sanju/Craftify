@@ -177,7 +177,6 @@ const updateProduct = async (req, res) => {
             image, coverImage,
             images, 
             compareAtPrice,
-            // --- CHANGES MADE HERE: Extract shippingCost ---
             shippingCost 
         } = req.body;
 
@@ -298,7 +297,8 @@ const deleteProduct = async (req, res) => {
 // @access  Private (Customer)
 const createProductReview = async (req, res) => {
     try {
-        const { rating, comment } = req.body;
+        // --- CHANGES MADE HERE: Added image to destructuring ---
+        const { rating, comment, image } = req.body;
         const product = await Product.findById(req.params.id);
 
         if (product) {
@@ -314,6 +314,8 @@ const createProductReview = async (req, res) => {
                 name: req.user.name,
                 rating: Number(rating),
                 comment,
+                // --- CHANGES MADE HERE: Saved image in the review object ---
+                image: image || null,
                 user: req.user._id,
             };
 
