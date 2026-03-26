@@ -393,6 +393,64 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, showPageLoader }
   );
 };
 
+// --- CHANGES MADE HERE: NEW ARRIVALS SLIDER START ---
+const NewArrivalsSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
+    const scrollRef = useRef(null);
+  
+    const scrollLeftAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+    };
+  
+    const scrollRightAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+    };
+  
+    if (!products || products.length === 0) return null;
+  
+    return (
+      <div className="mb-12 relative group px-2 sm:px-0 mt-8">
+          <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
+              <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-pink-500 fill-pink-500/20" /> 
+                  New Arrivals
+              </h3>
+          </div>
+          
+          <button 
+              onClick={scrollLeftAction}
+              className="hidden md:flex absolute left-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronLeft className="w-6 h-6 ml-[-2px]" />
+          </button>
+  
+          <div 
+              ref={scrollRef}
+              className="flex gap-4 md:gap-6 overflow-x-auto py-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible"
+          >
+              {products.map((product, index) => (
+                  <div key={product._id || product.id} className="w-[160px] sm:w-[200px] md:w-[240px] lg:w-[260px] shrink-0 snap-center flex items-stretch">
+                      <ProductCard 
+                          product={product} 
+                          index={index}
+                          wishlist={wishlist} 
+                          toggleWishlist={toggleWishlist} 
+                          addToCart={addToCart} 
+                      />
+                  </div>
+              ))}
+          </div>
+  
+          <button 
+              onClick={scrollRightAction}
+              className="hidden md:flex absolute right-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-pink-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronRight className="w-6 h-6 mr-[-2px]" />
+          </button>
+      </div>
+    );
+};
+// --- CHANGES MADE HERE: NEW ARRIVALS SLIDER END ---
+
 const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     const scrollRef = useRef(null);
   
@@ -409,7 +467,7 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     if (!trendingProducts || trendingProducts.length === 0) return null;
   
     return (
-      <div className="mb-12 relative group px-2 sm:px-0">
+      <div className="mb-12 relative group px-2 sm:px-0 mt-8">
           <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
               <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
                   <Flame className="w-6 h-6 text-orange-500 fill-orange-500/20" /> 
@@ -473,10 +531,14 @@ const ShopView = ({
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
 
+  // --- CHANGES MADE HERE: New Arrivals State START ---
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [isNewArrivalsLoading, setIsNewArrivalsLoading] = useState(true);
+  // --- CHANGES MADE HERE: New Arrivals State END ---
+
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
 
-  // CHANGES MADE HERE: Smart filtering code added to handle case sensitivity and spaces
   const filteredProducts = products.filter((product) => {
       const prodCategory = (product?.category || "").toLowerCase().trim();
       const selectedCategory = (activeCategory || "").toLowerCase().trim();
@@ -488,7 +550,6 @@ const ShopView = ({
 
       return matchCategory && matchSearch;
   });
-  // ---------------------------------------------------------------------------------------
 
   useEffect(() => {
       if (showPageLoader) {
@@ -531,6 +592,25 @@ const ShopView = ({
     fetchTrendingProducts();
   }, []);
 
+  // --- CHANGES MADE HERE: Fetch New Arrivals START ---
+  useEffect(() => {
+    const fetchNewArrivals = async () => {
+        try {
+            const res = await fetch(`${API_URL}/api/products/new-arrivals`);
+            if (res.ok) {
+                const data = await res.json();
+                setNewArrivals(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch new arrivals", error);
+        } finally {
+            setIsNewArrivalsLoading(false);
+        }
+    };
+    fetchNewArrivals();
+  }, []);
+  // --- CHANGES MADE HERE: Fetch New Arrivals END ---
+
   return (
       <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
             
@@ -556,6 +636,17 @@ const ShopView = ({
                     showPageLoader={showPageLoader} 
                 />
 
+                {/* --- CHANGES MADE HERE: Render New Arrivals Slider START --- */}
+                {!isNewArrivalsLoading && newArrivals.length > 0 && searchQuery === "" && activeCategory === "All" && (
+                    <NewArrivalsSlider 
+                        products={newArrivals}
+                        wishlist={wishlist}
+                        toggleWishlist={toggleWishlist}
+                        addToCart={addToCart}
+                    />
+                )}
+                {/* --- CHANGES MADE HERE: Render New Arrivals Slider END --- */}
+
                 {!isTrendingLoading && trendingProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
                     <TrendingSlider 
                         products={trendingProducts}
@@ -564,6 +655,12 @@ const ShopView = ({
                         addToCart={addToCart}
                     />
                 )}
+
+                <div className="flex items-center justify-between mt-8 mb-6 px-2 sm:px-0">
+                   <h3 className="text-2xl font-black text-slate-800 font-serif">
+                       {activeCategory === "All" && searchQuery === "" ? "Explore All" : "Search Results"}
+                   </h3>
+                </div>
 
                 <motion.div layout className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
                     <AnimatePresence>

@@ -23,6 +23,23 @@ const getProducts = async (req, res) => {
 
         const queryFilter = { ...keyword, ...category };
 
+        // --- CHANGES MADE HERE: Smart Exclude Logic ---
+        // Agar frontend ne excludeSliders=true bheja hai, toh hum sliders wale products database se hi hata denge
+        if (req.query.excludeSliders === 'true') {
+            const newArrivals = await Product.find({ stock: { $gt: 0 } }).sort({ createdAt: -1 }).limit(12).select('_id');
+            const trending = await Product.find({ stock: { $gt: 0 } }).sort({ views: -1 }).limit(8).select('_id');
+            
+            const excludeIds = [
+                ...newArrivals.map(p => p._id), 
+                ...trending.map(p => p._id)
+            ];
+
+            if (excludeIds.length > 0) {
+                queryFilter._id = { $nin: excludeIds };
+            }
+        }
+        // ----------------------------------------------
+
         const count = await Product.countDocuments(queryFilter);
 
         const products = await Product.find(queryFilter)
@@ -211,8 +228,6 @@ const updateProduct = async (req, res) => {
             if (compareAtPrice !== undefined) {
                 product.compareAtPrice = compareAtPrice;
             }
-
-            // --- CHANGES MADE HERE: Update shippingCost ---
             if (shippingCost !== undefined) {
                 product.shippingCost = shippingCost;
             }
@@ -314,7 +329,7 @@ const createProductReview = async (req, res) => {
                 name: req.user.name,
                 rating: Number(rating),
                 comment,
-                // --- CHANGES MADE HERE: Saved image in the review object ---
+               
                 image: image || null,
                 user: req.user._id,
             };
@@ -505,8 +520,22 @@ const getCategories = async (req, res) => {
         res.status(500).json({ message: "Server Error fetching categories" });
     }
 };
+// @desc    Get new arrival products (latest 12)
+// @route   GET /api/products/new-arrivals
+// @access  Public
+const getNewArrivals = async (req, res) => {
+    try {
+        const newArrivals = await Product.find({ stock: { $gt: 0 } })
+            .sort({ createdAt: -1 })
+            .limit(12)
+            .populate('shop', 'name logo rating');
 
-// --- CHANGES MADE HERE: NEW ADMIN REVIEW FUNCTIONS START ---
+        res.json(newArrivals);
+    } catch (error) {
+        console.error("New Arrivals Error:", error);
+        res.status(500).json({ message: "Server error fetching new arrivals" });
+    }
+};
 
 // @desc    Get all product reviews across all products
 // @route   GET /api/products/admin/all-reviews
@@ -561,7 +590,6 @@ const updateReviewAdmin = async (req, res) => {
         if (rating) review.rating = Number(rating);
         if (comment) review.comment = comment;
 
-        // Recalculate average rating
         product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
 
         await product.save();
@@ -591,8 +619,6 @@ const deleteReviewAdmin = async (req, res) => {
         }
 
         product.reviews.splice(reviewIndex, 1);
-        
-        // Recalculate average rating and review count
         product.numReviews = product.reviews.length;
         if (product.numReviews > 0) {
             product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
@@ -606,9 +632,6 @@ const deleteReviewAdmin = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-// --- CHANGES MADE HERE: NEW ADMIN REVIEW FUNCTIONS END ---
-
 module.exports = {
     getProducts,
     getProductById,
@@ -623,6 +646,7 @@ module.exports = {
     incrementProductView,   
     getTrendingProducts,    
     getCategories,
+    getNewArrivals,
     getAllReviewsAdmin,
     updateReviewAdmin,
     deleteReviewAdmin

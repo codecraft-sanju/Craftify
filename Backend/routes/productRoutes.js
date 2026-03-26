@@ -14,7 +14,9 @@ const {
     incrementProductView,
     getTrendingProducts,
     getCategories,
-    // --- CHANGES MADE HERE: Imported new admin review functions ---
+   
+    getNewArrivals,
+ 
     getAllReviewsAdmin,
     updateReviewAdmin,
     deleteReviewAdmin
@@ -31,6 +33,8 @@ router.route('/')
 
 
 router.route('/batch').delete(protect, deleteProductsBatch); 
+
+router.get('/new-arrivals', getNewArrivals);
 
 router.get('/top', getTopProducts);
 

@@ -296,6 +296,12 @@ const CraftifyContent = () => {
       if (activeCategory !== 'All') url.searchParams.append('category', activeCategory);
       if (debouncedSearch) url.searchParams.append('keyword', debouncedSearch);
 
+      // --- CHANGES MADE HERE: Send exclude flag to backend ---
+      if (activeCategory === 'All' && !debouncedSearch) {
+          url.searchParams.append('excludeSliders', 'true');
+      }
+      // -------------------------------------------------------
+
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error('Failed to fetch products');
       const data = await res.json();
