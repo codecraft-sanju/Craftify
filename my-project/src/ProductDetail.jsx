@@ -12,7 +12,9 @@ import {
   Share2,
   ImagePlus,
   PackageCheck,
-  Star // Added Star icon for professional rating
+  Star,
+  X,
+  PenLine
 } from 'lucide-react';
 
 import { PremiumImage, Button, Badge } from './App';
@@ -82,12 +84,13 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
 
   // --- REVIEWS STATE ---
   const [rating, setRating] = useState(5);
-  const [hoverRating, setHoverRating] = useState(0); // Naya state star hover animation ke liye
+  const [hoverRating, setHoverRating] = useState(0); 
   const [comment, setComment] = useState('');
   const [reviewImage, setReviewImage] = useState(null);
   const [reviewImagePreview, setReviewImagePreview] = useState(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false); 
   // ---------------------
 
   const scrollRef = useRef(null);
@@ -249,12 +252,13 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         setComment('');
         setReviewImage(null);
         setReviewImagePreview(null);
+        setIsReviewModalOpen(false); 
         
         // Fetch updated product to show the review immediately
         const updatedRes = await fetch(`${API_URL}/api/products/${id}`);
         if(updatedRes.ok) {
             const updatedData = await updatedRes.json();
-            setFetchedProduct(updatedData); // This will update UI instantly
+            setFetchedProduct(updatedData); 
         }
       } else {
         setReviewError(data.message || "Something went wrong while submitting review.");
@@ -266,6 +270,11 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
     }
   };
   // -------------------------
+
+  const totalReviews = product?.reviews?.length || 0;
+  const averageRating = totalReviews > 0
+      ? (product.reviews.reduce((acc, rev) => acc + rev.rating, 0) / totalReviews).toFixed(1)
+      : 0;
 
   if (!product && isFetchingProduct)
     return (
@@ -472,159 +481,86 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         </div>
 
         {/* --- REVIEWS SECTION START --- */}
-        <div className="mt-16 pt-8 border-t border-slate-100 px-5 md:px-0">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">Customer Reviews</h2>
-            <div className="h-[2px] flex-1 bg-slate-100 ml-6 rounded-full hidden md:block" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            
-            {/* Left Column: Existing Reviews List */}
+        <div className="mt-20 pt-10 border-t border-slate-100 px-5 md:px-0">
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
             <div>
-              {product.reviews && product.reviews.length === 0 ? (
-                 <p className="text-slate-500 bg-slate-50 p-6 rounded-2xl border border-slate-100">No reviews yet. Be the first to review this product!</p>
-              ) : (
-                <div className="space-y-6">
-                  {product.reviews && [...product.reviews].reverse().map((review, index) => (
-                    <div key={index} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
-                             {review.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-800">{review.name}</p>
-                            
-                            {/* PROFESSIONAL STARS IN LIST */}
-                            <div className="flex items-center gap-0.5 mt-0.5">
-                              {[...Array(5)].map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}`} 
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-slate-400 font-medium">
-                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Just now'}
-                        </span>
-                      </div>
-                      
-                      <p className="text-slate-600 text-sm leading-relaxed mb-4">{review.comment}</p>
-                      
-                      {review.image && (
-                         <div className="mt-3">
-                           <img 
-                             src={review.image} 
-                             alt="Review attachment" 
-                             className="w-32 h-32 object-cover rounded-xl border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
-                             onClick={() => window.open(review.image, '_blank')}
-                           />
-                         </div>
-                      )}
-                    </div>
-                  ))}
+              <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                Customer Reviews
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-sm font-bold">{totalReviews}</span>
+              </h2>
+              {totalReviews > 0 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center">
+                    <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                    <span className="ml-1.5 font-bold text-slate-800 text-lg">{averageRating}</span>
+                  </div>
+                  <span className="text-slate-500 text-sm font-medium">Average rating</span>
                 </div>
               )}
             </div>
-
-            {/* Right Column: Write a Review Form */}
-            <div>
-              <div className="bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-900 mb-6">Write a Review</h3>
-                
-                {!currentUser ? (
-                  <div className="bg-white p-4 rounded-xl border border-indigo-100 text-center">
-                    <p className="text-sm text-slate-600 mb-3">You need to be logged in to leave a review.</p>
-                  </div>
-                ) : (
-                  <form onSubmit={submitReviewHandler} className="space-y-6">
-                    
-                    {/* PROFESSIONAL INTERACTIVE STAR RATING */}
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Rating</label>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setRating(star)}
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            className="p-1 focus:outline-none transition-transform hover:scale-110 active:scale-95"
-                          >
-                            <Star
-                              className={`w-8 h-8 transition-colors duration-200 ${
-                                star <= (hoverRating || rating)
-                                  ? 'fill-amber-400 text-amber-400'
-                                  : 'fill-white text-slate-300 stroke-[1.5]'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Comment Input */}
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Your Review</label>
-                      <textarea 
-                        required
-                        rows="4"
-                        className="w-full p-4 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
-                        placeholder="What did you like or dislike? How was the customization?"
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                      ></textarea>
-                    </div>
-
-                    {/* Image Upload Input */}
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Add a Photo (Optional)</label>
-                      <div className="flex items-center gap-4">
-                         <label className="cursor-pointer flex flex-col items-center justify-center w-24 h-24 bg-white border-2 border-dashed border-slate-300 rounded-2xl hover:bg-slate-50 transition-colors">
-                           <ImagePlus className="w-6 h-6 text-slate-400 mb-1" />
-                           <span className="text-[10px] font-bold text-slate-500 uppercase">Upload</span>
-                           <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                         </label>
-                         
-                         {reviewImagePreview && (
-                           <div className="relative group">
-                             <img src={reviewImagePreview} alt="Preview" className="w-24 h-24 object-cover rounded-2xl border border-slate-200" />
-                             <button 
-                               type="button"
-                               onClick={() => { setReviewImage(null); setReviewImagePreview(null); }}
-                               className="absolute -top-2 -right-2 bg-slate-900 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md hover:bg-red-500 transition-colors"
-                             >✕</button>
-                           </div>
-                         )}
-                      </div>
-                    </div>
-
-                    {/* Error Message */}
-                    {reviewError && (
-                      <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium">
-                        {reviewError}
-                      </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <Button 
-                      type="submit" 
-                      variant="brand" 
-                      className="w-full py-4 text-sm mt-2"
-                      disabled={isSubmittingReview}
-                    >
-                      {isSubmittingReview ? 'Submitting Review...' : 'Submit Review'}
-                    </Button>
-
-                  </form>
-                )}
-              </div>
-            </div>
             
+            <Button 
+              onClick={() => setIsReviewModalOpen(true)}
+              variant="brand"
+              className="flex items-center gap-2 rounded-xl shadow-sm"
+            >
+              <PenLine className="w-4 h-4" />
+              Write a Review
+            </Button>
+          </div>
+
+          <div>
+            {product.reviews && product.reviews.length === 0 ? (
+               <div className="text-center py-16 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-slate-400">
+                   <MessageCircle className="w-8 h-8" />
+                 </div>
+                 <h3 className="text-lg font-bold text-slate-900 mb-2">No reviews yet</h3>
+                 <p className="text-slate-500 text-sm max-w-sm mx-auto">Be the first to share your thoughts about this product and help others make a decision.</p>
+               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {product.reviews && [...product.reviews].reverse().map((review, index) => (
+                  <div key={index} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold border border-indigo-100">
+                           {review.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm">{review.name}</p>
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {[...Array(5)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}`} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-slate-400 font-medium bg-slate-50 px-2 py-1 rounded-md">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'New'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-slate-600 text-sm leading-relaxed flex-grow">{review.comment}</p>
+                    
+                    {review.image && (
+                       <div className="mt-4 pt-4 border-t border-slate-50">
+                         <img 
+                           src={review.image} 
+                           alt="Review attachment" 
+                           className="w-20 h-20 object-cover rounded-xl border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                           onClick={() => window.open(review.image, '_blank')}
+                         />
+                       </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {/* --- REVIEWS SECTION END --- */}
@@ -658,6 +594,123 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
         </div>
       </div>
       <Footer />
+
+      {/* --- REVIEW MODAL START --- */}
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <PenLine className="w-5 h-5 text-indigo-500" />
+                Write a Review
+              </h3>
+              <button 
+                onClick={() => setIsReviewModalOpen(false)}
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {!currentUser ? (
+                <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 text-center">
+                  <ShieldCheck className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
+                  <p className="text-sm text-indigo-900 font-medium mb-1">Authentication Required</p>
+                  <p className="text-xs text-indigo-700">Please login to your account to leave a review.</p>
+                </div>
+              ) : (
+                <form onSubmit={submitReviewHandler} className="space-y-6">
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-3 text-center">How would you rate this product?</label>
+                    <div className="flex items-center justify-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          onMouseEnter={() => setHoverRating(star)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className="p-1 focus:outline-none transition-transform hover:scale-110 active:scale-95"
+                        >
+                          <Star
+                            className={`w-10 h-10 transition-colors duration-200 ${
+                              star <= (hoverRating || rating)
+                                ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
+                                : 'fill-slate-50 text-slate-200 stroke-[1.5]'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Share your experience</label>
+                    <textarea 
+                      required
+                      rows="4"
+                      className="w-full p-4 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all"
+                      placeholder="What did you like or dislike? How was the customization?"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Add a Photo (Optional)</label>
+                    <div className="flex items-center gap-4">
+                        <label className="cursor-pointer flex flex-col items-center justify-center w-20 h-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:bg-slate-100 hover:border-slate-300 transition-colors">
+                          <ImagePlus className="w-5 h-5 text-slate-400 mb-1" />
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Upload</span>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                        </label>
+                        
+                        {reviewImagePreview && (
+                          <div className="relative group">
+                            <img src={reviewImagePreview} alt="Preview" className="w-20 h-20 object-cover rounded-2xl border border-slate-200 shadow-sm" />
+                            <button 
+                              type="button"
+                              onClick={() => { setReviewImage(null); setReviewImagePreview(null); }}
+                              className="absolute -top-2 -right-2 bg-slate-800 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-md hover:bg-red-500 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
+                  {reviewError && (
+                    <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                      {reviewError}
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <Button 
+                      type="submit" 
+                      variant="brand" 
+                      className="w-full py-3.5 text-sm rounded-xl font-bold"
+                      disabled={isSubmittingReview}
+                    >
+                      {isSubmittingReview ? (
+                         <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Submitting...
+                         </div>
+                      ) : 'Post Review'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- REVIEW MODAL END --- */}
     </>
   );
 };
