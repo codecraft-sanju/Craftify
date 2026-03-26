@@ -506,6 +506,109 @@ const getCategories = async (req, res) => {
     }
 };
 
+// --- CHANGES MADE HERE: NEW ADMIN REVIEW FUNCTIONS START ---
+
+// @desc    Get all product reviews across all products
+// @route   GET /api/products/admin/all-reviews
+// @access  Private (Founder/Admin)
+const getAllReviewsAdmin = async (req, res) => {
+    try {
+        const products = await Product.find({ 'reviews.0': { $exists: true } }).select('name reviews coverImage');
+        
+        let allReviews = [];
+        products.forEach(product => {
+            product.reviews.forEach(review => {
+                allReviews.push({
+                    _id: review._id,
+                    productId: product._id,
+                    productName: product.name,
+                    productImage: product.coverImage,
+                    user: review.user,
+                    name: review.name,
+                    rating: review.rating,
+                    comment: review.comment,
+                    image: review.image,
+                    createdAt: review.createdAt
+                });
+            });
+        });
+        
+        allReviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        res.status(200).json(allReviews);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update a specific review
+// @route   PUT /api/products/admin/reviews/:productId/:reviewId
+// @access  Private (Founder/Admin)
+const updateReviewAdmin = async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const product = await Product.findById(req.params.productId);
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        const review = product.reviews.id(req.params.reviewId);
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        if (rating) review.rating = Number(rating);
+        if (comment) review.comment = comment;
+
+        // Recalculate average rating
+        product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+
+        await product.save();
+        res.status(200).json({ message: 'Review updated successfully', review });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Delete a specific review
+// @route   DELETE /api/products/admin/reviews/:productId/:reviewId
+// @access  Private (Founder/Admin)
+const deleteReviewAdmin = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.productId);
+
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        const reviewIndex = product.reviews.findIndex(
+            (r) => r._id.toString() === req.params.reviewId.toString()
+        );
+
+        if (reviewIndex === -1) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        product.reviews.splice(reviewIndex, 1);
+        
+        // Recalculate average rating and review count
+        product.numReviews = product.reviews.length;
+        if (product.numReviews > 0) {
+            product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+        } else {
+            product.rating = 0;
+        }
+        
+        await product.save();
+        res.status(200).json({ message: 'Review deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// --- CHANGES MADE HERE: NEW ADMIN REVIEW FUNCTIONS END ---
+
 module.exports = {
     getProducts,
     getProductById,
@@ -519,5 +622,8 @@ module.exports = {
     getRelatedProducts,
     incrementProductView,   
     getTrendingProducts,    
-    getCategories 
+    getCategories,
+    getAllReviewsAdmin,
+    updateReviewAdmin,
+    deleteReviewAdmin
 };

@@ -6,7 +6,7 @@ import {
     Loader2, Home, Menu, MoreHorizontal, LogOut, ChevronRight, ShieldCheck,
     Trash2, AlertTriangle, RefreshCcw, LayoutGrid, Edit, ImageIcon, 
     Megaphone, Plus, Eye, EyeOff, Save, Zap, CreditCard, Box, BarChart3,
-    Server, FileText, Package, Mail, MapPin, ShoppingBag,Phone
+    Server, FileText, Package, Mail, MapPin, ShoppingBag, Phone, Star, MessageSquare // Added icons for reviews
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -113,7 +113,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
     const [payoutTxnId, setPayoutTxnId] = useState(""); 
     const [isSubmittingPayout, setIsSubmittingPayout] = useState(false);
 
-    // --- NEW: Product Edit States ---
+    // --- Product Edit States ---
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [productImages, setProductImages] = useState([]);
@@ -121,6 +121,14 @@ export default function FounderAccess({ currentUser, onLogout }) {
     const [productCategoryInput, setProductCategoryInput] = useState("");
     const [showProductCategoryDropdown, setShowProductCategoryDropdown] = useState(false);
     const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+
+    // --- NEW: Review States ---
+    const [reviews, setReviews] = useState([]);
+    const [isFetchingReviews, setIsFetchingReviews] = useState(false);
+    const [editingReview, setEditingReview] = useState(null);
+    const [editReviewRating, setEditReviewRating] = useState(5);
+    const [editReviewComment, setEditReviewComment] = useState("");
+    const [isSubmittingReviewUpdate, setIsSubmittingReviewUpdate] = useState(false);
 
     // Server Health
     const [serverStatus, setServerStatus] = useState('Checking...');
@@ -149,7 +157,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
             if (ordersRes.ok) setOrders(await ordersRes.json());
            if (productsRes.ok) {
                 const pData = await productsRes.json();
-                // Check agar backend ne object bheja hai jisme products array hai, varna directly data
                 setProducts(pData.products ? pData.products : (Array.isArray(pData) ? pData : []));
             }
 
@@ -172,6 +179,22 @@ export default function FounderAccess({ currentUser, onLogout }) {
             console.error("Dashboard Load Error:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Fetch Reviews Function
+    const fetchReviews = async () => {
+        setIsFetchingReviews(true);
+        try {
+            const res = await fetch(`${API_URL}/api/products/admin/all-reviews`, { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                setReviews(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch reviews:", error);
+        } finally {
+            setIsFetchingReviews(false);
         }
     };
 
@@ -202,6 +225,14 @@ export default function FounderAccess({ currentUser, onLogout }) {
         return () => clearInterval(interval);
     }, [currentUser]);
 
+    // Fetch reviews specifically when the reviews tab is clicked
+    useEffect(() => {
+        if (activeTab === 'reviews') {
+            fetchReviews();
+        }
+    }, [activeTab]);
+
+
     // --- COMPUTED DATA ---
     const rawCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
     const allCategories = ["All", ...rawCategories].sort((a, b) => {
@@ -212,8 +243,12 @@ export default function FounderAccess({ currentUser, onLogout }) {
 
     const filteredShops = shops.filter(shop => shop.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     const filteredUsers = users.filter(user => user.name?.toLowerCase().includes(searchQuery.toLowerCase()));
-    // Product Search Filter
     const filteredProducts = products.filter(product => product.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredReviews = reviews.filter(r => 
+        r.productName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.comment?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     
     const totalPlatformRevenue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
     const platformProfit = Math.round(totalPlatformRevenue * 0.10); 
@@ -231,7 +266,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
         return cloudData.secure_url;
     };
 
-    // --- NEW HANDLER: DELETE CATEGORY ---
     const handleDeleteCategory = async (categoryName) => {
         if (categoryName === "All" || categoryName === "other") {
             return alert("Cannot delete default categories.");
@@ -247,14 +281,12 @@ export default function FounderAccess({ currentUser, onLogout }) {
             });
 
             if (res.ok) {
-                // Update local state to remove it
                 setCategoryImages(prev => {
                     const newImages = { ...prev };
                     delete newImages[categoryName];
                     return newImages;
                 });
                 
-                // Also update products state locally so UI updates instantly
                 setProducts(prev => prev.map(p => p.category === categoryName ? { ...p, category: 'other' } : p));
                 alert(`Category ${categoryName} deleted successfully.`);
             } else {
@@ -265,7 +297,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
             alert("Error deleting category.");
         }
     };
-    // ------------------------------------
 
     const handleCategoryUpload = async () => {
         if (!newCategoryFile || !editingCategory) return;
@@ -421,7 +452,6 @@ export default function FounderAccess({ currentUser, onLogout }) {
         } catch (error) { alert("Error during batch deletion."); } finally { setIsDeleting(false); }
     };
 
-    // --- NEW: PRODUCT MANAGEMENT HANDLERS ---
     const handleOpenProductModal = (product = null) => { 
         setEditingProduct(product); 
         if (product && product.images && product.images.length > 0) {
@@ -478,15 +508,14 @@ export default function FounderAccess({ currentUser, onLogout }) {
             sizesArray = sizesString.split(',').map(s => s.trim()).filter(s => s !== '');
         }
 
-        // --- CHANGES MADE HERE: Added shippingCost support for Founder edits ---
         const productData = {
-            shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : null, // Founder cannot create product without selecting shop, so edit only mostly
+            shop: editingProduct ? (editingProduct.shop?._id || editingProduct.shop) : null,
             name: formData.get('name'), 
             category: productCategoryInput, 
             price: Number(formData.get('price')), 
             compareAtPrice: Number(formData.get('compareAtPrice')),
             stock: Number(formData.get('stock')),
-            shippingCost: Number(formData.get('shippingCost')) || 0, // ADDED THIS
+            shippingCost: Number(formData.get('shippingCost')) || 0,
             description: formData.get('description'), 
             images: productImages, 
             coverImage: productImages[0]?.url || '', 
@@ -527,6 +556,67 @@ export default function FounderAccess({ currentUser, onLogout }) {
             }
         } catch (error) { console.error(error); alert("Network Error"); }
     };
+
+    // --- NEW: REVIEW HANDLERS ---
+    const handleOpenReviewEditModal = (review) => {
+        setEditingReview(review);
+        setEditReviewRating(review.rating);
+        setEditReviewComment(review.comment);
+    };
+
+    const handleSaveReview = async (e) => {
+        e.preventDefault();
+        if (!editingReview) return;
+        
+        setIsSubmittingReviewUpdate(true);
+        try {
+            const res = await fetch(`${API_URL}/api/products/admin/reviews/${editingReview.productId}/${editingReview._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    rating: editReviewRating,
+                    comment: editReviewComment
+                })
+            });
+
+            if (res.ok) {
+                setReviews(prev => prev.map(r => r._id === editingReview._id ? { ...r, rating: editReviewRating, comment: editReviewComment } : r));
+                setEditingReview(null);
+                alert("Review updated successfully!");
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to update review.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error updating review.");
+        } finally {
+            setIsSubmittingReviewUpdate(false);
+        }
+    };
+
+    const handleDeleteReview = async (productId, reviewId) => {
+        if (!window.confirm("Are you sure you want to permanently delete this review?")) return;
+        
+        try {
+            const res = await fetch(`${API_URL}/api/products/admin/reviews/${productId}/${reviewId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                setReviews(prev => prev.filter(r => r._id !== reviewId));
+            } else {
+                const data = await res.json();
+                alert(data.message || "Failed to delete review.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error deleting review.");
+        }
+    };
+    // ----------------------------
 
 
     if (loading) return (
@@ -597,10 +687,11 @@ export default function FounderAccess({ currentUser, onLogout }) {
                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Operations</p>
                          <Box className="w-3 h-3 text-slate-600"/>
                     </div>
-                    {/* --- NEW: Platform Products Tab --- */}
                     <NavItem id="all-products" label="Platform Products" icon={ShoppingBag} />
                     <NavItem id="shops" label="Vendors" icon={Store} />
                     <NavItem id="users" label="User Base" icon={Users} />
+                    {/* --- NEW TAB MENU ITEM --- */}
+                    <NavItem id="reviews" label="Product Reviews" icon={MessageSquare} />
                     
                     <div className="px-4 py-2 mb-2 mt-8 flex items-center justify-between">
                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Appearance</p>
@@ -813,7 +904,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                              </div>
                          )}
 
-                         {/* === NEW TAB: PLATFORM PRODUCTS === */}
+                         {/* === TAB: PLATFORM PRODUCTS === */}
                          {activeTab === 'all-products' && (
                              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1002,6 +1093,70 @@ export default function FounderAccess({ currentUser, onLogout }) {
                              </GlassCard>
                          )}
 
+                         {/* === NEW TAB: REVIEWS === */}
+                         {activeTab === 'reviews' && (
+                             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                     <div>
+                                         <h2 className="text-2xl font-black text-slate-900 tracking-tight">Product Reviews Management</h2>
+                                         <p className="text-slate-500 text-sm font-medium">Monitor, edit, or remove customer feedback across the platform.</p>
+                                     </div>
+                                     <ActionButton onClick={fetchReviews} variant="secondary" icon={RefreshCcw} loading={isFetchingReviews}>
+                                        Refresh
+                                     </ActionButton>
+                                 </div>
+
+                                 {isFetchingReviews ? (
+                                    <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>
+                                 ) : filteredReviews.length === 0 ? (
+                                    <div className="py-24 text-center text-slate-500 flex flex-col items-center border-2 border-dashed border-slate-300 rounded-[2.5rem] bg-white">
+                                         <MessageSquare className="w-16 h-16 mb-4 opacity-20"/>
+                                         <p className="font-bold text-lg text-slate-400">No reviews found.</p>
+                                     </div>
+                                 ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {filteredReviews.map(review => (
+                                            <div key={review._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden relative group">
+                                                <div className="flex items-start gap-4 p-5 border-b border-slate-50">
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+                                                        <img src={review.productImage || "https://via.placeholder.com/100"} alt="Product" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-bold text-slate-900 text-sm truncate" title={review.productName}>{review.productName}</p>
+                                                        <div className="flex items-center gap-1 mt-1">
+                                                            {[1, 2, 3, 4, 5].map(star => (
+                                                                <Star key={star} className={`w-3 h-3 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-5 flex-1 flex flex-col">
+                                                    <p className="text-sm text-slate-600 line-clamp-4 flex-1 italic">"{review.comment}"</p>
+                                                    
+                                                    {review.image && (
+                                                        <div className="mt-3">
+                                                            <img src={review.image} alt="Review attachment" className="w-16 h-16 object-cover rounded-lg border border-slate-200" />
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-800 truncate max-w-[120px]">{review.name}</p>
+                                                            <p className="text-[10px] text-slate-400">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleOpenReviewEditModal(review)} className="p-2 bg-slate-50 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors" title="Edit Review"><Edit className="w-4 h-4"/></button>
+                                                            <button onClick={() => handleDeleteReview(review.productId, review._id)} className="p-2 bg-slate-50 text-rose-500 rounded-lg hover:bg-rose-50 transition-colors" title="Delete Review"><Trash2 className="w-4 h-4"/></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                 )}
+                             </div>
+                         )}
+
                          {/* === TAB: CATEGORIES === */}
                          {activeTab === 'categories' && (
                              <div className="animate-in slide-in-from-bottom-8 duration-500">
@@ -1017,20 +1172,17 @@ export default function FounderAccess({ currentUser, onLogout }) {
                                                  <img src={categoryImages[cat] || DEFAULT_CATEGORY_IMAGES[cat] || DEFAULT_CATEGORY_IMAGES["All"]} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={cat} />
                                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
                                                  
-                                                 {/* CHANGES MADE HERE: Added Edit and Delete buttons */}
                                                  <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
                                                      <button onClick={(e) => { e.stopPropagation(); setEditingCategory(cat); }} className="bg-white/90 backdrop-blur-md p-2.5 rounded-full hover:bg-white text-indigo-600 shadow-lg" title="Edit Image">
                                                          <Edit className="w-4 h-4"/>
                                                      </button>
                                                      
-                                                     {/* Don't show delete for "All" or "other" */}
                                                      {cat !== "All" && cat !== "other" && (
                                                          <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }} className="bg-rose-500/90 backdrop-blur-md p-2.5 rounded-full hover:bg-rose-600 text-white shadow-lg" title="Delete Category">
                                                              <Trash2 className="w-4 h-4"/>
                                                          </button>
                                                      )}
                                                  </div>
-                                                 {/* ----------------------------------------------- */}
                                              </div>
                                              <div className="absolute bottom-0 left-0 right-0 p-5 text-center pointer-events-none">
                                                  <h3 className="font-bold text-white text-lg drop-shadow-md capitalize">{cat}</h3>
@@ -1317,7 +1469,7 @@ export default function FounderAccess({ currentUser, onLogout }) {
                      </div>
                  )}
 
-                 {/* 3. NEW: Product Edit Modal */}
+                 {/* 3. Product Edit Modal */}
                  <ProductModal 
                     isOpen={isProductModalOpen} 
                     onClose={() => setIsProductModalOpen(false)} 
@@ -1334,6 +1486,54 @@ export default function FounderAccess({ currentUser, onLogout }) {
                     setShowCategoryDropdown={setShowProductCategoryDropdown} 
                     getAvailableCategories={() => allCategories}
                  />
+
+                 {/* 4. NEW: Edit Review Modal */}
+                 {editingReview && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" onClick={() => setEditingReview(null)}></div>
+                        <div className="bg-white rounded-[2rem] p-8 w-full max-w-md relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900">Edit Review</h3>
+                                    <p className="text-xs text-slate-500 mt-1 truncate">By {editingReview.name}</p>
+                                </div>
+                                <button onClick={() => setEditingReview(null)} className="p-2 hover:bg-slate-100 rounded-full"><X className="w-5 h-5 text-slate-500"/></button>
+                            </div>
+                            
+                            <form onSubmit={handleSaveReview} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Rating</label>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button 
+                                                key={star} 
+                                                type="button" 
+                                                onClick={() => setEditReviewRating(star)}
+                                                className="focus:outline-none"
+                                            >
+                                                <Star className={`w-8 h-8 transition-colors ${star <= editReviewRating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}`} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Comment</label>
+                                    <textarea 
+                                        className="w-full p-4 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none h-32"
+                                        value={editReviewComment}
+                                        onChange={(e) => setEditReviewComment(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <ActionButton type="submit" loading={isSubmittingReviewUpdate} className="w-full py-4" icon={Save}>
+                                    {isSubmittingReviewUpdate ? "Saving..." : "Save Changes"}
+                                </ActionButton>
+                            </form>
+                        </div>
+                    </div>
+                 )}
 
              </main>
         </div>
