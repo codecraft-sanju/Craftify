@@ -26,9 +26,22 @@ import {
 } from 'lucide-react';
 import io from 'socket.io-client';
 
+// NAYA IMPORT: React Query
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 var socket;
+
+// NAYA CODE: Query Client Setup
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes cache
+      refetchOnWindowFocus: false, 
+    },
+  },
+});
 
 import Navbar from './Navbar'; 
 import LandingPage from './LandingPage';
@@ -253,13 +266,11 @@ const CraftifyContent = () => {
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   
-  const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(true);
-  
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-
-  const productCache = useRef({}); 
+  
+  // NAYA CODE: Debounce state for search
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
   const [toasts, setToasts] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -270,6 +281,27 @@ const CraftifyContent = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // NAYA CODE: Debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // NAYA CODE: React Query Hook for fetching products
+  const { data: products = [], isLoading: productsLoading } = useQuery({
+    queryKey: ['products', activeCategory, debouncedSearch],
+    queryFn: async () => {
+      let url = new URL(`${API_URL}/api/products`);
+      if (activeCategory !== 'All') url.searchParams.append('category', activeCategory);
+      if (debouncedSearch) url.searchParams.append('keyword', debouncedSearch);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
+      return data.products || [];
+    }
+  });
 
   const fetchCart = async () => {
     if (!currentUser) return;
@@ -325,45 +357,6 @@ const CraftifyContent = () => {
       }
     } catch (e) { console.error(e); }
   };
-
-  const fetchProducts = async () => {
-    try {
-      setProductsLoading(true);
-
-      const cacheKey = `${activeCategory}_${searchQuery}`;
-      
-      let url = new URL(`${API_URL}/api/products`);
-      if (activeCategory !== 'All') url.searchParams.append('category', activeCategory);
-      if (searchQuery) url.searchParams.append('keyword', searchQuery);
-
-      const res = await fetch(url.toString());
-      if (res.ok) {
-          const data = await res.json();
-          const newProducts = data.products || [];
-          setProducts(newProducts);
-          productCache.current[cacheKey] = newProducts;
-      }
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        const cacheKey = `${activeCategory}_${searchQuery}`;
-        
-        if (productCache.current[cacheKey]) {
-            setProducts(productCache.current[cacheKey]);
-            setProductsLoading(false); 
-        } else {
-            fetchProducts();
-        }
-    }, 400); 
-    
-    return () => clearTimeout(timer);
-  }, [activeCategory, searchQuery]);
 
   useEffect(() => {
     socket = io(ENDPOINT, { withCredentials: true });
@@ -657,6 +650,13 @@ const CraftifyContent = () => {
   );
 };
 
+
 export default function App() {
-  return <Router><CraftifyContent /></Router>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <CraftifyContent />
+      </Router>
+    </QueryClientProvider>
+  );
 }
