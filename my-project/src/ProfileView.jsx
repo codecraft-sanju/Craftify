@@ -33,11 +33,13 @@ const Button = ({
     primary:
       'bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10 hover:shadow-slate-900/20 border border-transparent',
     secondary:
-      'bg-white text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm',
+      // TWEAKED: Warm cream background matching the theme
+      'bg-[#FCF8EB] text-slate-900 border border-[#E8E1CD] hover:border-[#D6CDB5] hover:bg-[#F5F0E1] shadow-sm',
     danger:
-      'bg-white text-red-600 border border-red-100 hover:bg-red-50 hover:border-red-200',
+      // TWEAKED: Warm cream with red accents
+      'bg-[#FCF8EB] text-red-600 border border-red-100 hover:bg-red-50 hover:border-red-200',
     ghost:
-      'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+      'bg-transparent text-slate-600 hover:bg-[#F5F0E1] hover:text-slate-900',
     indigo:
       'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/30 border border-transparent',
   };
@@ -67,7 +69,8 @@ const Badge = ({ children, color = 'slate' }) => {
     green:
       'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20',
     red: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/10',
-    slate: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/10',
+    // TWEAKED: Warmer slate badge
+    slate: 'bg-[#F5F0E1] text-slate-700 ring-1 ring-inset ring-[#E8E1CD]',
   };
   return (
     <span
@@ -158,19 +161,16 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
     let finalY = doc.lastAutoTable.finalY || 80;
 
-    // --- CLEARLY WRITING THE ORIGINAL VS HALF PRICE ON PDF ---
     if (order.hasLocalDeliveryDiscount && order.shippingPrice > 0) {
       finalY += 10;
       doc.setFontSize(10);
-      doc.setTextColor(16, 185, 129); // Emerald Green
-      // Showing the visual comparison here in the generated invoice
+      doc.setTextColor(16, 185, 129); 
       doc.text(`Local Delivery Applied (50% OFF on Shipping)`, 14, finalY);
       finalY += 6;
       doc.setTextColor(100, 100, 100);
       doc.text(`Original Shipping: Rs ${order.shippingPrice * 2} | Discounted Shipping: Rs ${order.shippingPrice}`, 14, finalY);
-      doc.setTextColor(0, 0, 0); // Reset color
+      doc.setTextColor(0, 0, 0); 
     }
-    // ----------------------------------------
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
@@ -240,16 +240,16 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
   const hasValidAvatar = currentUser?.avatar && currentUser.avatar.includes('http');
 
   return (
-    // CHANGE: Adjusted padding from pt-28 to pt-16 md:pt-28 to reduce mobile gap. Added min-h-screen.
     <div className="bg-[#FEFAEF] min-h-screen pt-16 md:pt-28 pb-32 max-w-5xl mx-auto px-4 sm:px-6">
       
-      {/* CHANGE: Enhanced shadows and rounded corners for a premium feel */}
-      <div className="bg-white p-6 sm:p-8 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden mb-8 md:mb-12 text-center md:text-left group">
+      {/* TWEAKED: bg-white changed to bg-[#FCF8EB], borders changed to warm tone */}
+      <div className="bg-[#FDF1E6] p-6 sm:p-8 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-[#E8E1CD] shadow-2xl shadow-[#65280E]/5 relative overflow-hidden mb-8 md:mb-12 text-center md:text-left group">
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-10 group-hover:opacity-15 transition-opacity"></div>
 
         <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10 mt-6">
           <div className="relative group/avatar shrink-0">
-            <div className="w-28 h-28 md:w-32 md:h-32 bg-white rounded-full p-1.5 md:p-2 shadow-xl relative ring-1 ring-slate-100">
+            {/* TWEAKED: Inner avatar ring background and border */}
+            <div className="w-28 h-28 md:w-32 md:h-32 bg-[#FCF8EB] rounded-full p-1.5 md:p-2 shadow-xl relative ring-1 ring-[#E8E1CD]">
               <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-white text-4xl font-bold overflow-hidden relative">
                 {uploading ? (
                    <Loader2 className="w-10 h-10 animate-spin text-white" />
@@ -270,16 +270,14 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 </label>
               </div>
             </div>
-            {/* CHANGE: Removed the absolute green dot div completely */}
             
             <div className="md:hidden absolute bottom-0 right-0 pointer-events-none">
-                 <div className="bg-slate-900 text-white p-2 rounded-full border-2 border-white shadow-md">
+                 <div className="bg-slate-900 text-white p-2 rounded-full border-2 border-[#FCF8EB] shadow-md">
                     <Camera className="w-3.5 h-3.5" />
                  </div>
             </div>
           </div>
 
-          {/* CHANGE: Added min-w-0 and w-full to the text container, and truncate to the text elements */}
           <div className="flex-1 min-w-0 w-full flex flex-col items-center md:items-start">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight truncate w-full text-center md:text-left" title={currentUser?.name}>
               {currentUser?.name}
@@ -308,9 +306,10 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
       <div className="space-y-4 md:space-y-5">
         {orders.length === 0 ? (
-          <div className="text-center py-20 md:py-24 bg-white rounded-[2rem] border border-slate-200 border-dashed">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package className="w-8 h-8 text-slate-300" />
+          // TWEAKED: Empty state card styling
+          <div className="text-center py-20 md:py-24 bg-[#FCF8EB] rounded-[2rem] border border-[#E8E1CD] border-dashed">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-[#F5F0E1] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="w-8 h-8 text-[#D6CDB5]" />
             </div>
             <p className="text-slate-400 font-medium text-base md:text-lg">No orders yet.</p>
             <Link to="/shop" className="text-indigo-600 font-bold hover:underline mt-2 inline-block">
@@ -319,9 +318,10 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
           </div>
         ) : (
           orders.map((o) => (
-            <div key={o._id} className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+            // TWEAKED: Order list card styling
+            <div key={o._id} className="bg-[#FCF8EB] p-5 md:p-6 rounded-3xl border border-[#E8E1CD] shadow-sm hover:shadow-lg hover:shadow-[#65280E]/5 transition-all duration-300 group">
               
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-50 pb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-[#E8E1CD] pb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
@@ -361,10 +361,11 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
 
               <div className="flex flex-col gap-3 mb-4">
                 {o.items?.map((item, i) => (
-                  <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                  // TWEAKED: Inner item card matches base bg to sink in beautifully
+                  <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-[#FDF1E6] p-4 rounded-2xl border border-[#E8E1CD] hover:bg-[#F5F0E1] transition-colors">
                     
                     <div className="flex items-center gap-4 w-full sm:w-auto flex-1">
-                        <div className="w-16 h-16 rounded-xl border border-slate-200 shadow-sm overflow-hidden bg-white shrink-0">
+                        <div className="w-16 h-16 rounded-xl border border-[#E8E1CD] shadow-sm overflow-hidden bg-[#FCF8EB] shrink-0">
                           <img
                             src={item.image || item.coverImage}
                             alt={item.name}
@@ -377,18 +378,19 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                           <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
                           
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                            <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                            {/* TWEAKED: Custom badges */}
+                            <span className="bg-[#FCF8EB] px-2 py-1 rounded-md border border-[#E8E1CD] shadow-sm">
                               Qty: {item.qty}
                             </span>
                             
                             {item.selectedColor && (
-                              <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                              <span className="bg-[#FCF8EB] px-2 py-1 rounded-md border border-[#E8E1CD] shadow-sm">
                                 Color: {item.selectedColor}
                               </span>
                             )}
                             
                             {item.selectedSize && (
-                              <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                              <span className="bg-[#FCF8EB] px-2 py-1 rounded-md border border-[#E8E1CD] shadow-sm">
                                 Size: {item.selectedSize}
                               </span>
                             )}
@@ -417,20 +419,21 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 ))}
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
+              {/* TWEAKED: Transaction & Pricing bar */}
+              <div className="bg-[#FDF1E6] rounded-2xl p-4 border border-[#E8E1CD] flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
                 
                 <div className="w-full sm:w-auto flex flex-col gap-1">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
                     <CreditCard className="w-3 h-3" /> Payment Transaction ID
                   </span>
                   <div className="flex items-center gap-2">
-                    <code className="bg-white px-2 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-mono text-xs font-bold w-full sm:w-auto overflow-hidden text-ellipsis">
+                    <code className="bg-[#FCF8EB] px-2 py-1.5 rounded-lg border border-[#E8E1CD] text-slate-700 font-mono text-xs font-bold w-full sm:w-auto overflow-hidden text-ellipsis">
                       {o.paymentInfo?.transactionId || 'COD / Not Available'}
                     </code>
                     {o.paymentInfo?.transactionId && (
                       <button 
                         onClick={() => copyToClipboard(o.paymentInfo.transactionId)}
-                        className="p-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-indigo-600 active:scale-95 shrink-0"
+                        className="p-1.5 bg-[#FCF8EB] border border-[#E8E1CD] hover:bg-[#F5F0E1] rounded-lg transition-colors text-slate-500 hover:text-indigo-600 active:scale-95 shrink-0"
                         title="Copy ID"
                       >
                         {copiedId === o.paymentInfo.transactionId ? (
@@ -443,7 +446,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
 
-                <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
+                <div className="w-full sm:w-auto text-left sm:text-right border-t sm:border-t-0 sm:border-l border-[#E8E1CD] pt-3 sm:pt-0 sm:pl-6">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">
                     Total Paid
                   </p>
@@ -451,7 +454,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     ₹{o.totalAmount}
                   </span>
                   
-                  {/* --- UI ME 50% DISCOUNT BREAKDOWN TEXT --- */}
                   {o.shippingPrice > 0 ? (
                       <div>
                           {o.hasLocalDeliveryDiscount ? (
@@ -474,7 +476,6 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                           Free Shipping
                       </p>
                   )}
-                  {/* ----------------------------------------- */}
                 </div>
               </div>
 
@@ -490,12 +491,12 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                                   Reason: <span className="text-slate-800">{o.cancellationReason || "Seller cancelled this order."}</span>
                               </p>
                               
-                              <div className="mt-3 bg-white p-3 rounded-xl border border-red-100 shadow-sm">
+                              <div className="mt-3 bg-[#FCF8EB] p-3 rounded-xl border border-red-100 shadow-sm">
                                   <p className="text-[10px] md:text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Refund Status</p>
                                   <p className="text-xs text-slate-600 leading-relaxed">
                                       Your payment will be refunded to the source account within 5-7 business days.
                                   </p>
-                                  <p className="text-[11px] md:text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-slate-100">
+                                  <p className="text-[11px] md:text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-[#E8E1CD]">
                                       If not received, please email your Order ID and Phone Number to:<br/>
                                       <span className="font-bold text-indigo-600 select-all">giftomizeofficial@gmail.com</span>
                                   </p>
@@ -518,10 +519,11 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 )}
                 
                 <div className="relative flex items-center flex-1 sm:flex-none">
+                  {/* TWEAKED: Button uses warm hover colors */}
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="text-xs h-9 w-full sm:w-auto bg-slate-50 hover:bg-slate-100" 
+                    className="text-xs h-9 w-full sm:w-auto bg-[#F5F0E1] hover:bg-[#E8E1CD] text-slate-800 border border-transparent" 
                     onClick={() => handleInvoiceClick(o)}
                   >
                     View Invoice
@@ -539,13 +541,14 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               </div>
 
               {trackingOrderId === o._id && o.orderStatus !== 'Cancelled' && (
-                <div className="mt-6 pt-6 border-t border-slate-100 animate-in slide-in-from-top-4 fade-in duration-300">
+                <div className="mt-6 pt-6 border-t border-[#E8E1CD] animate-in slide-in-from-top-4 fade-in duration-300">
                   <h4 className="text-sm font-bold text-slate-900 mb-6 px-2">Journey Details</h4>
                   
-                  <div className="relative pl-6 space-y-8 before:absolute before:inset-y-2 before:left-[11px] before:w-[2px] before:bg-slate-100">
+                  {/* TWEAKED: Timeline border colors */}
+                  <div className="relative pl-6 space-y-8 before:absolute before:inset-y-2 before:left-[11px] before:w-[2px] before:bg-[#E8E1CD]">
                     
                     <div className="relative flex items-start gap-4">
-                      <div className="absolute -left-6 w-6 h-6 rounded-full bg-indigo-500 border-4 border-white flex items-center justify-center shadow-sm">
+                      <div className="absolute -left-6 w-6 h-6 rounded-full bg-indigo-500 border-4 border-[#FCF8EB] flex items-center justify-center shadow-sm">
                         <CheckCircle className="w-3 h-3 text-white" />
                       </div>
                       <div>
@@ -555,7 +558,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     </div>
 
                     <div className="relative flex items-start gap-4">
-                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus !== 'Pending' ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-[#FCF8EB] flex items-center justify-center shadow-sm ${o.orderStatus !== 'Pending' ? 'bg-indigo-500' : 'bg-[#E8E1CD]'}`}>
                         <Package className={`w-3 h-3 ${o.orderStatus !== 'Pending' ? 'text-white' : 'text-slate-400'}`} />
                       </div>
                       <div>
@@ -565,7 +568,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     </div>
 
                     <div className="relative flex items-start gap-4">
-                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-[#FCF8EB] flex items-center justify-center shadow-sm ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'bg-indigo-500' : 'bg-[#E8E1CD]'}`}>
                         <Truck className={`w-3 h-3 ${['Shipped', 'Delivered'].includes(o.orderStatus) ? 'text-white' : 'text-slate-400'}`} />
                       </div>
                       <div>
@@ -575,7 +578,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     </div>
 
                     <div className="relative flex items-start gap-4">
-                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center shadow-sm ${o.orderStatus === 'Delivered' ? 'bg-green-500' : 'bg-slate-200'}`}>
+                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-4 border-[#FCF8EB] flex items-center justify-center shadow-sm ${o.orderStatus === 'Delivered' ? 'bg-green-500' : 'bg-[#E8E1CD]'}`}>
                         <Home className={`w-3 h-3 ${o.orderStatus === 'Delivered' ? 'text-white' : 'text-slate-400'}`} />
                       </div>
                       <div>
