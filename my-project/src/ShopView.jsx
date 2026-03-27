@@ -12,6 +12,7 @@ import {
 import ProductCard from './ProductCard'; 
 import Footer from './Footer'; 
 import ReviewsSection from './ReviewsSection';
+import FeaturesSection from './components/FeaturesSection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -812,6 +813,7 @@ const ShopView = ({
             </div>
 
            <ReviewsSection currentUser={currentUser} />
+           <FeaturesSection/>
 
             <Footer />
       </div>
