@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
   ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame, 
-  // --- CHANGES MADE HERE: Imported Eye icon for Recently Viewed ---
   Eye 
 } from 'lucide-react'; 
 
@@ -396,7 +395,6 @@ const CategoryHighlight = ({ activeCategory, setActiveCategory, showPageLoader }
   );
 };
 
-// --- CHANGES MADE HERE: NEW ARRIVALS SLIDER START ---
 const NewArrivalsSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     const scrollRef = useRef(null);
   
@@ -452,7 +450,6 @@ const NewArrivalsSlider = ({ products, wishlist, toggleWishlist, addToCart }) =>
       </div>
     );
 };
-// --- CHANGES MADE HERE: NEW ARRIVALS SLIDER END ---
 
 const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     const scrollRef = useRef(null);
@@ -512,7 +509,6 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     );
 };
 
-// --- CHANGES MADE HERE: RECENTLY VIEWED SLIDER START ---
 const RecentlyViewedSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     const scrollRef = useRef(null);
 
@@ -568,7 +564,6 @@ const RecentlyViewedSlider = ({ products, wishlist, toggleWishlist, addToCart })
       </div>
     );
 };
-// --- CHANGES MADE HERE: RECENTLY VIEWED SLIDER END ---
 
 const ShopView = ({ 
     searchQuery, 
@@ -577,6 +572,7 @@ const ShopView = ({
     setActiveCategory, 
     addToCart, 
     products = [], 
+    sliderProducts = [], 
     isLoading,
     wishlist = [],
     toggleWishlist
@@ -592,15 +588,12 @@ const ShopView = ({
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
 
-  // --- CHANGES MADE HERE: New Arrivals State START ---
   const [newArrivals, setNewArrivals] = useState([]);
   const [isNewArrivalsLoading, setIsNewArrivalsLoading] = useState(true);
-  // --- CHANGES MADE HERE: New Arrivals State END ---
 
-  // --- CHANGES MADE HERE: Recently Viewed State START ---
-  const [recentlyViewedProducts, setRecentlyViewedProducts] = useState([]);
-  const [isRecentlyViewedLoading, setIsRecentlyViewedLoading] = useState(true);
-  // --- CHANGES MADE HERE: Recently Viewed State END ---
+  // Use props directly instead of local state for recently viewed
+  const recentlyViewedProducts = sliderProducts;
+  const isRecentlyViewedLoading = isLoading; // Use parent's loading state
 
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
@@ -658,7 +651,6 @@ const ShopView = ({
     fetchTrendingProducts();
   }, []);
 
-  // --- CHANGES MADE HERE: Fetch New Arrivals START ---
   useEffect(() => {
     const fetchNewArrivals = async () => {
         try {
@@ -675,40 +667,6 @@ const ShopView = ({
     };
     fetchNewArrivals();
   }, []);
-  // --- CHANGES MADE HERE: Fetch New Arrivals END ---
-
-  // --- CHANGES MADE HERE: Fetch Recently Viewed START ---
-  useEffect(() => {
-    const fetchRecentlyViewed = async () => {
-        try {
-            const viewedIds = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
-
-            if (viewedIds.length === 0) {
-                setIsRecentlyViewedLoading(false);
-                return;
-            }
-
-            const res = await fetch(`${API_URL}/api/products/recently-viewed`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ productIds: viewedIds })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setRecentlyViewedProducts(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch recently viewed products", error);
-        } finally {
-            setIsRecentlyViewedLoading(false);
-        }
-    };
-    fetchRecentlyViewed();
-  }, []);
-  // --- CHANGES MADE HERE: Fetch Recently Viewed END ---
 
   return (
       <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
@@ -735,7 +693,6 @@ const ShopView = ({
                     showPageLoader={showPageLoader} 
                 />
 
-                {/* --- CHANGES MADE HERE: Render New Arrivals Slider START --- */}
                 {!isNewArrivalsLoading && newArrivals.length > 0 && searchQuery === "" && activeCategory === "All" && (
                     <NewArrivalsSlider 
                         products={newArrivals}
@@ -744,7 +701,6 @@ const ShopView = ({
                         addToCart={addToCart}
                     />
                 )}
-                {/* --- CHANGES MADE HERE: Render New Arrivals Slider END --- */}
 
                 {!isTrendingLoading && trendingProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
                     <TrendingSlider 
@@ -755,7 +711,6 @@ const ShopView = ({
                     />
                 )}
 
-                {/* --- CHANGES MADE HERE: Render Recently Viewed Slider START --- */}
                 {!isRecentlyViewedLoading && recentlyViewedProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
                     <RecentlyViewedSlider
                         products={recentlyViewedProducts}
@@ -764,7 +719,6 @@ const ShopView = ({
                         addToCart={addToCart}
                     />
                 )}
-                {/* --- CHANGES MADE HERE: Render Recently Viewed Slider END --- */}
 
                 <div className="flex items-center justify-between mt-8 mb-6 px-2 sm:px-0">
                    <h3 className="text-2xl font-black text-slate-800 font-serif">

@@ -636,30 +636,58 @@ const deleteReviewAdmin = async (req, res) => {
 };
 // --- NEW FUNCTION ADDED FOR RECENTLY VIEWED SLIDER ---
 const getRecentlyViewedProducts = async (req, res) => {
-    try {
-        const { productIds } = req.body; 
+    try {
+        const { productIds } = req.body; 
 
-        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-            return res.json([]);
-        }
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.json([]);
+        }
 
-        const idsToFetch = productIds.slice(0, 15);
+        // --- CHANGES MADE HERE: Logic for filling empty slots with random products ---
+        const SLIDER_LIMIT = 15;
+        const idsToFetch = productIds.slice(0, SLIDER_LIMIT);
 
-        const products = await Product.find({ _id: { $in: idsToFetch } })
-            .populate('shop', 'name logo rating');
+        const products = await Product.find({ _id: { $in: idsToFetch } })
+            .populate('shop', 'name logo rating');
 
-        const orderedProducts = idsToFetch.map(id => 
-            products.find(p => p._id.toString() === id)
-        ).filter(Boolean);
+        const orderedProducts = idsToFetch.map(id => 
+            products.find(p => p._id.toString() === id)
+        ).filter(Boolean);
 
-        res.json(orderedProducts);
+        const remainingLimit = SLIDER_LIMIT - orderedProducts.length;
+        let finalProducts = [...orderedProducts];
 
-    } catch (error) {
-        console.error("Recently Viewed Error:", error);
-        res.status(500).json({ message: "Server Error fetching recently viewed products" });
-    }
+        if (remainingLimit > 0) {
+            const mongoose = require('mongoose'); 
+            const objectIdsToExclude = idsToFetch.map(id => new mongoose.Types.ObjectId(id));
+
+            const randomProducts = await Product.aggregate([
+                { 
+                    $match: { 
+                        _id: { $nin: objectIdsToExclude },
+                        stock: { $gt: 0 } 
+                    } 
+                },
+                { $sample: { size: remainingLimit } }
+            ]);
+
+            const populatedRandomProducts = await Product.populate(randomProducts, { 
+                path: 'shop', 
+                select: 'name logo rating' 
+            });
+
+            finalProducts = [...finalProducts, ...populatedRandomProducts];
+        }
+
+        res.json(finalProducts);
+      
+
+    } catch (error) {
+        console.error("Recently Viewed Error:", error);
+        res.status(500).json({ message: "Server Error fetching recently viewed products" });
+    }
 };
-// -----------------------------------------------------
+
 module.exports = {
     getProducts,
     getProductById,
