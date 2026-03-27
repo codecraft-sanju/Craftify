@@ -240,21 +240,24 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
   const hasValidAvatar = currentUser?.avatar && currentUser.avatar.includes('http');
 
   return (
-    <div className="bg-[#FEFAEF] pt-28 pb-32 max-w-5xl mx-auto px-6">
-      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden mb-12 text-center md:text-left group">
+    // CHANGE: Adjusted padding from pt-28 to pt-16 md:pt-28 to reduce mobile gap. Added min-h-screen.
+    <div className="bg-[#FEFAEF] min-h-screen pt-16 md:pt-28 pb-32 max-w-5xl mx-auto px-4 sm:px-6">
+      
+      {/* CHANGE: Enhanced shadows and rounded corners for a premium feel */}
+      <div className="bg-white p-6 sm:p-8 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden mb-8 md:mb-12 text-center md:text-left group">
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 opacity-10 group-hover:opacity-15 transition-opacity"></div>
 
-        <div className="flex flex-col md:flex-row items-center gap-8 relative z-10 mt-6">
-          <div className="relative group/avatar">
-            <div className="w-32 h-32 bg-white rounded-full p-2 shadow-2xl relative">
+        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10 mt-6">
+          <div className="relative group/avatar shrink-0">
+            <div className="w-28 h-28 md:w-32 md:h-32 bg-white rounded-full p-1.5 md:p-2 shadow-xl relative ring-1 ring-slate-100">
               <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center text-white text-4xl font-bold overflow-hidden relative">
                 {uploading ? (
                    <Loader2 className="w-10 h-10 animate-spin text-white" />
                 ) : hasValidAvatar ? (
                   <img src={currentUser.avatar} className="w-full h-full object-cover" alt="User" />
                 ) : (
-                  <span className="text-5xl font-black text-white select-none">
-                     {currentUser?.name?.charAt(0).toUpperCase() || <UserIcon className="w-12 h-12" />}
+                  <span className="text-4xl md:text-5xl font-black text-white select-none">
+                     {currentUser?.name?.charAt(0).toUpperCase() || <UserIcon className="w-10 h-10 md:w-12 md:h-12" />}
                   </span>
                 )}
                 
@@ -267,19 +270,21 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                 </label>
               </div>
             </div>
-            <div className="absolute bottom-2 right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full pointer-events-none"></div>
+            {/* CHANGE: Removed the absolute green dot div completely */}
+            
             <div className="md:hidden absolute bottom-0 right-0 pointer-events-none">
-                 <div className="bg-slate-900 text-white p-1.5 rounded-full border-2 border-white shadow-sm">
-                    <Camera className="w-3 h-3" />
+                 <div className="bg-slate-900 text-white p-2 rounded-full border-2 border-white shadow-md">
+                    <Camera className="w-3.5 h-3.5" />
                  </div>
             </div>
           </div>
 
-          <div className="flex-1">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+          {/* CHANGE: Added min-w-0 and w-full to the text container, and truncate to the text elements */}
+          <div className="flex-1 min-w-0 w-full flex flex-col items-center md:items-start">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight truncate w-full text-center md:text-left" title={currentUser?.name}>
               {currentUser?.name}
             </h1>
-            <p className="text-slate-500 font-medium text-lg mt-1">
+            <p className="text-slate-500 font-medium text-base md:text-lg mt-1 truncate w-full max-w-[280px] sm:max-w-md text-center md:text-left" title={currentUser?.email}>
               {currentUser?.email}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
@@ -288,43 +293,43 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
             </div>
           </div>
 
-          <Button onClick={onLogout} variant="secondary" className="mt-6 md:mt-0 px-8">
+          <Button onClick={onLogout} variant="secondary" className="mt-4 md:mt-0 px-8 w-full md:w-auto shrink-0">
             Sign Out
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+      <div className="flex items-center gap-3 mb-6 md:mb-8 px-2">
+        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg shadow-sm">
           <Package className="w-5 h-5" />
         </div>
-        <h3 className="font-black text-2xl text-slate-900">Order History</h3>
+        <h3 className="font-black text-xl md:text-2xl text-slate-900">Order History</h3>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-4 md:space-y-5">
         {orders.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-[2rem] border border-slate-200 border-dashed">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="text-center py-20 md:py-24 bg-white rounded-[2rem] border border-slate-200 border-dashed">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="w-8 h-8 text-slate-300" />
             </div>
-            <p className="text-slate-400 font-medium text-lg">No orders yet.</p>
+            <p className="text-slate-400 font-medium text-base md:text-lg">No orders yet.</p>
             <Link to="/shop" className="text-indigo-600 font-bold hover:underline mt-2 inline-block">
               Start Shopping
             </Link>
           </div>
         ) : (
           orders.map((o) => (
-            <div key={o._id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+            <div key={o._id} className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
               
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-50 pb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-                    <p className="font-bold text-slate-900 text-lg">
+                    <p className="font-bold text-slate-900 text-base md:text-lg">
                       Order #{o._id.toString().slice(-6).toUpperCase()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">
+                  <div className="flex items-center gap-3 md:gap-4 text-[11px] md:text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {formatDate(o.createdAt)}
                     </span>
@@ -334,7 +339,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
                   <Badge color={o.orderStatus === 'Delivered' ? 'green' : o.orderStatus === 'Shipped' ? 'indigo' : o.orderStatus === 'Cancelled' ? 'red' : 'slate'}>
                     {o.orderStatus || 'Processing'}
                   </Badge>
@@ -346,8 +351,8 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                       </div>
                     )}
                     {o.hasLocalDeliveryDiscount && (
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                        <CheckCircle className="w-3 h-3" /> 50% Off Shipping
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 hidden sm:flex">
+                        <CheckCircle className="w-3 h-3" /> 50% Off Ship
                       </div>
                     )}
                   </div>
@@ -371,7 +376,7 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-bold text-slate-900 line-clamp-1">{item.name}</h4>
                           
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-wide">
                             <span className="bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm">
                               Qty: {item.qty}
                             </span>
@@ -419,13 +424,13 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                     <CreditCard className="w-3 h-3" /> Payment Transaction ID
                   </span>
                   <div className="flex items-center gap-2">
-                    <code className="bg-white px-2 py-1 rounded-lg border border-slate-200 text-slate-700 font-mono text-sm font-bold">
+                    <code className="bg-white px-2 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-mono text-xs font-bold w-full sm:w-auto overflow-hidden text-ellipsis">
                       {o.paymentInfo?.transactionId || 'COD / Not Available'}
                     </code>
                     {o.paymentInfo?.transactionId && (
                       <button 
                         onClick={() => copyToClipboard(o.paymentInfo.transactionId)}
-                        className="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-indigo-600 active:scale-95"
+                        className="p-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 hover:text-indigo-600 active:scale-95 shrink-0"
                         title="Copy ID"
                       >
                         {copiedId === o.paymentInfo.transactionId ? (
@@ -474,10 +479,10 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
               </div>
 
               {o.orderStatus === 'Cancelled' && (
-                  <div className="mt-6 bg-red-50 border border-red-100 rounded-2xl p-5 animate-in fade-in">
+                  <div className="mt-5 bg-red-50 border border-red-100 rounded-2xl p-4 md:p-5 animate-in fade-in">
                       <div className="flex items-start gap-3">
                           <div className="p-2 bg-red-100 rounded-full text-red-600 shrink-0">
-                              <AlertTriangle className="w-5 h-5" />
+                              <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />
                           </div>
                           <div className="flex-1">
                               <h4 className="text-red-900 font-bold text-sm">Order Cancelled</h4>
@@ -485,12 +490,12 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                                   Reason: <span className="text-slate-800">{o.cancellationReason || "Seller cancelled this order."}</span>
                               </p>
                               
-                              <div className="mt-3 bg-white p-3 rounded-xl border border-red-100">
-                                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Refund Status</p>
+                              <div className="mt-3 bg-white p-3 rounded-xl border border-red-100 shadow-sm">
+                                  <p className="text-[10px] md:text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">Refund Status</p>
                                   <p className="text-xs text-slate-600 leading-relaxed">
                                       Your payment will be refunded to the source account within 5-7 business days.
                                   </p>
-                                  <p className="text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-slate-100">
+                                  <p className="text-[11px] md:text-xs text-slate-600 leading-relaxed mt-2 pt-2 border-t border-slate-100">
                                       If not received, please email your Order ID and Phone Number to:<br/>
                                       <span className="font-bold text-indigo-600 select-all">giftomizeofficial@gmail.com</span>
                                   </p>
@@ -500,30 +505,30 @@ const ProfileView = ({ currentUser, orders, onLogout }) => {
                   </div>
               )}
 
-              <div className="mt-4 flex justify-end gap-3">
+              <div className="mt-5 flex flex-wrap justify-end gap-3">
                 {o.orderStatus !== 'Cancelled' && (
                   <Button 
                     size="sm" 
                     variant={trackingOrderId === o._id ? "indigo" : "secondary"} 
-                    className="text-xs h-9 transition-colors"
+                    className="text-xs h-9 transition-colors flex-1 sm:flex-none"
                     onClick={() => setTrackingOrderId(trackingOrderId === o._id ? null : o._id)}
                   >
                     {trackingOrderId === o._id ? 'Close Tracking' : 'Track Order'}
                   </Button>
                 )}
                 
-                <div className="relative flex items-center">
+                <div className="relative flex items-center flex-1 sm:flex-none">
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="text-xs h-9" 
+                    className="text-xs h-9 w-full sm:w-auto bg-slate-50 hover:bg-slate-100" 
                     onClick={() => handleInvoiceClick(o)}
                   >
                     View Invoice
                   </Button>
                   
                   {invoiceMsgId === o._id && (
-                    <div className="absolute bottom-full right-0 mb-3 w-64 p-3.5 bg-slate-900 text-white text-xs font-medium rounded-2xl shadow-2xl shadow-indigo-900/20 animate-in fade-in slide-in-from-bottom-2 z-20 flex items-start gap-3 border border-slate-700">
+                    <div className="absolute bottom-full right-0 mb-3 w-60 md:w-64 p-3 md:p-3.5 bg-slate-900 text-white text-xs font-medium rounded-2xl shadow-2xl shadow-indigo-900/20 animate-in fade-in slide-in-from-bottom-2 z-20 flex items-start gap-3 border border-slate-700">
                       <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
                       <p className="leading-relaxed">
                         The invoice will be generated only after your item is safely delivered. Please wait a little.
