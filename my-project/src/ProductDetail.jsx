@@ -147,6 +147,20 @@ const ProductDetail = ({ addToCart, currentUser, products, wishlist, toggleWishl
     if (id) {
         fetchRelatedProducts();
         trackProductView();
+        
+        // --- CHANGES MADE HERE: Save Product to Recently Viewed in LocalStorage ---
+        try {
+            let viewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+            viewed = viewed.filter(viewedId => viewedId !== id);
+            viewed.unshift(id);
+            if (viewed.length > 15) {
+                viewed.pop();
+            }
+            localStorage.setItem('recentlyViewed', JSON.stringify(viewed));
+        } catch (error) {
+            console.error("Error saving to recently viewed", error);
+        }
+        // -------------------------------------------------------------------------
     }
   }, [id, productFromProps]); 
 

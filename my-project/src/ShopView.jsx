@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Filter, PackageOpen, Store, XCircle, ArrowRight, Tag, 
-  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame 
+  ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Gift, Flame, 
+  // --- CHANGES MADE HERE: Imported Eye icon for Recently Viewed ---
+  Eye 
 } from 'lucide-react'; 
 
 import ProductCard from './ProductCard'; 
@@ -408,7 +410,7 @@ const NewArrivalsSlider = ({ products, wishlist, toggleWishlist, addToCart }) =>
     if (!products || products.length === 0) return null;
   
     return (
-      <div className="mb-12 relative group px-2 sm:px-0 mt-8">
+      <div className="mb-6 relative group px-2 sm:px-0 mt-4">
           <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
               <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-pink-500 fill-pink-500/20" /> 
@@ -467,7 +469,7 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     if (!trendingProducts || trendingProducts.length === 0) return null;
   
     return (
-      <div className="mb-12 relative group px-2 sm:px-0 mt-8">
+      <div className="mb-6 relative group px-2 sm:px-0 mt-4">
           <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
               <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
                   <Flame className="w-6 h-6 text-orange-500 fill-orange-500/20" /> 
@@ -509,6 +511,64 @@ const TrendingSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
     );
 };
 
+// --- CHANGES MADE HERE: RECENTLY VIEWED SLIDER START ---
+const RecentlyViewedSlider = ({ products, wishlist, toggleWishlist, addToCart }) => {
+    const scrollRef = useRef(null);
+
+    const scrollLeftAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+    };
+
+    const scrollRightAction = () => {
+        if (scrollRef.current) scrollRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+    };
+
+    if (!products || products.length === 0) return null;
+
+    return (
+      <div className="mb-6 relative group px-2 sm:px-0 mt-4">
+          <div className="flex items-center justify-between mb-6 px-2 sm:px-0">
+              <h3 className="text-2xl font-black text-slate-800 font-serif flex items-center gap-2">
+                  <Eye className="w-6 h-6 text-indigo-500 fill-indigo-500/20" />
+                  Recently Viewed
+              </h3>
+          </div>
+
+          <button
+              onClick={scrollLeftAction}
+              className="hidden md:flex absolute left-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-indigo-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronLeft className="w-6 h-6 ml-[-2px]" />
+          </button>
+
+          <div
+              ref={scrollRef}
+              className="flex gap-4 md:gap-6 overflow-x-auto py-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-4 px-4 sm:-mx-6 sm:px-6 overflow-y-visible"
+          >
+              {products.map((product, index) => (
+                  <div key={product._id || product.id} className="w-[160px] sm:w-[200px] md:w-[240px] lg:w-[260px] shrink-0 snap-center flex items-stretch">
+                      <ProductCard
+                          product={product}
+                          index={index}
+                          wishlist={wishlist}
+                          toggleWishlist={toggleWishlist}
+                          addToCart={addToCart}
+                      />
+                  </div>
+              ))}
+          </div>
+
+          <button
+              onClick={scrollRightAction}
+              className="hidden md:flex absolute right-0 top-[55%] -translate-y-1/2 z-10 bg-white shadow-md border border-slate-100 w-12 h-12 rounded-full items-center justify-center text-slate-600 hover:text-indigo-500 hover:scale-105 hover:shadow-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+              <ChevronRight className="w-6 h-6 mr-[-2px]" />
+          </button>
+      </div>
+    );
+};
+// --- CHANGES MADE HERE: RECENTLY VIEWED SLIDER END ---
+
 const ShopView = ({ 
     searchQuery, 
     setSearchQuery, 
@@ -535,6 +595,11 @@ const ShopView = ({
   const [newArrivals, setNewArrivals] = useState([]);
   const [isNewArrivalsLoading, setIsNewArrivalsLoading] = useState(true);
   // --- CHANGES MADE HERE: New Arrivals State END ---
+
+  // --- CHANGES MADE HERE: Recently Viewed State START ---
+  const [recentlyViewedProducts, setRecentlyViewedProducts] = useState([]);
+  const [isRecentlyViewedLoading, setIsRecentlyViewedLoading] = useState(true);
+  // --- CHANGES MADE HERE: Recently Viewed State END ---
 
   const userInfo = localStorage.getItem('userInfo'); 
   const currentUser = userInfo ? JSON.parse(userInfo) : null;
@@ -611,6 +676,39 @@ const ShopView = ({
   }, []);
   // --- CHANGES MADE HERE: Fetch New Arrivals END ---
 
+  // --- CHANGES MADE HERE: Fetch Recently Viewed START ---
+  useEffect(() => {
+    const fetchRecentlyViewed = async () => {
+        try {
+            const viewedIds = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+
+            if (viewedIds.length === 0) {
+                setIsRecentlyViewedLoading(false);
+                return;
+            }
+
+            const res = await fetch(`${API_URL}/api/products/recently-viewed`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ productIds: viewedIds })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setRecentlyViewedProducts(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch recently viewed products", error);
+        } finally {
+            setIsRecentlyViewedLoading(false);
+        }
+    };
+    fetchRecentlyViewed();
+  }, []);
+  // --- CHANGES MADE HERE: Fetch Recently Viewed END ---
+
   return (
       <div className="min-h-screen bg-[#FFFBF0] md:pt-20 flex flex-col overflow-hidden relative">
             
@@ -655,6 +753,17 @@ const ShopView = ({
                         addToCart={addToCart}
                     />
                 )}
+
+                {/* --- CHANGES MADE HERE: Render Recently Viewed Slider START --- */}
+                {!isRecentlyViewedLoading && recentlyViewedProducts.length > 0 && searchQuery === "" && activeCategory === "All" && (
+                    <RecentlyViewedSlider
+                        products={recentlyViewedProducts}
+                        wishlist={wishlist}
+                        toggleWishlist={toggleWishlist}
+                        addToCart={addToCart}
+                    />
+                )}
+                {/* --- CHANGES MADE HERE: Render Recently Viewed Slider END --- */}
 
                 <div className="flex items-center justify-between mt-8 mb-6 px-2 sm:px-0">
                    <h3 className="text-2xl font-black text-slate-800 font-serif">

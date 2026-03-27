@@ -296,9 +296,18 @@ const CraftifyContent = () => {
       if (activeCategory !== 'All') url.searchParams.append('category', activeCategory);
       if (debouncedSearch) url.searchParams.append('keyword', debouncedSearch);
 
-      // --- CHANGES MADE HERE: Send exclude flag to backend ---
+      // --- CHANGES MADE HERE: Send exclude flag and recently viewed IDs to backend ---
       if (activeCategory === 'All' && !debouncedSearch) {
           url.searchParams.append('excludeSliders', 'true');
+          
+          try {
+              const viewedIds = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+              if (viewedIds.length > 0) {
+                  url.searchParams.append('recentlyViewed', viewedIds.join(','));
+              }
+          } catch (e) {
+              console.error('Error reading recentlyViewed from localStorage', e);
+          }
       }
       // -------------------------------------------------------
 

@@ -1,8 +1,6 @@
 const Product = require('../models/Product');
 const Shop = require('../models/Shop');
 
-// ProductController.js -> getProducts
-
 const getProducts = async (req, res) => {
     try {
         const keyword = req.query.keyword
@@ -14,31 +12,35 @@ const getProducts = async (req, res) => {
               }
             : {};
 
-        // --- THE BULLETPROOF FIX FOR 2-WORD CATEGORIES ---
-        // Yahan exact match ki jagah flexible regex lagaya hai 
-        // Jo aage-peeche ke extra spaces ko ignore kar dega aur 'Wooden frame' dhund lega
         const category = req.query.category && req.query.category !== 'All' 
             ? { category: { $regex: req.query.category.trim(), $options: 'i' } } 
             : {};
 
         const queryFilter = { ...keyword, ...category };
 
-        // --- CHANGES MADE HERE: Smart Exclude Logic ---
-        // Agar frontend ne excludeSliders=true bheja hai, toh hum sliders wale products database se hi hata denge
+      
         if (req.query.excludeSliders === 'true') {
             const newArrivals = await Product.find({ stock: { $gt: 0 } }).sort({ createdAt: -1 }).limit(12).select('_id');
             const trending = await Product.find({ stock: { $gt: 0 } }).sort({ views: -1 }).limit(8).select('_id');
             
+        
+            let recentlyViewedIds = [];
+            if (req.query.recentlyViewed) {
+                recentlyViewedIds = req.query.recentlyViewed.split(',');
+            }
+
             const excludeIds = [
-                ...newArrivals.map(p => p._id), 
-                ...trending.map(p => p._id)
+                ...newArrivals.map(p => p._id.toString()), // toString is safer for comparison
+                ...trending.map(p => p._id.toString()),
+                ...recentlyViewedIds // Append recently viewed IDs
             ];
 
+          
             if (excludeIds.length > 0) {
                 queryFilter._id = { $nin: excludeIds };
             }
         }
-        // ----------------------------------------------
+     
 
         const count = await Product.countDocuments(queryFilter);
 
@@ -632,6 +634,32 @@ const deleteReviewAdmin = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+// --- NEW FUNCTION ADDED FOR RECENTLY VIEWED SLIDER ---
+const getRecentlyViewedProducts = async (req, res) => {
+    try {
+        const { productIds } = req.body; 
+
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.json([]);
+        }
+
+        const idsToFetch = productIds.slice(0, 15);
+
+        const products = await Product.find({ _id: { $in: idsToFetch } })
+            .populate('shop', 'name logo rating');
+
+        const orderedProducts = idsToFetch.map(id => 
+            products.find(p => p._id.toString() === id)
+        ).filter(Boolean);
+
+        res.json(orderedProducts);
+
+    } catch (error) {
+        console.error("Recently Viewed Error:", error);
+        res.status(500).json({ message: "Server Error fetching recently viewed products" });
+    }
+};
+// -----------------------------------------------------
 module.exports = {
     getProducts,
     getProductById,
@@ -649,5 +677,6 @@ module.exports = {
     getNewArrivals,
     getAllReviewsAdmin,
     updateReviewAdmin,
-    deleteReviewAdmin
+    deleteReviewAdmin,
+    getRecentlyViewedProducts
 };

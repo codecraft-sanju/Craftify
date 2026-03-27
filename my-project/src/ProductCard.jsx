@@ -50,7 +50,6 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
         
         // If external link (Cloudinary/S3/Firebase)
         if (path.startsWith('http') || path.startsWith('https') || path.startsWith('data:')) {
-            // --- CHANGE HERE: Apply optimization to external URLs ---
             return optimizeCloudinaryUrl(path);
         }
         
@@ -61,9 +60,22 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
 
     const finalImageSrc = getImageUrl(displayImage);
 
+    // --- CHANGES MADE HERE: Secondary Image Logic for Hover Effect ---
+    let secondaryImageSrc = null;
+    if (product.images && product.images.length > 1) {
+        // Aisa image dhundo jo first (display) image se alag ho
+        const secondImg = product.images.find(img => img.url !== displayImage);
+        if (secondImg) {
+            secondaryImageSrc = getImageUrl(secondImg.url);
+        } else {
+            // Backup ke liye index 1 utha lo
+            secondaryImageSrc = getImageUrl(product.images[1].url);
+        }
+    }
+    // -----------------------------------------------------------------
+
     // 4. Price Logic
     const currentPrice = product.price || 0;
-    // CHANGES MADE: Pull compareAtPrice from DB. Fallback to 20% higher if not set or 0.
     const oldPrice = product.compareAtPrice || Math.round(currentPrice * 1.2); 
 
     const cardRef = useRef(null);
@@ -81,24 +93,57 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
             delay: (index % 8) * 0.1, 
             ease: "easeOut" 
         }}
-        className="group bg-[#FFFBF0] rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 w-full"
+        // --- CHANGES MADE HERE: Removed general "group" class from the outer wrapper ---
+        className="bg-[#FFFBF0] rounded-[1.5rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:border-indigo-100 transition-all duration-300 flex flex-col h-full relative transform hover:-translate-y-1 w-full"
       >
          
          {/* --- IMAGE CONTAINER --- */}
-         <div className="relative aspect-square bg-slate-50 overflow-hidden">
-             <img 
-                src={finalImageSrc} 
-                alt={product.name}
-                loading="lazy"
-                onError={(e) => { 
-                    e.target.onerror = null; 
-                    e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
-                }} 
-                className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
-             />
+         {/* --- CHANGES MADE HERE: Added "group/image" here to isolate hover state --- */}
+         <div className="relative aspect-square bg-slate-50 overflow-hidden group/image">
+             
+             {/* --- CHANGES MADE HERE: Image Swap Animation uses group/image --- */}
+             {secondaryImageSrc ? (
+                 <>
+                     {/* Primary Image (Fades out on hover) */}
+                     <img 
+                        src={finalImageSrc} 
+                        alt={product.name}
+                        loading="lazy"
+                        onError={(e) => { 
+                            e.target.onerror = null; 
+                            e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
+                        }} 
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover/image:scale-110 group-hover/image:opacity-0 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
+                     />
+                     {/* Secondary Image (Fades in on hover) */}
+                     <img 
+                        src={secondaryImageSrc} 
+                        alt={`${product.name} alternate`}
+                        loading="lazy"
+                        onError={(e) => { 
+                            e.target.onerror = null; 
+                            e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
+                        }} 
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-0 scale-100 group-hover/image:scale-110 group-hover/image:opacity-100 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
+                     />
+                 </>
+             ) : (
+                 /* Fallback: Single Image (Just scales on hover) */
+                 <img 
+                    src={finalImageSrc} 
+                    alt={product.name}
+                    loading="lazy"
+                    onError={(e) => { 
+                        e.target.onerror = null; 
+                        e.target.src = "https://placehold.co/400x500?text=Image+Error"; 
+                    }} 
+                    className={`w-full h-full object-cover transition-transform duration-700 group-hover/image:scale-110 ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
+                 />
+             )}
+             {/* ----------------------------------------------- */}
              
              {/* Hover Overlay */}
-             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+             <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/5 transition-colors duration-300" />
 
              {/* --- BADGES (Top Left) --- */}
              <div className="absolute top-3 left-3 flex flex-col gap-2 items-start z-10">
@@ -136,7 +181,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
              
              {/* Row 1: Title (Left) and Current Price (Right) */}
              <div className="flex justify-between items-start gap-2 mb-1 min-h-[2.5rem]">
-                <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-indigo-600 transition-colors flex-1">
+                <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 transition-colors flex-1">
                     {product.name}
                 </h3>
                 <span className="text-lg font-black text-slate-900 shrink-0 mt-[-2px]">
@@ -170,6 +215,7 @@ const ProductCard = ({ product, index = 0, wishlist = [], toggleWishlist, addToC
                    if(!isOutOfStock) addToCart(product);
                 }}
                 disabled={isOutOfStock}
+                // --- CHANGES MADE HERE: Added group/btn isolated state ---
                 className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn z-20 relative ${
                     isOutOfStock 
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 

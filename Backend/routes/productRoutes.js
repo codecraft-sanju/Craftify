@@ -14,25 +14,23 @@ const {
     incrementProductView,
     getTrendingProducts,
     getCategories,
-   
     getNewArrivals,
- 
     getAllReviewsAdmin,
     updateReviewAdmin,
-    deleteReviewAdmin
+    deleteReviewAdmin,
+    getRecentlyViewedProducts
 } = require('../controllers/productController');
-
 
 const { protect } = require('../middleware/authMiddleware');
 
 
 router.route('/')
     .get(getProducts) 
-
     .post(protect, createProduct);
 
 
 router.route('/batch').delete(protect, deleteProductsBatch); 
+router.post('/recently-viewed', getRecentlyViewedProducts);
 
 router.get('/new-arrivals', getNewArrivals);
 
